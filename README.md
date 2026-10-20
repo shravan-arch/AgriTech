@@ -156,10 +156,25 @@ This executes `vite build` inside `client/` and compiles optimized static assets
 
 ---
 
+## 🔐 Authentication Endpoints & Testing
+
+The backend provides full JWT authentication with bcrypt password hashing. When MongoDB Atlas is configured, accounts persist to MongoDB. When running offline or before configuring credentials, it automatically falls back to a development store with pre-seeded demo data.
+
+### Seeded Demo Farmer Credentials
+- **Email:** `demo@agritech.com`
+- **Password:** `Farmer123!`
+
+### Auth API Endpoints
+- `POST /api/auth/register` - Create new user (`name`, `email`, `password`, `farmName`, `farmSizeHectares`, `primaryCrops`)
+- `POST /api/auth/login` - Authenticate and obtain JWT token (`email`, `password`)
+- `GET /api/auth/me` - Retrieve current authenticated profile (requires `Authorization: Bearer <token>`)
+
+---
+
 ## 📋 Milestone Roadmap
 
-- [x] **Milestone 1: Working Scaffold** — Full project scaffolding, React landing page, Express health check, proxy, build verification.
-- [ ] **Milestone 2: Database & Authentication** — MongoDB Atlas integration, Mongoose schemas (User, Farm), JWT auth endpoints (register/login/verify).
+- [x] **Milestone 1: Working Scaffold** — Project structure, React Vite landing page with Bootstrap, Express health endpoint, proxy, build verification.
+- [x] **Milestone 2: Database & Authentication** — MongoDB Atlas / Mongoose connection handler, User model with bcrypt, JWT token issuing & verification middleware, Auth REST API (`register`, `login`, `me`), React `AuthContext`, and interactive Farmer Portal UI.
 - [ ] **Milestone 3: Core AgriTech Domain Models** — Field management, soil telemetry, sensor logs, and crop tracking endpoints.
 - [ ] **Milestone 4: Dashboard & Analytics** — Protected farmer portal, Recharts data visualization, real-time metrics.
 - [ ] **Milestone 5: Production Deployment Readiness** — Containerization / production scripts, security headers (Helmet), validation.
