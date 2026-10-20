@@ -33,3 +33,8 @@ Thumbs.db
 # Testing & Coverage
 coverage/
 .nyc_output/
+
+# Local Dev Persistence Data
+server/data/
+*.db
+

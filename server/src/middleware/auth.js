@@ -1,6 +1,5 @@
 import { verifyToken } from '../utils/token.js';
-import User from '../models/User.js';
-import { getDBStatus } from '../config/db.js';
+import { userStore } from '../storage/userStore.js';
 
 export const protect = async (req, res, next) => {
   let token;
@@ -21,29 +20,16 @@ export const protect = async (req, res, next) => {
 
   try {
     const decoded = verifyToken(token);
-    const dbStatus = getDBStatus();
+    const user = await userStore.findById(decoded.id);
 
-    if (dbStatus.isConnected) {
-      const user = await User.findById(decoded.id).select('-password');
-      if (!user) {
-        return res.status(401).json({
-          error: 'Unauthorized',
-          message: 'User belonging to this token no longer exists.',
-        });
-      }
-      req.user = user;
-    } else {
-      // Offline / fallback mode
-      req.user = {
-        _id: decoded.id,
-        id: decoded.id,
-        email: decoded.email,
-        name: decoded.name || 'Demo Farmer',
-        role: decoded.role || 'farmer',
-        farmName: decoded.farmName || 'Green Valley Farm',
-      };
+    if (!user) {
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: 'User belonging to this token no longer exists.',
+      });
     }
 
+    req.user = user;
     next();
   } catch (error) {
     return res.status(401).json({
