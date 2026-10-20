@@ -1,0 +1,58 @@
+:root {
+  --agri-primary: #198754;
+  --agri-primary-dark: #146c43;
+  --agri-secondary: #0d6efd;
+  --agri-accent: #ffc107;
+  --agri-bg-light: #f8faf7;
+  --agri-card-border: #e2e8f0;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--agri-bg-light);
+  color: #212529;
+  -webkit-font-smoothing: antialiased;
+}
+
+.brand-leaf {
+  color: #198754;
+}
+
+.hero-banner {
+  background: linear-gradient(135deg, #0f5132 0%, #198754 60%, #20c997 100%);
+  color: #ffffff;
+  border-radius: 1rem;
+}
+
+.feature-card {
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  border: 1px solid var(--agri-card-border);
+}
+
+.feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+}
+
+.badge-live-pulse {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  background-color: #20c997;
+  border-radius: 50%;
+  box-shadow: 0 0 0 rgba(32, 201, 151, 0.4);
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(32, 201, 151, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(32, 201, 151, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(32, 201, 151, 0);
+  }
+}
