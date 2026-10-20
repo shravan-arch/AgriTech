@@ -299,11 +299,18 @@ function App() {
                   </div>
                 </div>
                 <div className="col-12 mt-3">
-                  <div className="alert alert-success d-flex align-items-center mb-0" role="alert">
-                    <i className="bi bi-shield-check fs-4 me-2"></i>
-                    <div>
-                      <strong>Full-stack handshake verified:</strong> {healthStatus.message} (Database Mode: <code>{healthStatus.database?.mode}</code>)
+                  <div className={`alert ${healthStatus.database?.connected ? 'alert-success' : 'alert-info'} d-flex flex-column gap-2 mb-0`} role="alert">
+                    <div className="d-flex align-items-center">
+                      <i className={`bi ${healthStatus.database?.connected ? 'bi-shield-check text-success' : 'bi-info-circle text-primary'} fs-4 me-2`}></i>
+                      <div>
+                        <strong>Full-stack handshake verified:</strong> {healthStatus.message} (Database Mode: <code>{healthStatus.database?.mode}</code>)
+                      </div>
                     </div>
+                    {!healthStatus.database?.connected && healthStatus.database?.diagnostics?.errorMessage && (
+                      <div className="small border-top pt-2 text-muted">
+                        <i className="bi bi-diagram-3 me-1"></i> Target Cluster: <code>{healthStatus.database.targetCluster}</code> &bull; Connection Status: <span className="text-danger fw-semibold">{healthStatus.database.diagnostics.errorMessage} (Code {healthStatus.database.diagnostics.errorCode || 'N/A'})</span> &bull; <em>Local persistent store active</em>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

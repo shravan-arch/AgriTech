@@ -14,7 +14,10 @@ router.get('/', (req, res) => {
     environment: process.env.NODE_ENV || 'development',
     database: {
       connected: dbStatus.isConnected,
-      mode: dbStatus.isConnected ? 'mongodb-atlas' : 'local-persistent-store'
+      mode: dbStatus.mode,
+      targetCluster: dbStatus.target?.host || null,
+      targetDatabase: dbStatus.target?.database || null,
+      diagnostics: dbStatus.diagnostics
     },
     services: {
       auth: 'active',
