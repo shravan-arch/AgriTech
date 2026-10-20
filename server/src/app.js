@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import healthRouter from './routes/health.js';
+import authRouter from './routes/auth.js';
 
 const app = express();
 
@@ -16,6 +17,7 @@ if (process.env.NODE_ENV !== 'test') {
 
 // Routes
 app.use('/api/health', healthRouter);
+app.use('/api/auth', authRouter);
 
 // Catch-all 404 handler
 app.use((req, res) => {
