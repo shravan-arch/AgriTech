@@ -1,13 +1,18 @@
 import { Router } from 'express';
-import { register, login, getMe, getUserById } from '../controllers/authController.js';
-import { protect } from '../middleware/auth.js';
-import { checkUserOwnership } from '../middleware/ownership.js';
+import { createAuthController } from '../controllers/authController.js';
+import { createProtect } from '../middleware/auth.js';
+import { userStore as defaultUserStore } from '../storage/userStore.js';
 
-const router = Router();
+export const createAuthRouter = (userStore = defaultUserStore) => {
+  const router = Router();
+  const controller = createAuthController(userStore);
+  const protect = createProtect(userStore);
 
-router.post('/register', register);
-router.post('/login', login);
-router.get('/me', protect, getMe);
-router.get('/user/:id', protect, checkUserOwnership('id'), getUserById);
+  router.post('/register', controller.register);
+  router.post('/login', controller.login);
+  router.get('/me', protect, controller.getMe);
+  router.get('/user/:id', protect, controller.getUserById);
+  return router;
+};
 
-export default router;
+export default createAuthRouter();

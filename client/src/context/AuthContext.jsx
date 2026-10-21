@@ -1,81 +1,69 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-
-const AuthContext = createContext(null);
+import { useEffect, useState } from 'react';
+import AuthContext from './AuthContextValue.js';
+import { apiRequest } from '../lib/api.js';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(() => localStorage.getItem('agritech_token') || null);
+  const [token, setToken] = useState(() => localStorage.getItem('agritech_token'));
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState('');
 
-  // Validate token on mount
   useEffect(() => {
-    const fetchCurrentUser = async () => {
-      const storedToken = localStorage.getItem('agritech_token');
-      if (!storedToken) {
-        setLoading(false);
+    let active = true;
+
+    const validateSession = async () => {
+      if (!token) {
+        if (active) setLoading(false);
         return;
       }
 
       try {
-        const res = await fetch('/api/auth/me', {
-          headers: {
-            Authorization: `Bearer ${storedToken}`,
-          },
-        });
-
-        if (res.ok) {
-          const data = await res.json();
+        const data = await apiRequest('/auth/me', { token });
+        if (active) {
           setUser(data.user);
-          setToken(storedToken);
-        } else {
-          // Token expired or invalid
-          localStorage.removeItem('agritech_token');
-          setUser(null);
-          setToken(null);
+          setAuthError('');
         }
-      } catch (err) {
-        console.warn('Failed to verify token:', err);
+      } catch (error) {
+        if (active && error.status === 401) {
+          localStorage.removeItem('agritech_token');
+          setToken(null);
+          setUser(null);
+        } else if (active) {
+          setAuthError(error.message);
+        }
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
 
-    fetchCurrentUser();
-  }, []);
+    validateSession();
+    return () => {
+      active = false;
+    };
+  }, [token]);
 
-  const login = async (email, password) => {
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.message || 'Login failed');
-    }
-
+  const saveSession = (data) => {
     localStorage.setItem('agritech_token', data.token);
     setToken(data.token);
     setUser(data.user);
+    setAuthError('');
+  };
+
+  const login = async (email, password) => {
+    const data = await apiRequest('/auth/login', {
+      method: 'POST',
+      body: { email, password },
+    });
+    saveSession(data);
     return data;
   };
 
   const register = async (userData) => {
-    const res = await fetch('/api/auth/register', {
+    const data = await apiRequest('/auth/register', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(userData),
+      body: userData,
     });
-
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.message || 'Registration failed');
-    }
-
-    localStorage.setItem('agritech_token', data.token);
-    setToken(data.token);
-    setUser(data.user);
+    saveSession(data);
     return data;
   };
 
@@ -83,31 +71,23 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('agritech_token');
     setToken(null);
     setUser(null);
+    setAuthError('');
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        token,
-        isAuthenticated: !!user,
-        loading,
-        login,
-        register,
-        logout,
-      }}
-    >
+    <AuthContext.Provider value={{
+      user,
+      token,
+      isAuthenticated: Boolean(user && token),
+      loading,
+      authError,
+      login,
+      register,
+      logout,
+    }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
-
-export default AuthContext;
+export default AuthProvider;

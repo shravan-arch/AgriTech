@@ -5,19 +5,59 @@ import dotenv from 'dotenv';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// Target environment paths resolved reliably regardless of current working directory
 const serverEnvPath = path.resolve(__dirname, '../../.env');
 const rootEnvPath = path.resolve(__dirname, '../../../.env');
 
-// Load server/.env first if present (does not overwrite existing process.env variables)
 if (fs.existsSync(serverEnvPath)) {
   dotenv.config({ path: serverEnvPath });
 }
 
-// Load root .env as secondary fallback for any variables not defined in server/.env
 if (fs.existsSync(rootEnvPath)) {
   dotenv.config({ path: rootEnvPath });
 }
+
+export const validateProductionEnv = (env = process.env) => {
+  if (env.NODE_ENV !== 'production') return;
+
+  if (env.STORAGE_MODE === 'local-json') {
+    throw new Error('Local JSON storage is only available in development.');
+  }
+
+  const missing = ['MONGODB_URI', 'JWT_SECRET', 'CLIENT_URL']
+    .filter((key) => !env[key]?.trim());
+
+  if (missing.length) {
+    throw new Error(`Missing required production environment variables: ${missing.join(', ')}`);
+  }
+
+  if (env.JWT_SECRET.length < 32 || /<|>|your_|replace|example|placeholder/i.test(env.JWT_SECRET)) {
+    throw new Error('JWT_SECRET must be a unique secret of at least 32 characters in production.');
+  }
+
+  try {
+    const databaseUrl = new URL(env.MONGODB_URI);
+    if (!['mongodb:', 'mongodb+srv:'].includes(databaseUrl.protocol)) {
+      throw new Error();
+    }
+    for (const origin of env.CLIENT_URL.split(',').map((value) => value.trim())) {
+      const clientUrl = new URL(origin);
+      if (clientUrl.protocol !== 'https:' && clientUrl.hostname !== 'localhost') {
+        throw new Error();
+      }
+    }
+  } catch {
+    throw new Error('MONGODB_URI and CLIENT_URL must be valid production URLs.');
+  }
+};
+
+export const validateRuntimeEnv = (env = process.env) => {
+  validateProductionEnv(env);
+  if (env.NODE_ENV !== 'test' &&
+      (typeof env.JWT_SECRET !== 'string' ||
+       env.JWT_SECRET.length < 32 ||
+       /<|>|your_|replace|example|placeholder/i.test(env.JWT_SECRET))) {
+    throw new Error('JWT_SECRET must be configured with a unique value of at least 32 characters.');
+  }
+};
 
 export default dotenv;

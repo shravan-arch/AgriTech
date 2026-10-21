@@ -1,174 +1,132 @@
-import { userStore } from '../storage/userStore.js';
 import { generateToken } from '../utils/token.js';
-import { getDBStatus } from '../config/db.js';
 
-const EMAIL_REGEX = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const registerFields = new Set([
+  'name', 'email', 'password', 'farmName', 'farmSizeHectares', 'primaryCrops', 'role',
+]);
 
-// @desc    Register a new user
-// @route   POST /api/auth/register
-// @access  Public
-export const register = async (req, res, next) => {
-  try {
-    const { name, email, password, farmName, farmSizeHectares, primaryCrops } = req.body;
+const invalid = (res, message, fields) => res.status(400).json({
+  error: 'Validation Error',
+  message,
+  ...(fields ? { fields } : {}),
+});
 
-    // Validate required fields
-    if (!name || typeof name !== 'string' || !name.trim()) {
-      return res.status(400).json({
-        error: 'Validation Error',
-        message: 'A valid name is required.'
-      });
-    }
-
-    if (!email || !EMAIL_REGEX.test(email.trim())) {
-      return res.status(400).json({
-        error: 'Validation Error',
-        message: 'A valid email address is required.'
-      });
-    }
-
-    if (!password || typeof password !== 'string' || password.length < 6) {
-      return res.status(400).json({
-        error: 'Validation Error',
-        message: 'Password must be at least 6 characters long.'
-      });
-    }
-
-    const normalizedEmail = email.toLowerCase().trim();
-
-    // Check duplicate email
-    const exists = await userStore.emailExists(normalizedEmail);
-    if (exists) {
-      return res.status(409).json({
-        error: 'Conflict',
-        message: 'An account with this email address already exists.'
-      });
-    }
-
-    // Security: Enforce default role 'farmer' to prevent privilege escalation via registration
-    const user = await userStore.create({
-      name: name.trim(),
-      email: normalizedEmail,
-      password,
-      role: 'farmer',
-      farmName: (farmName && typeof farmName === 'string') ? farmName.trim() : 'My Farm',
-      farmSizeHectares: Number(farmSizeHectares) || 10,
-      primaryCrops: Array.isArray(primaryCrops) ? primaryCrops : ['Wheat']
-    });
-
-    const token = generateToken({
-      id: user._id || user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role
-    });
-
-    const userPayload = user.toJSON ? user.toJSON() : { ...user };
-    delete userPayload.password;
-
-    const dbStatus = getDBStatus();
-
-    return res.status(201).json({
-      success: true,
-      message: 'User registered successfully',
-      token,
-      user: userPayload,
-      storageMode: dbStatus.isConnected ? 'mongodb-atlas' : 'local-persistent-store'
-    });
-  } catch (error) {
-    next(error);
-  }
+const getSafeUser = (user) => {
+  const payload = user.toJSON ? user.toJSON() : { ...user };
+  delete payload.password;
+  return payload;
 };
 
-// @desc    Authenticate user & get token
-// @route   POST /api/auth/login
-// @access  Public
-export const login = async (req, res, next) => {
-  try {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({
-        error: 'Validation Error',
-        message: 'Both email and password are required.'
-      });
-    }
-
-    const normalizedEmail = email.toLowerCase().trim();
-    const user = await userStore.findByEmail(normalizedEmail);
-
-    if (!user) {
-      return res.status(401).json({
-        error: 'Unauthorized',
-        message: 'Invalid email or password credentials.'
-      });
-    }
-
-    const isMatch = await userStore.verifyPassword(user, password);
-    if (!isMatch) {
-      return res.status(401).json({
-        error: 'Unauthorized',
-        message: 'Invalid email or password credentials.'
-      });
-    }
-
-    const token = generateToken({
-      id: user._id || user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role
-    });
-
-    const userPayload = user.toJSON ? user.toJSON() : { ...user };
-    delete userPayload.password;
-
-    const dbStatus = getDBStatus();
-
-    return res.status(200).json({
-      success: true,
-      message: 'Login successful',
-      token,
-      user: userPayload,
-      storageMode: dbStatus.isConnected ? 'mongodb-atlas' : 'local-persistent-store'
-    });
-  } catch (error) {
-    next(error);
+const validateRegistration = (body) => {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return 'A JSON object is required.';
   }
+  const unknownFields = Object.keys(body).filter((key) => !registerFields.has(key));
+  if (unknownFields.length) return `Unsupported fields: ${unknownFields.join(', ')}.`;
+  if (typeof body.name !== 'string' || !body.name.trim() || body.name.trim().length > 50) {
+    return 'Name must contain 1 to 50 characters.';
+  }
+  if (typeof body.email !== 'string' || !EMAIL_REGEX.test(body.email.trim())) {
+    return 'A valid email address is required.';
+  }
+  if (typeof body.password !== 'string' || body.password.length < 10 || body.password.length > 128) {
+    return 'Password must contain 10 to 128 characters.';
+  }
+  if (body.farmName !== undefined &&
+      (typeof body.farmName !== 'string' || body.farmName.trim().length > 100)) {
+    return 'Farm name must be a string of at most 100 characters.';
+  }
+  if (body.farmSizeHectares !== undefined &&
+      (!Number.isFinite(Number(body.farmSizeHectares)) || Number(body.farmSizeHectares) <= 0)) {
+    return 'Farm size must be a positive number.';
+  }
+  if (body.primaryCrops !== undefined &&
+      (!Array.isArray(body.primaryCrops) ||
+        body.primaryCrops.length > 20 ||
+        body.primaryCrops.some((crop) => typeof crop !== 'string' || !crop.trim() || crop.length > 60))) {
+    return 'Primary crops must be a list of at most 20 non-empty names.';
+  }
+  return null;
 };
 
-// @desc    Get current authenticated user
-// @route   GET /api/auth/me
-// @access  Private
-export const getMe = async (req, res) => {
-  const userPayload = req.user.toJSON ? req.user.toJSON() : { ...req.user };
-  delete userPayload.password;
+export const createAuthController = (userStore) => ({
+  register: async (req, res, next) => {
+    try {
+      const validationMessage = validateRegistration(req.body);
+      if (validationMessage) return invalid(res, validationMessage);
 
-  res.status(200).json({
+      const user = await userStore.create({
+        name: req.body.name.trim(),
+        email: req.body.email.trim().toLowerCase(),
+        password: req.body.password,
+        role: 'farmer',
+        ...(req.body.farmName ? { farmName: req.body.farmName.trim() } : {}),
+        ...(req.body.farmSizeHectares !== undefined
+          ? { farmSizeHectares: Number(req.body.farmSizeHectares) }
+          : {}),
+        ...(req.body.primaryCrops ? { primaryCrops: req.body.primaryCrops.map((crop) => crop.trim()) } : {}),
+      });
+
+      const token = generateToken({ id: user._id || user.id });
+      return res.status(201).json({
+        success: true,
+        message: 'User registered successfully',
+        token,
+        user: getSafeUser(user),
+      });
+    } catch (error) {
+      return next(error);
+    }
+  },
+
+  login: async (req, res, next) => {
+    try {
+      const { email, password } = req.body || {};
+      if (typeof email !== 'string' || !EMAIL_REGEX.test(email.trim()) ||
+          typeof password !== 'string' || password.length < 1 || password.length > 128) {
+        return invalid(res, 'A valid email address and password are required.');
+      }
+
+      const user = await userStore.findByEmail(email.trim().toLowerCase());
+      if (!user || !(await userStore.verifyPassword(user, password))) {
+        return res.status(401).json({
+          error: 'Unauthorized',
+          message: 'Invalid email or password.',
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'Login successful',
+        token: generateToken({ id: user._id || user.id }),
+        user: getSafeUser(user),
+      });
+    } catch (error) {
+      return next(error);
+    }
+  },
+
+  getMe: (req, res) => res.status(200).json({
     success: true,
-    user: userPayload
-  });
-};
+    user: getSafeUser(req.user),
+  }),
 
-// @desc    Get user by ID (Protected by Ownership or Admin)
-// @route   GET /api/auth/user/:id
-// @access  Private (Owner or Admin)
-export const getUserById = async (req, res) => {
-  const user = await userStore.findById(req.params.id);
-  if (!user) {
-    return res.status(404).json({ error: 'Not Found', message: 'User not found' });
-  }
+  getUserById: async (req, res, next) => {
+    try {
+      const requesterId = req.user._id || req.user.id;
+      const user = await userStore.findOwnedById(
+        req.params.id,
+        requesterId,
+        req.user.role === 'admin'
+      );
+      if (!user) {
+        return res.status(404).json({ error: 'Not Found', message: 'User not found.' });
+      }
+      return res.status(200).json({ success: true, user: getSafeUser(user) });
+    } catch (error) {
+      return next(error);
+    }
+  },
+});
 
-  const userPayload = user.toJSON ? user.toJSON() : { ...user };
-  delete userPayload.password;
-
-  res.status(200).json({
-    success: true,
-    user: userPayload
-  });
-};
-
-export default {
-  register,
-  login,
-  getMe,
-  getUserById
-};
+export default createAuthController;

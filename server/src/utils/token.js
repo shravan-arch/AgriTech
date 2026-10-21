@@ -1,23 +1,16 @@
 import jwt from 'jsonwebtoken';
 
 const getJwtSecret = () => {
-  const secret = process.env.JWT_SECRET;
-  if (!secret) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('[Security] JWT_SECRET environment variable must be set in production!');
-    }
-    console.warn('[Security Warning] JWT_SECRET is not set in environment. Using development fallback key.');
-    return 'agritech_mvp_dev_secret_replace_in_env_2026';
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET must be configured before issuing or verifying tokens.');
   }
-  return secret;
+  return process.env.JWT_SECRET;
 };
-
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
 export const generateToken = (payload) => {
   const secret = getJwtSecret();
   return jwt.sign(payload, secret, {
-    expiresIn: JWT_EXPIRES_IN,
+    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
   });
 };
 

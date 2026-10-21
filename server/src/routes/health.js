@@ -4,26 +4,21 @@ import { getDBStatus } from '../config/db.js';
 const router = Router();
 
 router.get('/', (req, res) => {
-  const dbStatus = getDBStatus();
+  const storage = getDBStatus();
+  const available = storage.isAvailable;
+  const status = !available
+    ? 'unavailable'
+    : storage.mode === 'mongodb'
+      ? 'ok'
+      : 'degraded';
 
-  res.status(200).json({
-    status: 'ok',
-    message: 'AgriTech API Server is operational',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development',
-    database: {
-      connected: dbStatus.isConnected,
-      mode: dbStatus.mode,
-      targetCluster: dbStatus.target?.host || null,
-      targetDatabase: dbStatus.target?.database || null,
-      diagnostics: dbStatus.diagnostics
-    },
+  return res.status(available ? 200 : 503).json({
+    status,
     services: {
-      auth: 'active',
-      health: 'active',
-      persistence: dbStatus.isConnected ? 'remote-mongodb' : 'file-backed-store'
-    }
+      api: 'active',
+      persistence: storage.mode,
+    },
+    timestamp: new Date().toISOString(),
   });
 });
 

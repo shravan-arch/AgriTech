@@ -23,7 +23,7 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
       required: [true, 'Please provide a password'],
-      minlength: [6, 'Password must be at least 6 characters']
+      minlength: [10, 'Password must be at least 10 characters'],
     },
     role: {
       type: String,
@@ -33,19 +33,19 @@ const userSchema = new mongoose.Schema(
     farmName: {
       type: String,
       trim: true,
-      default: 'Green Valley Farm'
+      maxlength: [100, 'Farm name cannot exceed 100 characters']
     },
     farmSizeHectares: {
       type: Number,
-      default: 10
+      min: [0.01, 'Farm size must be greater than zero']
     },
     primaryCrops: {
       type: [String],
-      default: ['Wheat', 'Corn', 'Soybeans']
+      default: []
     },
     location: {
-      region: { type: String, default: 'Central Plains' },
-      country: { type: String, default: 'India' }
+      region: { type: String, trim: true },
+      country: { type: String, trim: true }
     }
   },
   {
@@ -54,13 +54,10 @@ const userSchema = new mongoose.Schema(
 );
 
 // Hash password before saving
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) {
-    return next();
-  }
+userSchema.pre('save', async function () {
+  if (!this.isModified('password')) return;
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
-  next();
 });
 
 // Compare password method
