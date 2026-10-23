@@ -19,6 +19,8 @@ const farmSchema = new mongoose.Schema(
       region: { type: String, trim: true, maxlength: 100 },
       country: { type: String, trim: true, maxlength: 100 },
       city: { type: String, trim: true, maxlength: 100 },
+      latitude: { type: Number, min: -90, max: 90 },
+      longitude: { type: Number, min: -180, max: 180 },
     },
   },
   { timestamps: true }

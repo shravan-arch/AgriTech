@@ -7,17 +7,21 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "test": "node --test tests/auth.test.js",
-    "test:integration": "node --test tests/integration/farms.integration.test.js"
+    "test": "node --test tests/*.test.js",
+    "test:integration": "node --test tests/integration/farms.integration.test.js",
+    "bootstrap:admin": "node src/scripts/bootstrapAdmin.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "google-auth-library": "^11.3.1",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.9.5",
-    "morgan": "^1.10.0"
+    "morgan": "^1.10.0",
+    "multer": "^2.4.0",
+    "nodemailer": "^10.1.7"
   },
   "devDependencies": {
     "nodemon": "^3.1.9"

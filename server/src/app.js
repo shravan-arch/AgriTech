@@ -5,14 +5,28 @@ import morgan from 'morgan';
 import healthRouter from './routes/health.js';
 import { createAuthRouter } from './routes/auth.js';
 import { createFarmRouter } from './routes/farms.js';
+import { createFinanceRouter } from './routes/finances.js';
+import { createInventoryRouter } from './routes/inventory.js';
+import { createSensorRouter } from './routes/sensors.js';
+import { createNotificationRouter } from './routes/notifications.js';
+import { createWeatherRouter } from './routes/weather.js';
+import { createAnalyticsRouter } from './routes/analytics.js';
+import { createAdminRouter } from './routes/admin.js';
+import { createAdminController } from './controllers/adminController.js';
 import { userStore as defaultUserStore } from './storage/userStore.js';
 import { farmStore as defaultFarmStore } from './storage/farmStore.js';
 
 export const createApp = ({
   userStore = defaultUserStore,
   farmStore = defaultFarmStore,
+  photoStorage,
+  weatherService,
+  googleAuthService,
+  emailService,
+  rateLimiter,
 } = {}) => {
   const app = express();
+  app.set('trust proxy', 1);
   const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
     .split(',')
     .map((origin) => origin.trim())
@@ -39,8 +53,15 @@ export const createApp = ({
   if (process.env.NODE_ENV !== 'test') app.use(morgan('combined'));
 
   app.use('/api/health', healthRouter);
-  app.use('/api/auth', createAuthRouter(userStore));
-  app.use('/api/farms', createFarmRouter(farmStore, userStore));
+  app.use('/api/auth', createAuthRouter(userStore, { googleAuthService, emailService, rateLimiter }));
+  app.use('/api/farms', createFarmRouter(farmStore, userStore, photoStorage));
+  app.use('/api/finances', createFinanceRouter(farmStore, userStore));
+  app.use('/api/inventory', createInventoryRouter(farmStore, userStore));
+  app.use('/api/sensors', createSensorRouter(farmStore, userStore));
+  app.use('/api/notifications', createNotificationRouter(farmStore, userStore));
+  app.use('/api/weather', createWeatherRouter(farmStore, userStore, weatherService));
+  app.use('/api/analytics', createAnalyticsRouter(farmStore, userStore));
+  app.use('/api/admin', createAdminRouter(createAdminController(userStore)));
 
   app.use((req, res) => res.status(404).json({
     error: 'Not Found',

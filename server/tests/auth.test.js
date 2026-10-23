@@ -20,6 +20,10 @@ const createMemoryStores = () => {
   const users = new Map();
   const farms = new Map();
   const fields = new Map();
+  const cropCycles = new Map();
+  const farmActivities = new Map();
+  const tasks = new Map();
+  const fieldPhotos = new Map();
   let nextId = 1;
   const id = () => (nextId++).toString(16).padStart(24, '0');
 
@@ -84,6 +88,9 @@ const createMemoryStores = () => {
         return { deleted: false, hasFields: true };
       }
       farms.delete(farmId);
+      for (const [tId, task] of tasks.entries()) {
+        if (task.farmId === farmId) tasks.delete(tId);
+      }
       return { deleted: true, hasFields: false };
     },
     async listFields(ownerId, farmId) {
@@ -106,7 +113,295 @@ const createMemoryStores = () => {
       const field = fields.get(fieldId);
       if (!field || field.ownerId !== String(ownerId)) return null;
       fields.delete(fieldId);
+      for (const [cId, cycle] of cropCycles.entries()) {
+        if (cycle.fieldId === fieldId) cropCycles.delete(cId);
+      }
+      for (const [aId, act] of farmActivities.entries()) {
+        if (act.fieldId === fieldId) farmActivities.delete(aId);
+      }
+      for (const [tId, task] of tasks.entries()) {
+        if (task.fieldId === fieldId) tasks.delete(tId);
+      }
+      for (const [pId, photo] of fieldPhotos.entries()) {
+        if (photo.fieldId === fieldId) fieldPhotos.delete(pId);
+      }
       return field;
+    },
+    async listCropCycles(ownerId, filters = {}) {
+      return [...cropCycles.values()].filter((cycle) => {
+        if (cycle.ownerId !== String(ownerId)) return false;
+        if (filters.farmId && cycle.farmId !== String(filters.farmId)) return false;
+        if (filters.fieldId && cycle.fieldId !== String(filters.fieldId)) return false;
+        if (filters.status && cycle.status !== filters.status) return false;
+        return true;
+      });
+    },
+    async findCropCycle(ownerId, cycleId, options = {}) {
+      const cycle = cropCycles.get(cycleId);
+      if (!cycle || cycle.ownerId !== String(ownerId)) return null;
+      if (options.farmId && cycle.farmId !== String(options.farmId)) return null;
+      if (options.fieldId && cycle.fieldId !== String(options.fieldId)) return null;
+      return cycle;
+    },
+    async createCropCycle(ownerId, farmId, fieldId, values) {
+      const farm = await this.findFarm(ownerId, farmId);
+      if (!farm) return { notFound: true, resource: 'farm' };
+      const field = fields.get(fieldId);
+      if (!field || field.ownerId !== String(ownerId) || field.farmId !== String(farmId)) {
+        return { notFound: true, resource: 'field' };
+      }
+      const targetStatus = values.status || 'active';
+      if (targetStatus === 'active') {
+        const existingActive = [...cropCycles.values()].find(
+          (c) => c.ownerId === String(ownerId) && c.fieldId === String(fieldId) && c.status === 'active'
+        );
+        if (existingActive) {
+          return { conflict: true, message: 'An active crop cycle already exists on this field.' };
+        }
+      }
+      const cycle = {
+        status: targetStatus,
+        stage: values.stage || 'sowing',
+        ...values,
+        _id: id(),
+        farmId,
+        fieldId,
+        ownerId: String(ownerId),
+      };
+      cropCycles.set(cycle._id, cycle);
+      return { cycle };
+    },
+    async updateCropCycle(ownerId, cycleId, values, options = {}) {
+      const cycle = await this.findCropCycle(ownerId, cycleId, options);
+      if (!cycle) return null;
+      const targetStatus = values.status !== undefined ? values.status : cycle.status;
+      if (targetStatus === 'active' && cycle.status !== 'active') {
+        const existingActive = [...cropCycles.values()].find(
+          (c) =>
+            c._id !== cycleId &&
+            c.ownerId === String(ownerId) &&
+            c.fieldId === String(cycle.fieldId) &&
+            c.status === 'active'
+        );
+        if (existingActive) {
+          return { conflict: true, message: 'An active crop cycle already exists on this field.' };
+        }
+      }
+      Object.assign(cycle, values);
+      return { cycle };
+    },
+    async deleteCropCycle(ownerId, cycleId, options = {}) {
+      const cycle = await this.findCropCycle(ownerId, cycleId, options);
+      if (!cycle) return null;
+      cropCycles.delete(cycleId);
+      for (const photo of fieldPhotos.values()) {
+        if (photo.cropCycleId === cycleId) photo.cropCycleId = undefined;
+      }
+      return cycle;
+    },
+
+    // FarmActivity
+    async listActivities(ownerId, filters = {}) {
+      return [...farmActivities.values()].filter((act) => {
+        if (act.ownerId !== String(ownerId)) return false;
+        if (filters.farmId && act.farmId !== String(filters.farmId)) return false;
+        if (filters.fieldId && act.fieldId !== String(filters.fieldId)) return false;
+        if (filters.cropCycleId && act.cropCycleId !== String(filters.cropCycleId)) return false;
+        if (filters.type && act.type !== filters.type) return false;
+        if (filters.startDate && new Date(act.date) < new Date(filters.startDate)) return false;
+        if (filters.endDate && new Date(act.date) > new Date(filters.endDate)) return false;
+        return true;
+      }).sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+    },
+    async findActivity(ownerId, activityId, options = {}) {
+      const act = farmActivities.get(activityId);
+      if (!act || act.ownerId !== String(ownerId)) return null;
+      if (options.farmId && act.farmId !== String(options.farmId)) return null;
+      if (options.fieldId && act.fieldId !== String(options.fieldId)) return null;
+      return act;
+    },
+    async createActivity(ownerId, farmId, fieldId, values) {
+      const farm = await this.findFarm(ownerId, farmId);
+      if (!farm) return { notFound: true, resource: 'farm' };
+      const field = fields.get(fieldId);
+      if (!field || field.ownerId !== String(ownerId) || field.farmId !== String(farmId)) {
+        return { notFound: true, resource: 'field' };
+      }
+      if (values.cropCycleId) {
+        const cycle = cropCycles.get(values.cropCycleId);
+        if (!cycle || cycle.ownerId !== String(ownerId) || cycle.farmId !== String(farmId) || cycle.fieldId !== String(fieldId)) {
+          return { notFound: true, resource: 'cropCycle' };
+        }
+      }
+      const activity = {
+        ...values,
+        _id: id(),
+        farmId,
+        fieldId,
+        ownerId: String(ownerId),
+      };
+      farmActivities.set(activity._id, activity);
+      return { activity };
+    },
+    async updateActivity(ownerId, activityId, values, options = {}) {
+      const act = await this.findActivity(ownerId, activityId, options);
+      if (!act) return null;
+      if (values.cropCycleId) {
+        const cycle = cropCycles.get(values.cropCycleId);
+        if (!cycle || cycle.ownerId !== String(ownerId) || cycle.farmId !== String(act.farmId) || cycle.fieldId !== String(act.fieldId)) {
+          return { notFound: true, resource: 'cropCycle' };
+        }
+      }
+      Object.assign(act, values);
+      return { activity: act };
+    },
+    async deleteActivity(ownerId, activityId, options = {}) {
+      const act = await this.findActivity(ownerId, activityId, options);
+      if (!act) return null;
+      farmActivities.delete(activityId);
+      return act;
+    },
+
+    // Tasks
+    async listTasks(ownerId, filters = {}) {
+      const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      const todayEnd = todayStart + 86400000 - 1;
+
+      return [...tasks.values()].filter((task) => {
+        if (task.ownerId !== String(ownerId)) return false;
+        if (filters.farmId && task.farmId !== String(filters.farmId)) return false;
+        if (filters.fieldId && task.fieldId !== String(filters.fieldId)) return false;
+        if (filters.cropCycleId && task.cropCycleId !== String(filters.cropCycleId)) return false;
+        if (filters.status && task.status !== filters.status) return false;
+        if (filters.type && task.type !== filters.type) return false;
+        if (filters.priority && task.priority !== filters.priority) return false;
+
+        const dueTime = new Date(task.dueDate).getTime();
+        if (filters.due === 'overdue') {
+          if (dueTime >= todayStart) return false;
+          if (!filters.status && (task.status === 'completed' || task.status === 'cancelled')) return false;
+        } else if (filters.due === 'today') {
+          if (dueTime < todayStart || dueTime > todayEnd) return false;
+        } else if (filters.due === 'upcoming') {
+          if (dueTime < todayStart) return false;
+        }
+        return true;
+      }).sort((a, b) => new Date(a.dueDate || 0) - new Date(b.dueDate || 0));
+    },
+    async findTask(ownerId, taskId, options = {}) {
+      const task = tasks.get(taskId);
+      if (!task || task.ownerId !== String(ownerId)) return null;
+      if (options.farmId && task.farmId !== String(options.farmId)) return null;
+      if (options.fieldId && task.fieldId !== String(options.fieldId)) return null;
+      return task;
+    },
+    async createTask(ownerId, values) {
+      if (values.farmId) {
+        const farm = await this.findFarm(ownerId, values.farmId);
+        if (!farm) return { notFound: true, resource: 'farm' };
+      }
+      if (values.fieldId) {
+        const field = fields.get(values.fieldId);
+        if (!field || field.ownerId !== String(ownerId) || (values.farmId && field.farmId !== String(values.farmId))) {
+          return { notFound: true, resource: 'field' };
+        }
+      }
+      if (values.cropCycleId) {
+        const cycle = cropCycles.get(values.cropCycleId);
+        if (!cycle || cycle.ownerId !== String(ownerId)) {
+          return { notFound: true, resource: 'cropCycle' };
+        }
+      }
+      const task = {
+        priority: 'medium',
+        status: 'pending',
+        type: 'general',
+        ...values,
+        _id: id(),
+        ownerId: String(ownerId),
+        completedAt: values.status === 'completed' ? new Date().toISOString() : undefined,
+      };
+      tasks.set(task._id, task);
+      return { task };
+    },
+    async updateTask(ownerId, taskId, values, options = {}) {
+      const task = await this.findTask(ownerId, taskId, options);
+      if (!task) return null;
+      if (values.status === 'completed' && !task.completedAt) {
+        task.completedAt = new Date().toISOString();
+      } else if (values.status && values.status !== 'completed') {
+        task.completedAt = null;
+      }
+      Object.assign(task, values);
+      return { task };
+    },
+    async deleteTask(ownerId, taskId, options = {}) {
+      const task = await this.findTask(ownerId, taskId, options);
+      if (!task) return null;
+      tasks.delete(taskId);
+      return task;
+    },
+
+    // FieldPhoto methods
+    async listPhotos(ownerId, filters = {}) {
+      return [...fieldPhotos.values()]
+        .filter((photo) => {
+          if (photo.ownerId !== String(ownerId)) return false;
+          if (filters.farmId && photo.farmId !== String(filters.farmId)) return false;
+          if (filters.fieldId && photo.fieldId !== String(filters.fieldId)) return false;
+          if (filters.cropCycleId && photo.cropCycleId !== String(filters.cropCycleId)) return false;
+          return true;
+        })
+        .sort((a, b) => new Date(b.capturedAt || 0) - new Date(a.capturedAt || 0));
+    },
+    async findPhoto(ownerId, photoId, options = {}) {
+      const photo = fieldPhotos.get(photoId);
+      if (!photo || photo.ownerId !== String(ownerId)) return null;
+      if (options.farmId && photo.farmId !== String(options.farmId)) return null;
+      if (options.fieldId && photo.fieldId !== String(options.fieldId)) return null;
+      return photo;
+    },
+    async createPhoto(ownerId, values) {
+      const farm = await this.findFarm(ownerId, values.farmId);
+      if (!farm) return { notFound: true, resource: 'farm' };
+      const field = fields.get(values.fieldId);
+      if (!field || field.ownerId !== String(ownerId) || field.farmId !== String(values.farmId)) {
+        return { notFound: true, resource: 'field' };
+      }
+      if (values.cropCycleId) {
+        const cycle = cropCycles.get(values.cropCycleId);
+        if (!cycle || cycle.ownerId !== String(ownerId)) {
+          return { notFound: true, resource: 'cropCycle' };
+        }
+      }
+      const photo = {
+        ...values,
+        _id: id(),
+        ownerId: String(ownerId),
+        capturedAt: values.capturedAt ? new Date(values.capturedAt).toISOString() : new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+      };
+      fieldPhotos.set(photo._id, photo);
+      return { photo };
+    },
+    async updatePhoto(ownerId, photoId, values, options = {}) {
+      const photo = await this.findPhoto(ownerId, photoId, options);
+      if (!photo) return null;
+      if (values.cropCycleId) {
+        const cycle = cropCycles.get(values.cropCycleId);
+        if (!cycle || cycle.ownerId !== String(ownerId)) {
+          return { notFound: true, resource: 'cropCycle' };
+        }
+      }
+      Object.assign(photo, values);
+      return { photo };
+    },
+    async deletePhoto(ownerId, photoId, options = {}) {
+      const photo = await this.findPhoto(ownerId, photoId, options);
+      if (!photo) return null;
+      fieldPhotos.delete(photoId);
+      return photo;
     },
   };
 
@@ -135,6 +430,43 @@ const request = async (method, route, body, token) => {
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
   });
   return { status: response.status, data: await response.json() };
+};
+
+const uploadPhotoRequest = async (route, { buffer, filename = 'test.jpg', fields = {} }, token) => {
+  const formData = new FormData();
+  if (buffer) {
+    const blob = new Blob([buffer]);
+    formData.append('photo', blob, filename);
+  }
+  for (const [key, value] of Object.entries(fields)) {
+    formData.append(key, value);
+  }
+  const headers = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const response = await fetch(`${baseUrl}${route}`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+  return { status: response.status, data: await response.json() };
+};
+
+const getPhotoFileRequest = async (route, token) => {
+  const headers = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const response = await fetch(`${baseUrl}${route}`, {
+    method: 'GET',
+    headers,
+  });
+  return {
+    status: response.status,
+    contentType: response.headers.get('content-type'),
+    contentLength: response.headers.get('content-length'),
+    cacheControl: response.headers.get('cache-control'),
+    buffer: response.ok ? Buffer.from(await response.arrayBuffer()) : null,
+    data: !response.ok ? await response.json().catch(() => null) : null,
+  };
 };
 
 before(async () => {
@@ -443,6 +775,352 @@ describe('Authentication and owner-scoped farm management', () => {
     assert.equal(ownerFields.data.fields[0].name, 'East Plot');
   });
 
+  test('validates, creates, lists, updates, and completes crop cycles on owned fields', async () => {
+    // 1. Validation errors
+    const missingName = await request('POST', `/api/farms/${farmId}/fields/${fieldId}/crop-cycles`, {
+      cropName: '',
+      plantingDate: '2026-10-01',
+    }, userToken);
+    assert.equal(missingName.status, 400);
+
+    const invalidDateOrder = await request('POST', `/api/farms/${farmId}/fields/${fieldId}/crop-cycles`, {
+      cropName: 'Wheat',
+      plantingDate: '2026-10-15',
+      expectedHarvestDate: '2026-09-01', // earlier than planting!
+    }, userToken);
+    assert.equal(invalidDateOrder.status, 400);
+
+    const invalidStage = await request('POST', `/api/farms/${farmId}/fields/${fieldId}/crop-cycles`, {
+      cropName: 'Wheat',
+      plantingDate: '2026-10-01',
+      stage: 'unknown_stage',
+    }, userToken);
+    assert.equal(invalidStage.status, 400);
+
+    // 2. Reject cycle creation on mismatched farm/field
+    const mismatchedFarm = await request('POST', `/api/farms/${otherFarmId}/fields/${fieldId}/crop-cycles`, {
+      cropName: 'Wheat',
+      plantingDate: '2026-10-01',
+    }, userToken);
+    assert.equal(mismatchedFarm.status, 404);
+
+    // 3. Create valid active cycle
+    const created = await request('POST', `/api/farms/${farmId}/fields/${fieldId}/crop-cycles`, {
+      cropName: 'Wheat',
+      variety: 'Sonalika',
+      season: 'Rabi',
+      plantingDate: '2026-10-01',
+      expectedHarvestDate: '2027-02-15',
+      stage: 'sowing',
+      notes: 'Initial test sowing',
+    }, userToken);
+    assert.equal(created.status, 201);
+    const cycleId = created.data.cropCycle._id;
+    assert.equal(created.data.cropCycle.cropName, 'Wheat');
+    assert.equal(created.data.cropCycle.stage, 'sowing');
+    assert.equal(created.data.cropCycle.status, 'active');
+
+    // 4. Prevent second active cycle on the same field
+    const duplicateActive = await request('POST', `/api/farms/${farmId}/fields/${fieldId}/crop-cycles`, {
+      cropName: 'Mustard',
+      plantingDate: '2026-10-05',
+    }, userToken);
+    assert.equal(duplicateActive.status, 409);
+
+    // 5. List cycles for field and rollup endpoint
+    const fieldCycles = await request('GET', `/api/farms/${farmId}/fields/${fieldId}/crop-cycles`, undefined, userToken);
+    assert.equal(fieldCycles.status, 200);
+    assert.equal(fieldCycles.data.cropCycles.length, 1);
+    assert.equal(fieldCycles.data.cropCycles[0]._id, cycleId);
+
+    const allActive = await request('GET', '/api/farms/crop-cycles?status=active', undefined, userToken);
+    assert.equal(allActive.status, 200);
+    assert.equal(allActive.data.cropCycles.length, 1);
+    assert.equal(allActive.data.cropCycles[0]._id, cycleId);
+
+    // 6. Cross-account access denied
+    const otherView = await request('GET', `/api/farms/${farmId}/fields/${fieldId}/crop-cycles`, undefined, otherToken);
+    assert.equal(otherView.status, 404);
+    const otherGet = await request('GET', `/api/farms/crop-cycles/${cycleId}`, undefined, otherToken);
+    assert.equal(otherGet.status, 404);
+    const otherPatch = await request('PATCH', `/api/farms/crop-cycles/${cycleId}`, { stage: 'flowering' }, otherToken);
+    assert.equal(otherPatch.status, 404);
+    const otherDelete = await request('DELETE', `/api/farms/crop-cycles/${cycleId}`, undefined, otherToken);
+    assert.equal(otherDelete.status, 404);
+
+    // 7. Update lifecycle stage
+    const updateStage = await request('PATCH', `/api/farms/${farmId}/fields/${fieldId}/crop-cycles/${cycleId}`, {
+      stage: 'vegetative',
+    }, userToken);
+    assert.equal(updateStage.status, 200);
+    assert.equal(updateStage.data.cropCycle.stage, 'vegetative');
+
+    // 8. Mark cycle completed with harvest date
+    const completeCycle = await request('PATCH', `/api/farms/crop-cycles/${cycleId}`, {
+      stage: 'harvested',
+      status: 'completed',
+      harvestDate: '2027-02-14',
+    }, userToken);
+    assert.equal(completeCycle.status, 200);
+    assert.equal(completeCycle.data.cropCycle.status, 'completed');
+    assert.equal(completeCycle.data.cropCycle.stage, 'harvested');
+
+    // 9. Now that previous cycle is completed, allow a new active cycle on the same field
+    const newCycle = await request('POST', `/api/farms/${farmId}/fields/${fieldId}/crop-cycles`, {
+      cropName: 'Moong',
+      season: 'Zaid',
+      plantingDate: '2027-03-01',
+      stage: 'sowing',
+    }, userToken);
+    assert.equal(newCycle.status, 201);
+    const newCycleId = newCycle.data.cropCycle._id;
+
+    // Field now has 2 total cycles (1 active, 1 completed historical)
+    const historyCycles = await request('GET', `/api/farms/${farmId}/fields/${fieldId}/crop-cycles`, undefined, userToken);
+    assert.equal(historyCycles.data.cropCycles.length, 2);
+
+    // Delete the new cycle
+    const deleteCycle = await request('DELETE', `/api/farms/crop-cycles/${newCycleId}`, undefined, userToken);
+    assert.equal(deleteCycle.status, 200);
+  });
+
+  test('FarmActivity and Task schemas validate required fields and boundaries', async () => {
+    const mongoose = await import('mongoose');
+    const { default: FarmActivity } = await import('../src/models/FarmActivity.js');
+    const { default: Task } = await import('../src/models/Task.js');
+    const ownerId = new mongoose.default.Types.ObjectId();
+    const farmId = new mongoose.default.Types.ObjectId();
+    const fieldId = new mongoose.default.Types.ObjectId();
+
+    const invalidActivity = new FarmActivity({
+      ownerId,
+      farmId,
+      fieldId,
+      type: 'invalid_type',
+      date: new Date(),
+    });
+    await assert.rejects(invalidActivity.validate(), /Invalid activity type/);
+
+    const negativeCostActivity = new FarmActivity({
+      ownerId,
+      farmId,
+      fieldId,
+      type: 'irrigation',
+      date: new Date(),
+      cost: -50,
+    });
+    await assert.rejects(negativeCostActivity.validate(), /Cost must be non-negative/);
+
+    const invalidTask = new Task({
+      ownerId,
+      title: '',
+      dueDate: new Date(),
+    });
+    await assert.rejects(invalidTask.validate(), /Task title is required/);
+
+    const invalidTaskPriority = new Task({
+      ownerId,
+      title: 'Water crop',
+      dueDate: new Date(),
+      priority: 'super_urgent',
+    });
+    await assert.rejects(invalidTaskPriority.validate(), /Invalid task priority/);
+  });
+
+  test('validates, creates, filters, updates, and completes farm activities and operational tasks with owner isolation', async () => {
+    // 1. Activity validation
+    const missingType = await request('POST', `/api/farms/${farmId}/fields/${fieldId}/activities`, {
+      date: '2026-10-21',
+    }, userToken);
+    assert.equal(missingType.status, 400);
+
+    const invalidActType = await request('POST', `/api/farms/${farmId}/fields/${fieldId}/activities`, {
+      type: 'skydiving',
+      date: '2026-10-21',
+    }, userToken);
+    assert.equal(invalidActType.status, 400);
+
+    const invalidCost = await request('POST', `/api/farms/${farmId}/fields/${fieldId}/activities`, {
+      type: 'fertilizer',
+      date: '2026-10-21',
+      cost: -10,
+    }, userToken);
+    assert.equal(invalidCost.status, 400);
+
+    // Invalid foreign ID format
+    const malformedForeignId = await request('POST', `/api/farms/not-an-id/fields/${fieldId}/activities`, {
+      type: 'irrigation',
+      date: '2026-10-21',
+    }, userToken);
+    assert.equal(malformedForeignId.status, 400);
+
+    const malformedTaskForeignId = await request('POST', '/api/farms/tasks', {
+      title: 'Inspect pump',
+      dueDate: '2026-10-25',
+      farmId: 'invalid-id-format',
+    }, userToken);
+    assert.equal(malformedTaskForeignId.status, 400);
+
+    // Mismatched farm/field
+    const mismatchedFarm = await request('POST', `/api/farms/${otherFarmId}/fields/${fieldId}/activities`, {
+      type: 'irrigation',
+      date: '2026-10-21',
+    }, userToken);
+    assert.equal(mismatchedFarm.status, 404);
+
+    // 2. Create valid activity
+    const activityRes = await request('POST', `/api/farms/${farmId}/fields/${fieldId}/activities`, {
+      type: 'fertilizer',
+      date: '2026-10-21',
+      notes: 'Applied urea to wheat plot',
+      performedBy: 'Ramesh',
+      cost: 450,
+      inputs: [{ name: 'Urea', quantity: 25, unit: 'kg' }],
+    }, userToken);
+    assert.equal(activityRes.status, 201);
+    const activityId = activityRes.data.activity._id;
+    assert.equal(activityRes.data.activity.type, 'fertilizer');
+    assert.equal(activityRes.data.activity.inputs[0].name, 'Urea');
+    assert.equal(activityRes.data.activity.inputs[0].quantity, 25);
+
+    // 3. List activities (field-level and owner-level)
+    const fieldActivities = await request('GET', `/api/farms/${farmId}/fields/${fieldId}/activities`, undefined, userToken);
+    assert.equal(fieldActivities.status, 200);
+    assert.equal(fieldActivities.data.activities.length, 1);
+    assert.equal(fieldActivities.data.activities[0]._id, activityId);
+
+    const allActivities = await request('GET', '/api/farms/activities?type=fertilizer', undefined, userToken);
+    assert.equal(allActivities.status, 200);
+    assert.equal(allActivities.data.activities.length, 1);
+
+    // 4. Activity owner isolation
+    const otherActList = await request('GET', `/api/farms/${farmId}/fields/${fieldId}/activities`, undefined, otherToken);
+    assert.equal(otherActList.status, 404);
+    const otherActGet = await request('GET', `/api/farms/activities/${activityId}`, undefined, otherToken);
+    assert.equal(otherActGet.status, 404);
+    const otherActPatch = await request('PATCH', `/api/farms/activities/${activityId}`, { notes: 'Hacked' }, otherToken);
+    assert.equal(otherActPatch.status, 404);
+    const otherActDelete = await request('DELETE', `/api/farms/activities/${activityId}`, undefined, otherToken);
+    assert.equal(otherActDelete.status, 404);
+
+    // 5. Update activity
+    const updatedAct = await request('PATCH', `/api/farms/activities/${activityId}`, {
+      notes: 'Updated application notes',
+      cost: 500,
+    }, userToken);
+    assert.equal(updatedAct.status, 200);
+    assert.equal(updatedAct.data.activity.notes, 'Updated application notes');
+    assert.equal(updatedAct.data.activity.cost, 500);
+
+    // 6. Task validation
+    const missingTitle = await request('POST', '/api/farms/tasks', {
+      dueDate: '2026-10-25',
+    }, userToken);
+    assert.equal(missingTitle.status, 400);
+
+    const invalidPriority = await request('POST', '/api/farms/tasks', {
+      title: 'Valid task',
+      dueDate: '2026-10-25',
+      priority: 'critical_emergency',
+    }, userToken);
+    assert.equal(invalidPriority.status, 400);
+
+    // Mismatched task farm
+    const mismatchedTaskFarm = await request('POST', '/api/farms/tasks', {
+      title: 'Inspect irrigation pump',
+      dueDate: '2026-10-25',
+      farmId: otherFarmId,
+    }, userToken);
+    assert.equal(mismatchedTaskFarm.status, 404);
+
+    // 7. Create overdue, due-today, and upcoming tasks
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    const today = new Date().toISOString().split('T')[0];
+    const nextWeek = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
+
+    const overdueTask = await request('POST', '/api/farms/tasks', {
+      title: 'Fix drip nozzle leak',
+      type: 'irrigation',
+      dueDate: yesterday,
+      priority: 'high',
+      farmId,
+      fieldId,
+    }, userToken);
+    assert.equal(overdueTask.status, 201);
+    const overdueTaskId = overdueTask.data.task._id;
+
+    const todayTask = await request('POST', '/api/farms/tasks', {
+      title: 'Inspect wheat plot moisture',
+      type: 'inspection',
+      dueDate: today,
+      priority: 'medium',
+      farmId,
+      fieldId,
+    }, userToken);
+    assert.equal(todayTask.status, 201);
+    const todayTaskId = todayTask.data.task._id;
+
+    const upcomingTask = await request('POST', '/api/farms/tasks', {
+      title: 'Pre-harvest weed inspection',
+      type: 'inspection',
+      dueDate: nextWeek,
+      priority: 'low',
+      farmId,
+      fieldId,
+    }, userToken);
+    assert.equal(upcomingTask.status, 201);
+    const upcomingTaskId = upcomingTask.data.task._id;
+
+    // 8. Due filters
+    const overdueList = await request('GET', '/api/farms/tasks?due=overdue', undefined, userToken);
+    assert.equal(overdueList.status, 200);
+    assert.ok(overdueList.data.tasks.some((t) => t._id === overdueTaskId));
+    assert.ok(!overdueList.data.tasks.some((t) => t._id === upcomingTaskId));
+
+    const todayList = await request('GET', '/api/farms/tasks?due=today', undefined, userToken);
+    assert.equal(todayList.status, 200);
+    assert.ok(todayList.data.tasks.some((t) => t._id === todayTaskId));
+
+    const upcomingList = await request('GET', '/api/farms/tasks?due=upcoming', undefined, userToken);
+    assert.equal(upcomingList.status, 200);
+    assert.ok(upcomingList.data.tasks.some((t) => t._id === upcomingTaskId));
+
+    // 9. Task owner isolation
+    const otherTaskGet = await request('GET', `/api/farms/tasks/${todayTaskId}`, undefined, otherToken);
+    assert.equal(otherTaskGet.status, 404);
+    const otherTaskComplete = await request('POST', `/api/farms/tasks/${todayTaskId}/complete`, {}, otherToken);
+    assert.equal(otherTaskComplete.status, 404);
+    const otherTaskPatch = await request('PATCH', `/api/farms/tasks/${todayTaskId}`, { title: 'Unauthorized' }, otherToken);
+    assert.equal(otherTaskPatch.status, 404);
+    const otherTaskDelete = await request('DELETE', `/api/farms/tasks/${todayTaskId}`, undefined, otherToken);
+    assert.equal(otherTaskDelete.status, 404);
+
+    // 10. Complete task via dedicated complete endpoint
+    const initialActivityCount = (await request('GET', '/api/farms/activities', undefined, userToken)).data.activities.length;
+    const completed = await request('POST', `/api/farms/tasks/${todayTaskId}/complete`, {}, userToken);
+    assert.equal(completed.status, 200);
+    assert.equal(completed.data.task.status, 'completed');
+    assert.ok(completed.data.task.completedAt);
+
+    // Verify task completion does NOT create a FarmActivity automatically (distinctness rule)
+    const afterActivityCount = (await request('GET', '/api/farms/activities', undefined, userToken)).data.activities.length;
+    assert.equal(afterActivityCount, initialActivityCount);
+
+    // 11. Reopen task clears completedAt
+    const reopened = await request('PATCH', `/api/farms/tasks/${todayTaskId}`, {
+      status: 'in_progress',
+    }, userToken);
+    assert.equal(reopened.status, 200);
+    assert.equal(reopened.data.task.status, 'in_progress');
+    assert.equal(reopened.data.task.completedAt, null);
+
+    // Cleanup created test tasks and activities
+    assert.equal((await request('DELETE', `/api/farms/tasks/${overdueTaskId}`, undefined, userToken)).status, 200);
+    assert.equal((await request('DELETE', `/api/farms/tasks/${todayTaskId}`, undefined, userToken)).status, 200);
+    assert.equal((await request('DELETE', `/api/farms/tasks/${upcomingTaskId}`, undefined, userToken)).status, 200);
+    assert.equal((await request('DELETE', `/api/farms/activities/${activityId}`, undefined, userToken)).status, 200);
+  });
+
   test('deletes owned fields and then their farm; rejects malformed JSON safely', async () => {
     const deleteOtherField = await request('DELETE', `/api/farms/fields/${otherFieldId}`, undefined, otherToken);
     const deleteOtherFarm = await request('DELETE', `/api/farms/${otherFarmId}`, undefined, otherToken);
@@ -554,6 +1232,559 @@ describe('Explicit offline development storage', () => {
       assert.equal(result.status, 0, `${result.stderr}\n${result.stdout}`);
     } finally {
       fs.rmSync(temporaryDirectory, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('Phase 3: Secure Field Photographs and Visual History', () => {
+  const VALID_JPEG_BUFFER = Buffer.from([
+    0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01,
+    0x01, 0x01, 0x00, 0x48, 0x00, 0x48, 0x00, 0x00, 0xff, 0xdb, 0x00, 0x43,
+    0x00, 0x08, 0x06, 0x06, 0x07, 0x06, 0x05, 0x08, 0x07, 0x07, 0x07, 0x09,
+  ]);
+
+  const VALID_PNG_BUFFER = Buffer.from([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+    0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+  ]);
+
+  const SPOOFED_TEXT_BUFFER = Buffer.from('NOT_AN_IMAGE_FILE_JUST_PLAIN_TEXT_DATA');
+
+  let photoFarmId;
+  let photoFieldId;
+  let otherPhotoFarmId;
+  let otherPhotoFieldId;
+  let testPhotoId;
+  let testCycleId;
+
+  before(async () => {
+    const farmRes = await request('POST', '/api/farms', { name: 'Photo Test Farm' }, userToken);
+    photoFarmId = farmRes.data.farm._id;
+    const fieldRes = await request(
+      'POST',
+      `/api/farms/${photoFarmId}/fields`,
+      { name: 'North Vineyard', areaHectares: 2.5 },
+      userToken
+    );
+    photoFieldId = fieldRes.data.field._id;
+
+    const otherFarmRes = await request('POST', '/api/farms', { name: 'Other Photo Farm' }, otherToken);
+    otherPhotoFarmId = otherFarmRes.data.farm._id;
+    const otherFieldRes = await request(
+      'POST',
+      `/api/farms/${otherPhotoFarmId}/fields`,
+      { name: 'South Orchard', areaHectares: 3 },
+      otherToken
+    );
+    otherPhotoFieldId = otherFieldRes.data.field._id;
+  });
+
+  test('rejects unauthenticated photo upload or access', async () => {
+    const uploadRes = await uploadPhotoRequest(
+      `/api/farms/${photoFarmId}/fields/${photoFieldId}/photos`,
+      { buffer: VALID_JPEG_BUFFER },
+      null
+    );
+    assert.equal(uploadRes.status, 401);
+
+    const listRes = await request('GET', `/api/farms/${photoFarmId}/fields/${photoFieldId}/photos`);
+    assert.equal(listRes.status, 401);
+  });
+
+  test('rejects photo upload without an image file', async () => {
+    const res = await uploadPhotoRequest(
+      `/api/farms/${photoFarmId}/fields/${photoFieldId}/photos`,
+      { buffer: null, fields: { notes: 'No file attached' } },
+      userToken
+    );
+    assert.equal(res.status, 400);
+    assert.match(res.data.message, /Photograph image file is required/i);
+  });
+
+  test('rejects photo upload with spoofed magic bytes (non-image payload with image extension)', async () => {
+    const res = await uploadPhotoRequest(
+      `/api/farms/${photoFarmId}/fields/${photoFieldId}/photos`,
+      { buffer: SPOOFED_TEXT_BUFFER, filename: 'fake_crop.jpg' },
+      userToken
+    );
+    assert.equal(res.status, 400);
+    assert.match(res.data.message, /magic bytes do not match/i);
+  });
+
+  test('rejects photo upload exceeding size limit', async () => {
+    // Create buffer exceeding 10MB
+    const largeBuffer = Buffer.alloc(10 * 1024 * 1024 + 1024);
+    largeBuffer[0] = 0xff;
+    largeBuffer[1] = 0xd8;
+    largeBuffer[2] = 0xff;
+
+    const res = await uploadPhotoRequest(
+      `/api/farms/${photoFarmId}/fields/${photoFieldId}/photos`,
+      { buffer: largeBuffer, filename: 'huge_crop.jpg' },
+      userToken
+    );
+    assert.equal(res.status, 400);
+    assert.match(res.data.message, /exceeds maximum allowed limit of 10MB/i);
+  });
+
+  test('uploads authentic JPEG photograph with field, capture date, crop cycle, and notes', async () => {
+    // First create a crop cycle to link
+    const cycleRes = await request(
+      'POST',
+      `/api/farms/${photoFarmId}/fields/${photoFieldId}/crop-cycles`,
+      {
+        cropName: 'Barley',
+        plantingDate: '2026-05-01',
+        season: 'Spring',
+      },
+      userToken
+    );
+    assert.equal(cycleRes.status, 201);
+    testCycleId = cycleRes.data.cropCycle._id;
+
+    const uploadRes = await uploadPhotoRequest(
+      `/api/farms/${photoFarmId}/fields/${photoFieldId}/photos`,
+      {
+        buffer: VALID_JPEG_BUFFER,
+        filename: 'field_survey_may.jpg',
+        fields: {
+          cropCycleId: testCycleId,
+          capturedAt: '2026-05-15T10:00:00.000Z',
+          notes: 'Sprouts emerging evenly across north quadrant.',
+        },
+      },
+      userToken
+    );
+
+    assert.equal(uploadRes.status, 201);
+    assert.ok(uploadRes.data.photo);
+    assert.equal(uploadRes.data.photo.mimeType, 'image/jpeg');
+    assert.equal(uploadRes.data.photo.fileSize, VALID_JPEG_BUFFER.length);
+    assert.equal(uploadRes.data.photo.farmId, photoFarmId);
+    assert.equal(uploadRes.data.photo.fieldId, photoFieldId);
+    assert.equal(uploadRes.data.photo.cropCycleId, testCycleId);
+    assert.equal(uploadRes.data.photo.notes, 'Sprouts emerging evenly across north quadrant.');
+    assert.ok(uploadRes.data.photo.storageKey);
+
+    testPhotoId = uploadRes.data.photo._id;
+  });
+
+  test('uploads authentic PNG photo and lists photographs chronologically', async () => {
+    const secondPhotoRes = await uploadPhotoRequest(
+      `/api/farms/${photoFarmId}/fields/${photoFieldId}/photos`,
+      {
+        buffer: VALID_PNG_BUFFER,
+        filename: 'field_june.png',
+        fields: {
+          capturedAt: '2026-06-01T10:00:00.000Z',
+          notes: 'Crop canopy fully closed.',
+        },
+      },
+      userToken
+    );
+    assert.equal(secondPhotoRes.status, 201);
+
+    const listRes = await request(
+      'GET',
+      `/api/farms/${photoFarmId}/fields/${photoFieldId}/photos`,
+      undefined,
+      userToken
+    );
+    assert.equal(listRes.status, 200);
+    assert.ok(Array.isArray(listRes.data.photos));
+    assert.ok(listRes.data.photos.length >= 2);
+
+    // Latest photo (June) should be before earlier photo (May)
+    const dates = listRes.data.photos.map((p) => new Date(p.capturedAt).getTime());
+    assert.ok(dates[0] >= dates[1]);
+  });
+
+  test('enforces owner-level authorization for metadata access', async () => {
+    // Owner can retrieve metadata
+    const ownerRes = await request(
+      'GET',
+      `/api/farms/photos/${testPhotoId}`,
+      undefined,
+      userToken
+    );
+    assert.equal(ownerRes.status, 200);
+    assert.equal(ownerRes.data.photo._id, testPhotoId);
+
+    // Another authenticated user gets 404 (no information disclosure)
+    const otherUserRes = await request(
+      'GET',
+      `/api/farms/photos/${testPhotoId}`,
+      undefined,
+      otherToken
+    );
+    assert.equal(otherUserRes.status, 404);
+  });
+
+  test('streams photograph image bytes with proper headers and owner authorization', async () => {
+    // Owner can stream photo file
+    const streamRes = await getPhotoFileRequest(
+      `/api/farms/photos/${testPhotoId}/file`,
+      userToken
+    );
+    assert.equal(streamRes.status, 200);
+    assert.equal(streamRes.contentType, 'image/jpeg');
+    assert.equal(streamRes.contentLength, String(VALID_JPEG_BUFFER.length));
+    assert.equal(streamRes.cacheControl, 'private, max-age=3600');
+    assert.deepEqual(streamRes.buffer, VALID_JPEG_BUFFER);
+
+    // Other user cannot stream photo file
+    const otherStream = await getPhotoFileRequest(
+      `/api/farms/photos/${testPhotoId}/file`,
+      otherToken
+    );
+    assert.equal(otherStream.status, 404);
+
+    // Unauthenticated request cannot stream photo file
+    const unauthStream = await getPhotoFileRequest(
+      `/api/farms/photos/${testPhotoId}/file`,
+      null
+    );
+    assert.equal(unauthStream.status, 401);
+  });
+
+  test('updates observation notes and capture date', async () => {
+    const updateRes = await request(
+      'PATCH',
+      `/api/farms/photos/${testPhotoId}`,
+      {
+        notes: 'Updated note: Minor aphid signs observed on leaves.',
+        capturedAt: '2026-05-16T12:00:00.000Z',
+      },
+      userToken
+    );
+    assert.equal(updateRes.status, 200);
+    assert.equal(updateRes.data.photo.notes, 'Updated note: Minor aphid signs observed on leaves.');
+
+    // Other user cannot update photo
+    const otherUpdate = await request(
+      'PATCH',
+      `/api/farms/photos/${testPhotoId}`,
+      { notes: 'Hacked note' },
+      otherToken
+    );
+    assert.equal(otherUpdate.status, 404);
+  });
+
+  test('deletes photograph and cleans up metadata and stored bytes', async () => {
+    // Other user cannot delete photo
+    const otherDelete = await request(
+      'DELETE',
+      `/api/farms/photos/${testPhotoId}`,
+      undefined,
+      otherToken
+    );
+    assert.equal(otherDelete.status, 404);
+
+    // Owner deletes photo
+    const deleteRes = await request(
+      'DELETE',
+      `/api/farms/photos/${testPhotoId}`,
+      undefined,
+      userToken
+    );
+    assert.equal(deleteRes.status, 200);
+    assert.equal(deleteRes.data.success, true);
+
+    // Metadata access now returns 404
+    const getRes = await request('GET', `/api/farms/photos/${testPhotoId}`, undefined, userToken);
+    assert.equal(getRes.status, 404);
+
+    // File access now returns 404
+    const fileRes = await getPhotoFileRequest(`/api/farms/photos/${testPhotoId}/file`, userToken);
+    assert.equal(fileRes.status, 404);
+  });
+
+  test('cascades photo deletion when parent field is deleted', async () => {
+    // Create new field
+    const fieldRes = await request(
+      'POST',
+      `/api/farms/${photoFarmId}/fields`,
+      { name: 'Photo Cascade Field', areaHectares: 1.5 },
+      userToken
+    );
+    assert.equal(fieldRes.status, 201);
+    const cFieldId = fieldRes.data.field._id;
+
+    // Upload photo to this field
+    const uploadRes = await uploadPhotoRequest(
+      `/api/farms/${photoFarmId}/fields/${cFieldId}/photos`,
+      { buffer: VALID_PNG_BUFFER, filename: 'cascade.png' },
+      userToken
+    );
+    assert.equal(uploadRes.status, 201);
+    const cPhotoId = uploadRes.data.photo._id;
+
+    // Delete the field
+    const delFieldRes = await request('DELETE', `/api/farms/fields/${cFieldId}`, undefined, userToken);
+    assert.equal(delFieldRes.status, 200);
+
+    // Photo should be gone
+    const getPhotoRes = await request('GET', `/api/farms/photos/${cPhotoId}`, undefined, userToken);
+    assert.equal(getPhotoRes.status, 404);
+  });
+
+  test('handles storage adapter failure gracefully with 500 error response', async () => {
+    const failingStorage = {
+      async savePhoto() {
+        throw new Error('S3 Disk Connection Timeout.');
+      },
+      async getPhoto() {
+        throw new Error('Storage Read Failure.');
+      },
+      async deletePhoto() {},
+    };
+
+    const failingApp = createApp({
+      userStore: stores.userStore,
+      farmStore: stores.farmStore,
+      photoStorage: failingStorage,
+    });
+
+    const failingServer = failingApp.listen(0);
+    const failingBaseUrl = `http://127.0.0.1:${failingServer.address().port}`;
+
+    try {
+      const formData = new FormData();
+      const blob = new Blob([VALID_JPEG_BUFFER]);
+      formData.append('photo', blob, 'sample.jpg');
+
+      const response = await fetch(`${failingBaseUrl}/api/farms/${photoFarmId}/fields/${photoFieldId}/photos`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${userToken}` },
+        body: formData,
+      });
+
+      assert.equal(response.status, 500);
+      const data = await response.json();
+      assert.equal(data.error, 'Storage Failure');
+      assert.match(data.message, /S3 Disk Connection Timeout/i);
+    } finally {
+      await new Promise((resolve) => failingServer.close(resolve));
+    }
+  });
+});
+
+describe('Persistence failure and fallback regression tests', () => {
+  test('rejects writes and reports failure without falling back to local JSON when persistent storage is unavailable', async () => {
+    const fs = await import('node:fs');
+    const os = await import('node:os');
+    const path = await import('node:path');
+    const { spawnSync } = await import('node:child_process');
+
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'agritech-regr-'));
+
+    const testScript = `
+      import assert from 'node:assert/strict';
+      import fs from 'node:fs';
+      import path from 'node:path';
+
+      const { userStore } = await import('./src/storage/userStore.js');
+      const { farmStore } = await import('./src/storage/farmStore.js');
+      const { getDBStatus } = await import('./src/config/db.js');
+
+      assert.equal(getDBStatus().mode, 'unavailable');
+      assert.equal(getDBStatus().isAvailable, false);
+
+      // Verify userStore.create fails and no local JSON is written
+      await assert.rejects(
+        () => userStore.create({ name: 'Fail User', email: 'fail@example.com', password: 'SafePassword123!' }),
+        /Persistent storage is unavailable/
+      );
+      assert.equal(fs.existsSync(path.join(process.env.LOCAL_DATA_DIR, 'users.json')), false);
+
+      // Verify farmStore operations fail and no local JSON is written
+      await assert.rejects(
+        () => farmStore.createFarm('000000000000000000000001', { name: 'Failing Farm' }),
+        /Persistent storage is unavailable/
+      );
+      assert.equal(fs.existsSync(path.join(process.env.LOCAL_DATA_DIR, 'farms.json')), false);
+
+      await assert.rejects(
+        () => farmStore.createField('000000000000000000000001', '000000000000000000000002', { name: 'Failing Field', areaHectares: 2 }),
+        /Persistent storage is unavailable/
+      );
+      assert.equal(fs.existsSync(path.join(process.env.LOCAL_DATA_DIR, 'fields.json')), false);
+
+      await assert.rejects(
+        () => farmStore.deleteFarm('000000000000000000000001', '000000000000000000000002'),
+        /Persistent storage is unavailable/
+      );
+
+      await assert.rejects(
+        () => farmStore.deleteField('000000000000000000000001', '000000000000000000000003'),
+        /Persistent storage is unavailable/
+      );
+    `;
+
+    try {
+      const result = spawnSync(process.execPath, ['--input-type=module', '-e', testScript], {
+        cwd: process.cwd(),
+        encoding: 'utf8',
+        timeout: 15000,
+        env: {
+          ...process.env,
+          NODE_ENV: 'development',
+          JWT_SECRET: 'test-only-secret-with-at-least-thirty-two-characters',
+          MONGODB_URI: '',
+          STORAGE_MODE: '',
+          LOCAL_DATA_DIR: tempDir,
+        },
+      });
+      assert.equal(result.status, 0, result.stderr);
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test('reports internal server error on API requests when database is disconnected and never writes local files', async () => {
+    const fs = await import('node:fs');
+    const os = await import('node:os');
+    const path = await import('node:path');
+    const { spawnSync } = await import('node:child_process');
+
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'agritech-api-regr-'));
+
+    const testScript = `
+      import assert from 'node:assert/strict';
+      import fs from 'node:fs';
+      import path from 'node:path';
+
+      const { userStore } = await import('./src/storage/userStore.js');
+      const { farmStore } = await import('./src/storage/farmStore.js');
+      const { createApp } = await import('./src/app.js');
+
+      const app = createApp({ userStore, farmStore });
+      const server = await new Promise((resolve) => {
+        const s = app.listen(0, () => resolve(s));
+      });
+      const baseUrl = 'http://127.0.0.1:' + server.address().port;
+
+      try {
+        const response = await fetch(baseUrl + '/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: 'API Fail User',
+            email: 'apifail@example.com',
+            password: 'SafePassword123!',
+          }),
+        });
+
+        assert.equal(response.status, 500);
+        const data = await response.json();
+        assert.equal(data.error, 'Internal Server Error');
+        assert.equal(fs.existsSync(path.join(process.env.LOCAL_DATA_DIR, 'users.json')), false);
+      } finally {
+        await new Promise((resolve) => server.close(resolve));
+      }
+    `;
+
+    try {
+      const result = spawnSync(process.execPath, ['--input-type=module', '-e', testScript], {
+        cwd: process.cwd(),
+        encoding: 'utf8',
+        timeout: 15000,
+        env: {
+          ...process.env,
+          NODE_ENV: 'development',
+          JWT_SECRET: 'test-only-secret-with-at-least-thirty-two-characters',
+          MONGODB_URI: '',
+          STORAGE_MODE: '',
+          LOCAL_DATA_DIR: tempDir,
+        },
+      });
+      assert.equal(result.status, 0, result.stderr);
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test('propagates database write failures and never silently falls back to local JSON store', async () => {
+    const fs = await import('node:fs');
+    const os = await import('node:os');
+    const path = await import('node:path');
+    const { spawnSync } = await import('node:child_process');
+
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'agritech-mongo-err-'));
+
+    const testScript = `
+      import assert from 'node:assert/strict';
+      import fs from 'node:fs';
+      import path from 'node:path';
+
+      // Import models and simulate MongoDB write failure
+      const { default: User } = await import('./src/models/User.js');
+      const { default: Farm } = await import('./src/models/Farm.js');
+      const { default: Field } = await import('./src/models/Field.js');
+
+      User.create = async () => {
+        const error = new Error('Mongo connection timed out during write');
+        error.name = 'MongoServerError';
+        throw error;
+      };
+
+      Farm.create = async () => {
+        const error = new Error('Mongo write concern error');
+        error.name = 'MongoServerError';
+        throw error;
+      };
+
+      Field.create = async () => {
+        const error = new Error('Mongo write failed');
+        error.name = 'MongoServerError';
+        throw error;
+      };
+
+      // Set mongoose connection readyState to 1 and mock db to simulate active mongodb mode
+      const mongoose = (await import('mongoose')).default;
+      Object.defineProperty(mongoose.connection, 'readyState', { value: 1, configurable: true });
+      mongoose.connection.db = { collection: () => ({ createIndex: async () => {} }) };
+
+      const { userStore } = await import('./src/storage/userStore.js');
+      const { farmStore } = await import('./src/storage/farmStore.js');
+
+      // Verify that database errors are thrown directly and never fall back to local JSON
+      await assert.rejects(
+        () => userStore.create({ name: 'Mongo Fail User', email: 'mfail@example.com', password: 'SafePassword123!' }),
+        /Mongo connection timed out during write/
+      );
+      assert.equal(fs.existsSync(path.join(process.env.LOCAL_DATA_DIR, 'users.json')), false);
+
+      await assert.rejects(
+        () => farmStore.createFarm('000000000000000000000001', { name: 'Mongo Fail Farm' }),
+        /Mongo write concern error/
+      );
+      assert.equal(fs.existsSync(path.join(process.env.LOCAL_DATA_DIR, 'farms.json')), false);
+
+      await assert.rejects(
+        () => farmStore.createField('000000000000000000000001', '000000000000000000000002', { name: 'Mongo Fail Field', areaHectares: 3 }),
+        /Mongo write failed/
+      );
+      assert.equal(fs.existsSync(path.join(process.env.LOCAL_DATA_DIR, 'fields.json')), false);
+    `;
+
+    try {
+      const result = spawnSync(process.execPath, ['--input-type=module', '-e', testScript], {
+        cwd: process.cwd(),
+        encoding: 'utf8',
+        timeout: 15000,
+        env: {
+          ...process.env,
+          NODE_ENV: 'development',
+          JWT_SECRET: 'test-only-secret-with-at-least-thirty-two-characters',
+          MONGODB_URI: '',
+          STORAGE_MODE: '',
+          LOCAL_DATA_DIR: tempDir,
+        },
+      });
+      assert.equal(result.status, 0, result.stderr);
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
     }
   });
 });

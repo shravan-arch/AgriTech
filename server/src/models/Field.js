@@ -29,6 +29,11 @@ const fieldSchema = new mongoose.Schema(
     },
     soilType: { type: String, trim: true, maxlength: 100 },
     waterSource: { type: String, trim: true, maxlength: 100 },
+    irrigationDetails: { type: String, trim: true, maxlength: 100 },
+    coordinates: {
+      latitude: { type: Number, min: -90, max: 90 },
+      longitude: { type: Number, min: -180, max: 180 },
+    },
   },
   { timestamps: true }
 );

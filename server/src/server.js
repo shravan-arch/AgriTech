@@ -17,6 +17,16 @@ const startServer = async () => {
     console.log(`[AgriTech Server] Health check available at http://localhost:${PORT}/api/health`);
     console.log(`[AgriTech Server] Auth endpoints available at http://localhost:${PORT}/api/auth`);
   });
+
+  server.on('error', (error) => {
+    if (error.code === 'EADDRINUSE') {
+      console.error(`[Server Error] Port ${PORT} is already in use by another running process.`);
+      console.error(`[Server Error] If an existing AgriTech server is already running, please stop it first or run 'npx kill-port ${PORT}'.`);
+    } else {
+      console.error(`[Server Error] ${error.message}`);
+    }
+    process.exit(1);
+  });
 };
 
 startServer().catch((error) => {

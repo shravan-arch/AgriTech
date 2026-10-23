@@ -1,11 +1,23 @@
 import { useState } from 'react';
 import { Link, Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import AuthPage from './pages/AuthPage.jsx';
+import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
+import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
+import VerifyEmailPage from './pages/VerifyEmailPage.jsx';
+import ProfilePage from './pages/ProfilePage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
 import FarmDetailPage from './pages/FarmDetailPage.jsx';
 import FarmsPage from './pages/FarmsPage.jsx';
+import OperationsPage from './pages/OperationsPage.jsx';
+import MonitoringPage from './pages/MonitoringPage.jsx';
+import InventoryPage from './pages/InventoryPage.jsx';
+import AnalyticsPage from './pages/AnalyticsPage.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
+import AdminRoute from './components/AdminRoute.jsx';
+import AdminPage from './pages/AdminPage.jsx';
+import LanguageToggle from './components/LanguageToggle.jsx';
 import { useAuth } from './context/useAuth.js';
+import { useLanguage } from './context/useLanguage.js';
 
 const HomePage = () => {
   return (
@@ -49,6 +61,7 @@ const HomePage = () => {
 
 function App() {
   const { user, isAuthenticated, logout } = useAuth();
+  const { t } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const closeMenu = () => setMenuOpen(false);
@@ -59,6 +72,10 @@ function App() {
     .slice(0, 2)
     .join('')
     .toUpperCase();
+
+  const userRoleLabel = user?.role === 'admin'
+    ? 'Administrator'
+    : 'Farmer';
 
   return (
     isAuthenticated ? (
@@ -75,21 +92,68 @@ function App() {
             <span className="brand-icon"><i className="bi bi-flower1" aria-hidden="true" /></span>
             <span>Agri<span className="brand-accent">Tech</span></span>
           </Link>
-          <div className="sidebar-section-label">Workspace</div>
+          <div className="sidebar-section-label">{t('nav.workspace')}</div>
           <nav className="sidebar-nav" aria-label="Workspace navigation">
             <NavLink className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`} to="/dashboard" onClick={closeMenu}>
-              <i className="bi bi-grid-1x2" aria-hidden="true" />Overview
+              <i className="bi bi-grid-1x2" aria-hidden="true" />
+              <span>{t('nav.overview')}</span>
             </NavLink>
             <NavLink className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`} to="/farms" onClick={closeMenu}>
-              <i className="bi bi-houses" aria-hidden="true" />My farms
+              <i className="bi bi-houses" aria-hidden="true" />
+              <span>{t('nav.farms')}</span>
             </NavLink>
+            <NavLink className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`} to="/operations" onClick={closeMenu}>
+              <i className="bi bi-calendar2-check" aria-hidden="true" />
+              <span>{t('nav.operations')}</span>
+            </NavLink>
+            <NavLink className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`} to="/monitoring" onClick={closeMenu}>
+              <i className="bi bi-broadcast-pin" aria-hidden="true" />
+              <span>{t('nav.monitoring')}</span>
+            </NavLink>
+            <NavLink className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`} to="/inventory" onClick={closeMenu}>
+              <i className="bi bi-boxes" aria-hidden="true" />
+              <span>{t('nav.inventory')}</span>
+            </NavLink>
+            <NavLink className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`} to="/analytics" onClick={closeMenu}>
+              <i className="bi bi-graph-up" aria-hidden="true" />
+              <span>{t('nav.analytics')}</span>
+            </NavLink>
+            <NavLink className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`} to="/profile" onClick={closeMenu}>
+              <i className="bi bi-person-circle" aria-hidden="true" />
+              <span>{t('nav.profile')}</span>
+              {user && !user.emailVerified && (
+                <span className="badge bg-warning text-dark ms-auto" style={{ fontSize: '0.65rem' }}>{t('nav.verify')}</span>
+              )}
+            </NavLink>
+            {user?.role === 'admin' && (
+              <NavLink className={({ isActive }) => `sidebar-link sidebar-link-admin${isActive ? ' active' : ''}`} to="/admin" onClick={closeMenu}>
+                <i className="bi bi-shield-shaded" aria-hidden="true" />
+                <span className="fw-semibold">{t('nav.admin')}</span>
+                <span className="sidebar-role-badge ms-auto">ADMIN</span>
+              </NavLink>
+            )}
           </nav>
           <div className="sidebar-bottom">
-            <div className="sidebar-note"><i className="bi bi-shield-check" aria-hidden="true" /><span>Your records are private to your account.</span></div>
-            <div className="sidebar-profile">
-              <span className="avatar">{initials || 'F'}</span>
-              <span className="profile-copy"><strong>{user?.name}</strong><small>Farmer account</small></span>
-              <button className="icon-button" type="button" aria-label="Sign out" title="Sign out" onClick={logout}>
+            <div className="d-flex align-items-center justify-content-between mb-2 px-1">
+              <span className="sidebar-lang-label">Language:</span>
+              <LanguageToggle size="sm" />
+            </div>
+            <div className="sidebar-note"><i className="bi bi-shield-check" aria-hidden="true" /><span>{t('nav.privateNotice')}</span></div>
+            <div className="sidebar-profile-wrap">
+              <Link to="/profile" className="sidebar-profile text-decoration-none" onClick={closeMenu}>
+                <span className="avatar">{initials || 'F'}</span>
+                <span className="profile-copy">
+                  <strong>{user?.name}</strong>
+                  <small>{userRoleLabel} {t('nav.accountSuffix')}</small>
+                </span>
+              </Link>
+              <button
+                className="icon-button sidebar-logout-btn"
+                type="button"
+                aria-label="Sign out"
+                title="Sign out"
+                onClick={logout}
+              >
                 <i className="bi bi-box-arrow-right" aria-hidden="true" />
               </button>
             </div>
@@ -111,14 +175,35 @@ function App() {
               <span className="brand-icon"><i className="bi bi-flower1" aria-hidden="true" /></span>
               <span>Agri<span className="brand-accent">Tech</span></span>
             </Link>
-            <span className="avatar avatar-small">{initials || 'F'}</span>
+            <Link to="/profile" className="avatar avatar-small text-decoration-none">{initials || 'F'}</Link>
           </header>
           <main className="workspace-content">
+            {user && !user.emailVerified && (
+              <div className="alert alert-warning border-0 rounded-3 shadow-sm d-flex align-items-center justify-content-between py-2 px-3 mb-4" role="alert">
+                <div className="d-flex align-items-center gap-2 small">
+                  <i className="bi bi-exclamation-triangle-fill text-warning flex-shrink-0" style={{ fontSize: '1.1rem' }} />
+                  <span>
+                    Your email address (<strong>{user.email}</strong>) is not verified. Complete verification to secure your farm account.
+                  </span>
+                </div>
+                <Link to="/profile" className="btn btn-warning btn-sm fw-semibold text-dark text-nowrap ms-2">
+                  Verify in Profile
+                </Link>
+              </div>
+            )}
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+              <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
               <Route path="/farms" element={<ProtectedRoute><FarmsPage /></ProtectedRoute>} />
               <Route path="/farms/:farmId" element={<ProtectedRoute><FarmDetailPage /></ProtectedRoute>} />
+              <Route path="/operations" element={<ProtectedRoute><OperationsPage /></ProtectedRoute>} />
+              <Route path="/monitoring" element={<ProtectedRoute><MonitoringPage /></ProtectedRoute>} />
+              <Route path="/inventory" element={<ProtectedRoute><InventoryPage /></ProtectedRoute>} />
+              <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
+              <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
+              <Route path="/verify-email" element={<VerifyEmailPage />} />
+              <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </main>
@@ -131,7 +216,16 @@ function App() {
           <Route path="/dashboard" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<AuthPage mode="login" />} />
           <Route path="/register" element={<AuthPage mode="register" />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
           <Route path="/farms/*" element={<Navigate to="/login" replace />} />
+          <Route path="/operations" element={<Navigate to="/login" replace />} />
+          <Route path="/monitoring" element={<Navigate to="/login" replace />} />
+          <Route path="/inventory" element={<Navigate to="/login" replace />} />
+          <Route path="/analytics" element={<Navigate to="/login" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>

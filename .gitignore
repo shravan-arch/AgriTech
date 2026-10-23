@@ -36,5 +36,7 @@ coverage/
 
 # Local Dev Persistence Data
 server/data/
+server/uploads/
+uploads/
 *.db
 

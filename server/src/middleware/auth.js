@@ -24,6 +24,25 @@ export const createProtect = (userStore = defaultUserStore) => async (req, res, 
         message: 'The account for this token no longer exists.',
       });
     }
+
+    if (user.status === 'suspended') {
+      return res.status(403).json({
+        error: 'Forbidden',
+        code: 'ACCOUNT_SUSPENDED',
+        message: 'Your account has been suspended. Please contact system administration.',
+      });
+    }
+
+    if (user.passwordChangedAt && decoded.iat) {
+      const passwordChangedTimestamp = Math.floor(new Date(user.passwordChangedAt).getTime() / 1000);
+      if (decoded.iat < passwordChangedTimestamp) {
+        return res.status(401).json({
+          error: 'Unauthorized',
+          message: 'Password was recently changed. Please log in again.',
+        });
+      }
+    }
+
     req.user = user;
     return next();
   } catch (error) {
