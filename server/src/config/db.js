@@ -21,7 +21,17 @@ export const getSafeConnectionDetails = () => {
   }
 };
 
+let connectionPromise = null;
+
 export const connectDB = async () => {
+  if (mongoose.connection.readyState === 1) {
+    selectedStorageMode = 'mongodb';
+    return mongoose.connection;
+  }
+  if (connectionPromise) {
+    return connectionPromise;
+  }
+
   validateRuntimeEnv();
   if (process.env.NODE_ENV === 'development' && process.env.STORAGE_MODE === 'local-json') {
     selectedStorageMode = 'local-json-development';
@@ -35,21 +45,27 @@ export const connectDB = async () => {
     throw new Error('A valid MONGODB_URI is required; no local persistence fallback is available.');
   }
 
-  try {
-    const connection = await mongoose.connect(process.env.MONGODB_URI, {
-      serverSelectionTimeoutMS: 5000,
-    });
-    selectedStorageMode = 'mongodb';
-    console.log(`[Database] Connected to MongoDB host ${connection.connection.host}.`);
-    return connection;
-  } catch (error) {
-    selectedStorageMode = 'unavailable';
-    console.error(`[Database] MongoDB connection failed (${error.name || 'Error'}).`);
-    throw new Error('MongoDB connection failed; the server was not started.');
-  }
+  connectionPromise = (async () => {
+    try {
+      const connection = await mongoose.connect(process.env.MONGODB_URI, {
+        serverSelectionTimeoutMS: 5000,
+      });
+      selectedStorageMode = 'mongodb';
+      console.log(`[Database] Connected to MongoDB host ${connection.connection.host}.`);
+      return connection;
+    } catch (error) {
+      selectedStorageMode = 'unavailable';
+      connectionPromise = null;
+      console.error(`[Database] MongoDB connection failed (${error.name || 'Error'}).`);
+      throw new Error('MongoDB connection failed; the server was not started.');
+    }
+  })();
+
+  return connectionPromise;
 };
 
 export const disconnectDB = async () => {
+  connectionPromise = null;
   await mongoose.disconnect();
   selectedStorageMode = 'unavailable';
 };

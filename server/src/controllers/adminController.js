@@ -169,7 +169,13 @@ export const createAdminController = (
           return res.status(404).json({ error: 'User not found' });
         }
 
-        const resetLink = `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password/${result.resetToken}`;
+        const clientBase = (
+          process.env.CLIENT_URL ||
+          (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : null) ||
+          (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
+          'http://localhost:5173'
+        ).replace(/\/+$/, '');
+        const resetLink = `${clientBase}/reset-password/${result.resetToken}`;
 
         try {
           await emailService.sendPasswordResetEmail(result.user.email, result.resetToken);

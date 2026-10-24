@@ -15,6 +15,7 @@ import { createAdminRouter } from './routes/admin.js';
 import { createAdminController } from './controllers/adminController.js';
 import { userStore as defaultUserStore } from './storage/userStore.js';
 import { farmStore as defaultFarmStore } from './storage/farmStore.js';
+import { connectDB } from './config/db.js';
 
 export const createApp = ({
   userStore = defaultUserStore,
@@ -33,6 +34,15 @@ export const createApp = ({
     .map((origin) => origin.trim())
     .filter(Boolean);
 
+  const isAllowedOrigin = (origin) => {
+    if (!origin) return true;
+    if (allowedOrigins.includes(origin)) return true;
+    if (origin.endsWith('.vercel.app')) return true;
+    if (process.env.VERCEL_URL && origin === `https://${process.env.VERCEL_URL}`) return true;
+    if (process.env.VERCEL_PROJECT_PRODUCTION_URL && origin === `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`) return true;
+    return false;
+  };
+
   app.disable('x-powered-by');
   app.use((req, res, next) => {
     res.set({
@@ -44,12 +54,25 @@ export const createApp = ({
   });
   app.use(cors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+      if (isAllowedOrigin(origin)) return callback(null, true);
       return callback(Object.assign(new Error('Origin is not allowed.'), { status: 403 }));
     },
+    credentials: true,
   }));
   app.use(express.json({ limit: '20kb' }));
   app.use(express.urlencoded({ extended: false, limit: '20kb' }));
+
+  // Ensure database is connected for serverless environments
+  app.use(async (req, res, next) => {
+    if (process.env.NODE_ENV !== 'test' && process.env.STORAGE_MODE !== 'local-json') {
+      try {
+        await connectDB();
+      } catch (err) {
+        console.error('[Database] Middleware connection error:', err.message);
+      }
+    }
+    next();
+  });
 
   if (process.env.NODE_ENV !== 'test') app.use(morgan('combined'));
 

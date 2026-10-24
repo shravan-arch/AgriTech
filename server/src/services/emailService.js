@@ -34,6 +34,13 @@ export const getTransporter = () => {
   });
 };
 
+const getClientUrl = () => {
+  if (process.env.CLIENT_URL) return process.env.CLIENT_URL.replace(/\/+$/, '');
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return 'http://localhost:5173';
+};
+
 /**
  * Sends a password reset email.
  *
@@ -45,7 +52,7 @@ export const getTransporter = () => {
  * @throws {Error} Throws if delivery fails or transporter is unconfigured.
  */
 export const sendPasswordResetEmail = async ({ to, name, resetToken }) => {
-  const clientUrl = (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/+$/, '');
+  const clientUrl = getClientUrl();
   const resetUrl = `${clientUrl}/reset-password?token=${encodeURIComponent(resetToken)}`;
   const from = process.env.EMAIL_FROM || '"AgriTech Security" <no-reply@agritech.local>';
 
@@ -111,7 +118,7 @@ export const sendPasswordResetEmail = async ({ to, name, resetToken }) => {
  * @throws {Error} Throws if delivery fails or transporter is unconfigured.
  */
 export const sendVerificationEmail = async ({ to, name, verificationToken }) => {
-  const clientUrl = (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/+$/, '');
+  const clientUrl = getClientUrl();
   const verificationUrl = `${clientUrl}/verify-email?token=${encodeURIComponent(verificationToken)}`;
   const from = process.env.EMAIL_FROM || '"AgriTech Security" <no-reply@agritech.local>';
 
