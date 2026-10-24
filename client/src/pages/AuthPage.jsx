@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/useAuth.js';
 import { useLanguage } from '../context/useLanguage.js';
@@ -28,7 +28,7 @@ const AUTH_SLIDES = [
 
 const AuthPage = ({ mode }) => {
   const isRegister = mode === 'register';
-  const { user, isAuthenticated, loading, authError, login, googleLogin, register, resendVerification, logout } = useAuth();
+  const { user, isAuthenticated, loading, authError, clearAuthError, login, googleLogin, register, resendVerification, logout } = useAuth();
   const { t, language } = useLanguage();
   const navigate = useNavigate();
 
@@ -80,6 +80,8 @@ const AuthPage = ({ mode }) => {
   }
 
   const update = (event) => {
+    if (error) setError('');
+    if (authError && clearAuthError) clearAuthError();
     setForm((previous) => ({ ...previous, [event.target.name]: event.target.value }));
   };
 
@@ -103,6 +105,7 @@ const AuthPage = ({ mode }) => {
   const submit = async (event) => {
     event.preventDefault();
     setError('');
+    if (clearAuthError) clearAuthError();
     setUnverifiedLoginEmail('');
     setResendSuccess('');
     setSubmitting(true);
@@ -188,8 +191,9 @@ const AuthPage = ({ mode }) => {
     }
   };
 
-  const handleGoogleCredential = async (credential) => {
+  const handleGoogleCredential = useCallback(async (credential) => {
     setError('');
+    if (clearAuthError) clearAuthError();
     setSubmitting(true);
     try {
       const result = await googleLogin(credential);
@@ -217,7 +221,7 @@ const AuthPage = ({ mode }) => {
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [googleLogin, clearAuthError, authPortal, logout, navigate, t]);
 
   // Dedicated "Admin Request Submitted" screen
   if (adminApprovalNotice) {
@@ -424,6 +428,7 @@ const AuthPage = ({ mode }) => {
                   setAuthPortal('user');
                   setSelectedRole('user');
                   setError('');
+                  if (clearAuthError) clearAuthError();
                 }}
               >
                 <i className="bi bi-person-fill" />
@@ -436,6 +441,7 @@ const AuthPage = ({ mode }) => {
                   setAuthPortal('admin');
                   setSelectedRole('admin');
                   setError('');
+                  if (clearAuthError) clearAuthError();
                 }}
               >
                 <i className="bi bi-shield-lock-fill" />

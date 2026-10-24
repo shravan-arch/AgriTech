@@ -24,12 +24,10 @@ export const AuthProvider = ({ children }) => {
           setAuthError('');
         }
       } catch (error) {
-        if (active && error.status === 401) {
+        if (active) {
           localStorage.removeItem('agritech_token');
           setToken(null);
           setUser(null);
-        } else if (active) {
-          setAuthError(error.message);
         }
       } finally {
         if (active) setLoading(false);
@@ -128,6 +126,10 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setAuthError('');
   };
+
+  const clearAuthError = useCallback(() => {
+    setAuthError('');
+  }, []);
 
   const listAdminUsers = useCallback(async (params = {}) => {
     const query = new URLSearchParams(params).toString();
@@ -451,6 +453,7 @@ export const AuthProvider = ({ children }) => {
       isAuthenticated: Boolean(user && token),
       loading,
       authError,
+      clearAuthError,
       login,
       googleLogin,
       register,

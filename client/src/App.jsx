@@ -31,7 +31,7 @@ const ADMIN_PAGES = [
 ];
 
 function App() {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, loading, logout } = useAuth();
   const { t } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
@@ -51,6 +51,17 @@ function App() {
   // Extract active admin tab from query param
   const searchParams = new URLSearchParams(location.search);
   const currentAdminTab = searchParams.get('tab') || 'overview';
+
+  if (loading) {
+    return (
+      <div className="min-vh-100 d-flex align-items-center justify-content-center bg-light">
+        <div className="loading-panel m-auto text-center" role="status" aria-live="polite">
+          <span className="spinner-border text-success mb-2" aria-hidden="true" />
+          <div className="small text-secondary">{t('common.loading')}</div>
+        </div>
+      </div>
+    );
+  }
 
   // -------------------------------------------------------------------------
   // 1. AUTHENTICATED: ENTERPRISE ADMINISTRATOR ENVIRONMENT

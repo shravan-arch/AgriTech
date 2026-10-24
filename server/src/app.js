@@ -31,15 +31,16 @@ export const createApp = ({
   app.set('trust proxy', 1);
   const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
     .split(',')
-    .map((origin) => origin.trim())
+    .map((origin) => origin.trim().replace(/\/+$/, ''))
     .filter(Boolean);
 
   const isAllowedOrigin = (origin) => {
     if (!origin) return true;
-    if (allowedOrigins.includes(origin)) return true;
-    if (origin.endsWith('.vercel.app')) return true;
-    if (process.env.VERCEL_URL && origin === `https://${process.env.VERCEL_URL}`) return true;
-    if (process.env.VERCEL_PROJECT_PRODUCTION_URL && origin === `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`) return true;
+    const cleanOrigin = origin.replace(/\/+$/, '');
+    if (allowedOrigins.includes(cleanOrigin)) return true;
+    if (cleanOrigin.endsWith('.vercel.app')) return true;
+    if (process.env.VERCEL_URL && cleanOrigin === `https://${process.env.VERCEL_URL}`) return true;
+    if (process.env.VERCEL_PROJECT_PRODUCTION_URL && cleanOrigin === `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`) return true;
     return false;
   };
 

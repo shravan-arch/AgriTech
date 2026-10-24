@@ -37,6 +37,11 @@ export const GoogleSignInButton = ({ onCredentialReceived, disabled = false, tex
     document.head.appendChild(script);
   }, []);
 
+  const onCredentialReceivedRef = useRef(onCredentialReceived);
+  useEffect(() => {
+    onCredentialReceivedRef.current = onCredentialReceived;
+  }, [onCredentialReceived]);
+
   useEffect(() => {
     if (!scriptLoaded || !GOOGLE_CLIENT_ID || !window.google?.accounts?.id || !containerRef.current) {
       return;
@@ -46,8 +51,8 @@ export const GoogleSignInButton = ({ onCredentialReceived, disabled = false, tex
       window.google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
         callback: (response) => {
-          if (response?.credential) {
-            onCredentialReceived(response.credential);
+          if (response?.credential && onCredentialReceivedRef.current) {
+            onCredentialReceivedRef.current(response.credential);
           }
         },
       });
@@ -68,7 +73,7 @@ export const GoogleSignInButton = ({ onCredentialReceived, disabled = false, tex
     } catch {
       // In case of GIS initialization error
     }
-  }, [scriptLoaded, onCredentialReceived]);
+  }, [scriptLoaded]);
 
   const handleFallbackClick = () => {
     if (configMissing) {

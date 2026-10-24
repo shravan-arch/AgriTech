@@ -579,4 +579,9 @@ describe('Monitoring, Real Weather & Simulated Sensors', () => {
       process.env.NODE_ENV = oldEnv;
     }
   });
+
+  after(async () => {
+    const { disconnectDB } = await import('../src/config/db.js');
+    await disconnectDB();
+  });
 });
