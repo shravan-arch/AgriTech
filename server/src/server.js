@@ -2,6 +2,9 @@ import './config/env.js';
 import app from './app.js';
 import { connectDB, disconnectDB } from './config/db.js';
 import { validateRuntimeEnv } from './config/env.js';
+import schedulerService from './services/schedulerService.js';
+import { farmStore } from './storage/farmStore.js';
+import weatherService from './services/weatherService.js';
 
 const PORT = process.env.PORT || 5000;
 
@@ -17,6 +20,11 @@ const startServer = async () => {
     console.log(`[AgriTech Server] Health check available at http://localhost:${PORT}/api/health`);
     console.log(`[AgriTech Server] Auth endpoints available at http://localhost:${PORT}/api/auth`);
   });
+
+  // Start scheduled weather snapshot refresh job (every 30 mins)
+  if (process.env.NODE_ENV !== 'test') {
+    schedulerService.startWeatherAutoRefresh(farmStore, weatherService, 30);
+  }
 
   server.on('error', (error) => {
     if (error.code === 'EADDRINUSE') {
@@ -40,6 +48,7 @@ const shutdown = async (signal) => {
   console.log(`${signal} received. Shutting down gracefully...`);
 
   try {
+    schedulerService.stopAll();
     if (server) {
       await new Promise((resolve, reject) => {
         server.close((error) => error ? reject(error) : resolve());

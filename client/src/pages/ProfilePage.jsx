@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/useAuth.js';
 import { useLanguage } from '../context/useLanguage.js';
-import LanguageToggle from '../components/LanguageToggle.jsx';
+import { INDIAN_LANGUAGES } from '../lib/translations.js';
 
 const ProfilePage = () => {
   const { user, setUser, updateProfile, resendVerification, verifyEmail } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   const [form, setForm] = useState({
     name: user?.name || '',
@@ -19,6 +19,8 @@ const ProfilePage = () => {
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState('');
   const [saveError, setSaveError] = useState('');
+
+  const isAdmin = user?.role === 'admin';
 
   // Email verification state
   const [resending, setResending] = useState(false);
@@ -129,16 +131,16 @@ const ProfilePage = () => {
       {/* Top Header */}
       <div className="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-2 border-bottom">
         <div>
-          <span className="topbar-breadcrumb">Account / Settings</span>
-          <h1 className="h3 fw-bold topbar-heading mb-1">User Profile</h1>
+          <span className="topbar-breadcrumb">AgriTech / {t('nav.profile')}</span>
+          <h1 className="h3 fw-bold topbar-heading mb-1">{t('profile.title')}</h1>
           <p className="text-muted small mb-0">
-            Manage your personal contact information, farm identity, and email verification.
+            {t('profile.subtitle')}
           </p>
         </div>
         <div className="d-flex align-items-center gap-2 mt-2 mt-md-0">
           <Link to="/dashboard" className="btn btn-outline-secondary btn-sm">
             <i className="bi bi-arrow-left me-1" />
-            Back to Dashboard
+            {t('nav.overview')}
           </Link>
         </div>
       </div>
@@ -249,10 +251,12 @@ const ProfilePage = () => {
             <div className="card-body p-3 p-md-4">
               <div className="d-flex align-items-center justify-content-between mb-2">
                 <div className="d-flex align-items-center gap-2">
-                  <i className="bi bi-translate text-primary" style={{ fontSize: '1.25rem' }} />
+                  <i className="bi bi-translate text-success" style={{ fontSize: '1.25rem' }} />
                   <h3 className="h6 fw-bold mb-0">{t('profile.languagePref')}</h3>
                 </div>
-                <LanguageToggle size="sm" />
+                <span className="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-pill">
+                  {INDIAN_LANGUAGES.find((item) => item.code === language)?.name || 'English'}
+                </span>
               </div>
               <p className="text-muted small mb-0">
                 {t('profile.languageHelp')}
@@ -268,23 +272,23 @@ const ProfilePage = () => {
                   className={`bi ${user?.emailVerified ? 'bi-check-circle-fill text-success' : 'bi-shield-exclamation text-warning'}`}
                   style={{ fontSize: '1.4rem' }}
                 />
-                <h3 className="h6 fw-bold mb-0">Email Verification</h3>
+                <h3 className="h6 fw-bold mb-0">{t('profile.emailVerification')}</h3>
               </div>
 
               {user?.emailVerified ? (
                 <div>
                   <div className="alert alert-success d-flex align-items-center gap-2 py-2 px-3 small mb-2">
                     <i className="bi bi-shield-check flex-shrink-0" />
-                    <div>Your email address is verified and active.</div>
+                    <div>{t('profile.verifiedMessage')}</div>
                   </div>
                   <p className="text-muted small mb-0">
-                    Your account has full security privileges, password recovery protection, and operational alerts enabled.
+                    {t('profile.adminApprovedDesc')}
                   </p>
                 </div>
               ) : (
                 <div>
                   <p className="text-muted small mb-3">
-                    Your email address (<strong>{user?.email}</strong>) has not been verified yet. Complete verification now to safeguard your farm data.
+                    {t('profile.unverifiedWarning')} (<strong>{user?.email}</strong>)
                   </p>
 
                   {verificationSuccess && (
@@ -310,11 +314,11 @@ const ProfilePage = () => {
                     {resending ? (
                       <><span className="spinner-border spinner-border-sm" aria-hidden="true" /> Sending Email…</>
                     ) : cooldown > 0 ? (
-                      `Resend available in ${cooldown}s`
+                      t('profile.resendCooldown', { seconds: cooldown })
                     ) : (
                       <>
                         <i className="bi bi-send" />
-                        Send Verification Email
+                        {t('profile.sendVerification')}
                       </>
                     )}
                   </button>
@@ -322,14 +326,14 @@ const ProfilePage = () => {
                   <div className="border-top pt-3">
                     <form onSubmit={handleVerifyWithToken}>
                       <label className="form-label small fw-semibold text-muted" htmlFor="token-input">
-                        Have a verification token?
+                        {t('profile.tokenFormTitle')}
                       </label>
                       <div className="input-group input-group-sm mb-2">
                         <input
                           id="token-input"
                           type="text"
                           className="form-control"
-                          placeholder="Paste verification token"
+                          placeholder={t('profile.tokenPlaceholder')}
                           value={verifyToken}
                           onChange={(e) => setVerifyToken(e.target.value)}
                         />
@@ -338,12 +342,9 @@ const ProfilePage = () => {
                           className="btn btn-primary"
                           disabled={verifyingToken || !verifyToken.trim()}
                         >
-                          {verifyingToken ? 'Verifying…' : 'Verify'}
+                          {verifyingToken ? '…' : t('profile.verifyTokenBtn')}
                         </button>
                       </div>
-                      <small className="text-muted" style={{ fontSize: '0.75rem' }}>
-                        Or click the activation link directly in the email you received.
-                      </small>
                     </form>
                   </div>
                 </div>
@@ -356,7 +357,7 @@ const ProfilePage = () => {
         <div className="col-12 col-lg-7 col-xl-8">
           <div className="card shadow-sm border-0 rounded-3">
             <div className="card-header bg-white border-bottom py-3 px-4">
-              <h3 className="h6 fw-bold mb-0">Personal & Farm Information</h3>
+              <h3 className="h6 fw-bold mb-0">{t('profile.personalInfo')}</h3>
             </div>
             <div className="card-body p-4">
               {saveSuccess && (
@@ -373,12 +374,24 @@ const ProfilePage = () => {
                 </div>
               )}
 
+              {isAdmin && (
+                <div className="alert alert-info border-0 rounded-3 shadow-sm d-flex align-items-start gap-3 p-3 mb-4" role="alert">
+                  <i className="bi bi-shield-lock-fill text-primary fs-4 flex-shrink-0 mt-1" />
+                  <div>
+                    <h4 className="h6 fw-bold mb-1 text-primary">Administrator Profile Governance Notice</h4>
+                    <p className="small mb-0 text-secondary">
+                      In accordance with platform security policy, Administrators are prohibited from modifying their own user profile, credentials, or agricultural parameters. Your account data can only be monitored by you; any profile updates must be conducted by another authorized Administrator via the Admin Console.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <form onSubmit={handleSaveProfile}>
                 <div className="row g-3">
                   {/* Full Name */}
                   <div className="col-12 col-md-6">
                     <label className="form-label small fw-semibold" htmlFor="profile-name">
-                      Full Name <span className="text-danger">*</span>
+                      {t('profile.fullName')} <span className="text-danger">*</span>
                     </label>
                     <input
                       id="profile-name"
@@ -388,6 +401,7 @@ const ProfilePage = () => {
                       value={form.name}
                       onChange={handleChange}
                       maxLength={50}
+                      disabled={isAdmin || saving}
                       required
                     />
                   </div>
@@ -396,15 +410,15 @@ const ProfilePage = () => {
                   <div className="col-12 col-md-6">
                     <div className="d-flex justify-content-between align-items-center mb-1">
                       <label className="form-label small fw-semibold mb-0" htmlFor="profile-email">
-                        Email Address
+                        {t('auth.emailLabel')}
                       </label>
                       {user?.emailVerified ? (
                         <span className="badge bg-success-subtle text-success small" style={{ fontSize: '0.7rem' }}>
-                          Verified
+                          {t('profile.verifiedBadge')}
                         </span>
                       ) : (
                         <span className="badge bg-warning-subtle text-warning-emphasis small" style={{ fontSize: '0.7rem' }}>
-                          Unverified
+                          {t('profile.unverifiedBadge')}
                         </span>
                       )}
                     </div>
@@ -424,7 +438,7 @@ const ProfilePage = () => {
                   {/* Phone Number */}
                   <div className="col-12 col-md-6">
                     <label className="form-label small fw-semibold" htmlFor="profile-phone">
-                      Phone Number
+                      {t('profile.phone')}
                     </label>
                     <div className="input-group">
                       <span className="input-group-text bg-light text-muted">
@@ -439,17 +453,15 @@ const ProfilePage = () => {
                         value={form.phone}
                         onChange={handleChange}
                         maxLength={30}
+                        disabled={isAdmin || saving}
                       />
                     </div>
-                    <small className="text-muted" style={{ fontSize: '0.75rem' }}>
-                      Used for SMS weather alerts and operational dispatch.
-                    </small>
                   </div>
 
                   {/* Farm Name */}
                   <div className="col-12 col-md-6">
                     <label className="form-label small fw-semibold" htmlFor="profile-farm-name">
-                      Farm or Entity Name
+                      {t('profile.farmName')}
                     </label>
                     <div className="input-group">
                       <span className="input-group-text bg-light text-muted">
@@ -464,6 +476,7 @@ const ProfilePage = () => {
                         value={form.farmName}
                         onChange={handleChange}
                         maxLength={100}
+                        disabled={isAdmin || saving}
                       />
                     </div>
                   </div>
@@ -471,7 +484,7 @@ const ProfilePage = () => {
                   {/* Farm Size */}
                   <div className="col-12 col-md-6">
                     <label className="form-label small fw-semibold" htmlFor="profile-farm-size">
-                      Farm Area (Hectares)
+                      {t('profile.farmSize')}
                     </label>
                     <div className="input-group">
                       <input
@@ -484,15 +497,16 @@ const ProfilePage = () => {
                         placeholder="e.g. 15.5"
                         value={form.farmSizeHectares}
                         onChange={handleChange}
+                        disabled={isAdmin || saving}
                       />
-                      <span className="input-group-text bg-light text-muted">ha</span>
+                      <span className="input-group-text bg-light text-muted">{t('farms.hectares')}</span>
                     </div>
                   </div>
 
                   {/* Account Role (Readonly) */}
                   <div className="col-12 col-md-6">
                     <label className="form-label small fw-semibold" htmlFor="profile-role">
-                      Assigned Role
+                      {t('common.role')}
                     </label>
                     <input
                       id="profile-role"
@@ -507,7 +521,7 @@ const ProfilePage = () => {
                   {/* Address */}
                   <div className="col-12">
                     <label className="form-label small fw-semibold" htmlFor="profile-address">
-                      Physical Farm Address
+                      {t('profile.address')}
                     </label>
                     <textarea
                       id="profile-address"
@@ -518,28 +532,38 @@ const ProfilePage = () => {
                       value={form.address}
                       onChange={handleChange}
                       maxLength={200}
+                      disabled={isAdmin || saving}
                     />
-                    <small className="text-muted" style={{ fontSize: '0.75rem' }}>
-                      Accurate address information helps pinpoint microclimate and localized agro-weather data.
-                    </small>
                   </div>
                 </div>
 
                 <div className="mt-4 pt-2 border-top d-flex justify-content-end gap-2">
-                  <button
-                    type="submit"
-                    className="btn btn-primary px-4 fw-semibold"
-                    disabled={saving}
-                  >
-                    {saving ? (
-                      <><span className="spinner-border spinner-border-sm me-2" aria-hidden="true" />Saving Changes…</>
-                    ) : (
-                      <>
-                        <i className="bi bi-check2 me-1" />
-                        Save Profile Changes
-                      </>
-                    )}
-                  </button>
+                  {isAdmin ? (
+                    <button
+                      type="button"
+                      className="btn btn-secondary px-4 fw-semibold"
+                      disabled
+                      title="Self-modification is restricted for Administrators"
+                    >
+                      <i className="bi bi-lock me-1" />
+                      Profile Locked (Admin Protected)
+                    </button>
+                  ) : (
+                    <button
+                      type="submit"
+                      className="btn btn-primary px-4 fw-semibold"
+                      disabled={saving}
+                    >
+                      {saving ? (
+                        <><span className="spinner-border spinner-border-sm me-2" aria-hidden="true" />{t('common.saving')}</>
+                      ) : (
+                        <>
+                          <i className="bi bi-check2 me-1" />
+                          {t('common.save')}
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               </form>
             </div>

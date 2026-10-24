@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, Navigate, NavLink, Route, Routes } from 'react-router-dom';
+import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import AuthPage from './pages/AuthPage.jsx';
 import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
 import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
@@ -13,56 +13,29 @@ import MonitoringPage from './pages/MonitoringPage.jsx';
 import InventoryPage from './pages/InventoryPage.jsx';
 import AnalyticsPage from './pages/AnalyticsPage.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
-import AdminRoute from './components/AdminRoute.jsx';
 import AdminPage from './pages/AdminPage.jsx';
 import LanguageToggle from './components/LanguageToggle.jsx';
 import { useAuth } from './context/useAuth.js';
 import { useLanguage } from './context/useLanguage.js';
+import LandingPage from './pages/LandingPage.jsx';
 
-const HomePage = () => {
-  return (
-    <div className="public-page">
-      <header className="public-header">
-        <Link className="brand-mark" to="/" aria-label="AgriTech home">
-          <span className="brand-icon"><i className="bi bi-flower1" aria-hidden="true" /></span>
-          <span>Agri<span className="brand-accent">Tech</span></span>
-        </Link>
-        <nav className="public-actions" aria-label="Account">
-          <Link className="public-login" to="/login">Sign in</Link>
-          <Link className="btn btn-primary" to="/register">Create account</Link>
-        </nav>
-      </header>
-      <main className="home-hero">
-        <div className="home-copy">
-          <span className="eyebrow"><span className="eyebrow-dot" />A better way to know your land</span>
-          <h1>Your farm deserves a clear view.</h1>
-          <p>Keep farms and fields organized in one thoughtful workspace. Your records are built from the information you provide.</p>
-          <div className="home-actions">
-            <Link className="btn btn-primary btn-lg" to="/register">Get started <i className="bi bi-arrow-right ms-2" aria-hidden="true" /></Link>
-            <Link className="btn btn-outline-secondary btn-lg" to="/login">Sign in</Link>
-          </div>
-          <div className="home-note"><i className="bi bi-shield-check" aria-hidden="true" /><span>Private farm records, always in your control.</span></div>
-        </div>
-        <div className="home-art" aria-hidden="true">
-          <div className="home-art-sun" />
-          <div className="home-art-hill hill-back" />
-          <div className="home-art-hill hill-middle" />
-          <div className="home-art-hill hill-front" />
-          <div className="home-art-path" />
-          <span className="home-art-label"><i className="bi bi-geo-alt-fill" /> Your land, at a glance</span>
-          <i className="bi bi-flower3 home-art-flower flower-a" />
-          <i className="bi bi-flower3 home-art-flower flower-b" />
-        </div>
-      </main>
-      <footer className="public-footer"><span>AgriTech</span><span>Farm records, kept simple.</span></footer>
-    </div>
-  );
-};
+const ADMIN_PAGES = [
+  { id: 'overview', label: 'Overview', shortDesc: 'Platform KPIs & Activity', icon: 'bi-grid-1x2' },
+  { id: 'users', label: 'Users', shortDesc: 'Profiles & Support', icon: 'bi-people' },
+  { id: 'content', label: 'Content', shortDesc: 'Crops & Knowledge', icon: 'bi-journal-richtext' },
+  { id: 'resources', label: 'Resources', shortDesc: 'Inventory & Stock Alerts', icon: 'bi-boxes' },
+  { id: 'services', label: 'Services', shortDesc: 'Offerings & Bookings', icon: 'bi-calendar-check' },
+  { id: 'analytics', label: 'Analytics', shortDesc: 'Reports & Strategic Trends', icon: 'bi-graph-up' },
+  { id: 'security_policies', label: 'Security & Policies', shortDesc: 'Health, Audit & Compliance', icon: 'bi-shield-check' },
+  { id: 'profile', label: 'My Profile', shortDesc: 'Admin Account & Security', icon: 'bi-person-circle' },
+];
 
 function App() {
   const { user, isAuthenticated, logout } = useAuth();
   const { t } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const closeMenu = () => setMenuOpen(false);
 
@@ -73,12 +46,175 @@ function App() {
     .join('')
     .toUpperCase();
 
-  const userRoleLabel = user?.role === 'admin'
-    ? 'Administrator'
-    : 'Farmer';
+  const isAdmin = user?.role === 'admin';
 
-  return (
-    isAuthenticated ? (
+  // Extract active admin tab from query param
+  const searchParams = new URLSearchParams(location.search);
+  const currentAdminTab = searchParams.get('tab') || 'overview';
+
+  // -------------------------------------------------------------------------
+  // 1. AUTHENTICATED: ENTERPRISE ADMINISTRATOR ENVIRONMENT
+  // -------------------------------------------------------------------------
+  if (isAuthenticated && isAdmin) {
+    return (
+      <div className="admin-workspace-shell">
+        {/* Mobile scrim overlay */}
+        <button
+          className={`admin-sidebar-scrim ${menuOpen ? 'is-visible' : ''}`}
+          type="button"
+          aria-label="Close admin navigation"
+          tabIndex={menuOpen ? 0 : -1}
+          onClick={closeMenu}
+        />
+
+        {/* Dedicated Admin Sidebar (Green Brand Theme) */}
+        <aside className={`admin-workspace-sidebar ${menuOpen ? 'is-open' : ''}`} id="admin-workspace-navigation">
+          <Link className="brand-mark sidebar-brand" to="/admin?tab=overview" onClick={closeMenu}>
+            <span className="brand-icon"><i className="bi bi-flower1" aria-hidden="true" /></span>
+            <span style={{ color: '#ffffff', fontSize: '1.2rem', fontWeight: 800, fontFamily: 'inherit' }}>AgriTech</span>
+          </Link>
+
+          <div className="farmbrite-farm-pill mb-3">
+            <span className="farm-pill-dot" style={{ backgroundColor: '#22c55e' }} />
+            <div className="farm-pill-text">
+              <strong>AgriTech Admin Console Platform</strong>
+              <small>Governance Active</small>
+            </div>
+          </div>
+
+          <div className="admin-sidebar-section-label">ADMINISTRATION</div>
+
+          <nav className="admin-sidebar-nav" aria-label="Admin domain navigation">
+            {ADMIN_PAGES.map((page) => {
+              const isActive = location.pathname === '/admin' && currentAdminTab === page.id;
+              return (
+                <button
+                  key={page.id}
+                  type="button"
+                  className={`admin-sidebar-link ${isActive ? 'active' : ''}`}
+                  onClick={() => {
+                    navigate(`/admin?tab=${page.id}`);
+                    closeMenu();
+                  }}
+                >
+                  <div className="admin-link-icon-wrap">
+                    <i className={`bi ${page.icon}`} aria-hidden="true" />
+                  </div>
+                  <div className="admin-link-content">
+                    <span className="admin-link-title">{page.label}</span>
+                    <span className="admin-link-subtext">{page.shortDesc}</span>
+                  </div>
+                  {isActive && <i className="bi bi-chevron-right ms-auto admin-active-chevron" />}
+                </button>
+              );
+            })}
+          </nav>
+
+          <div className="admin-sidebar-bottom">
+            <div className="admin-guard-note">
+              <i className="bi bi-shield-check text-success flex-shrink-0" />
+              <div>
+                <strong className="d-block text-white">Platform Administrator</strong>
+                <span style={{ fontSize: '0.68rem', color: '#a3c2a6' }}>User workspace isolated</span>
+              </div>
+            </div>
+
+            <div className="admin-profile-card">
+              <button
+                type="button"
+                className="d-flex align-items-center gap-2 border-0 bg-transparent text-start p-0 flex-grow-1 text-decoration-none"
+                onClick={() => {
+                  navigate('/admin?tab=profile');
+                  closeMenu();
+                }}
+                title="View Admin Profile"
+              >
+                <div className="admin-avatar">
+                  {initials || 'AD'}
+                </div>
+                <div className="admin-profile-details">
+                  <span className="admin-name" title={user?.name}>{user?.name}</span>
+                  <span className="admin-email" title={user?.email}>{user?.email}</span>
+                </div>
+              </button>
+              <button
+                className="admin-logout-btn"
+                type="button"
+                aria-label="Sign out"
+                title="Sign out of Admin Environment"
+                onClick={logout}
+              >
+                <i className="bi bi-box-arrow-right" aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+        </aside>
+
+        {/* Admin Main Workspace */}
+        <div className="admin-workspace-main">
+          <header className="admin-workspace-topbar">
+            <div className="d-flex align-items-center gap-3">
+              <button
+                className="admin-menu-toggle d-lg-none"
+                type="button"
+                aria-label="Toggle admin navigation"
+                onClick={() => setMenuOpen((open) => !open)}
+              >
+                <i className={`bi ${menuOpen ? 'bi-x-lg' : 'bi-list'}`} aria-hidden="true" />
+              </button>
+
+              <Link className="brand-mark d-md-none" to="/admin?tab=overview">
+                <span className="brand-icon"><i className="bi bi-flower1" aria-hidden="true" /></span>
+                <span>Agri<span className="brand-accent">Tech</span></span>
+              </Link>
+
+              <div className="d-none d-md-flex align-items-center gap-2">
+                <span className="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-3 py-1-5 small fw-semibold d-inline-flex align-items-center gap-2">
+                  <span className="spinner-grow spinner-grow-sm text-success" style={{ width: '0.5rem', height: '0.5rem' }} role="status" aria-hidden="true" />
+                  AgriTech Intelligence Hub &bull; Administrator
+                </span>
+                <span className="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-2 py-1 small d-none d-lg-inline-flex align-items-center gap-1">
+                  <i className="bi bi-check-circle-fill" /> All 8 Systems Active
+                </span>
+              </div>
+            </div>
+
+            <div className="d-flex align-items-center gap-3">
+              <LanguageToggle />
+              <div className="d-none d-sm-flex align-items-center gap-2 text-muted small">
+                <i className="bi bi-shield-lock-fill text-success" />
+                <span>Authorized Admin</span>
+              </div>
+              <button
+                className="btn btn-outline-danger btn-sm d-flex align-items-center gap-2"
+                onClick={logout}
+                title="Sign out of Admin Console"
+              >
+                <i className="bi bi-box-arrow-right" />
+                <span className="d-none d-md-inline">Sign Out</span>
+              </button>
+            </div>
+          </header>
+
+          <main className="admin-workspace-content">
+            <Routes>
+              <Route path="/admin" element={<AdminPage />} />
+              <Route path="/verify-email" element={<VerifyEmailPage />} />
+              <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
+              {/* User features are terminated for admins: redirect all user pages to /admin */}
+              <Route path="*" element={<Navigate to="/admin" replace />} />
+            </Routes>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // 2. AUTHENTICATED: FARMER / USER WORKSPACE
+  // -------------------------------------------------------------------------
+  if (isAuthenticated && !isAdmin) {
+    return (
       <div className="workspace-shell">
         <button
           className={`sidebar-scrim ${menuOpen ? 'is-visible' : ''}`}
@@ -90,7 +226,7 @@ function App() {
         <aside className={`workspace-sidebar ${menuOpen ? 'is-open' : ''}`} id="workspace-navigation">
           <Link className="brand-mark sidebar-brand" to="/dashboard" onClick={closeMenu}>
             <span className="brand-icon"><i className="bi bi-flower1" aria-hidden="true" /></span>
-            <span>Agri<span className="brand-accent">Tech</span></span>
+            <span style={{ color: '#ffffff', fontSize: '1.2rem', fontWeight: 800, fontFamily: 'inherit' }}>AgriTech</span>
           </Link>
           <div className="sidebar-section-label">{t('nav.workspace')}</div>
           <nav className="sidebar-nav" aria-label="Workspace navigation">
@@ -125,26 +261,15 @@ function App() {
                 <span className="badge bg-warning text-dark ms-auto" style={{ fontSize: '0.65rem' }}>{t('nav.verify')}</span>
               )}
             </NavLink>
-            {user?.role === 'admin' && (
-              <NavLink className={({ isActive }) => `sidebar-link sidebar-link-admin${isActive ? ' active' : ''}`} to="/admin" onClick={closeMenu}>
-                <i className="bi bi-shield-shaded" aria-hidden="true" />
-                <span className="fw-semibold">{t('nav.admin')}</span>
-                <span className="sidebar-role-badge ms-auto">ADMIN</span>
-              </NavLink>
-            )}
           </nav>
           <div className="sidebar-bottom">
-            <div className="d-flex align-items-center justify-content-between mb-2 px-1">
-              <span className="sidebar-lang-label">Language:</span>
-              <LanguageToggle size="sm" />
-            </div>
             <div className="sidebar-note"><i className="bi bi-shield-check" aria-hidden="true" /><span>{t('nav.privateNotice')}</span></div>
             <div className="sidebar-profile-wrap">
               <Link to="/profile" className="sidebar-profile text-decoration-none" onClick={closeMenu}>
                 <span className="avatar">{initials || 'F'}</span>
                 <span className="profile-copy">
                   <strong>{user?.name}</strong>
-                  <small>{userRoleLabel} {t('nav.accountSuffix')}</small>
+                  <small>Farmer {t('nav.accountSuffix')}</small>
                 </span>
               </Link>
               <button
@@ -159,24 +284,40 @@ function App() {
             </div>
           </div>
         </aside>
+
         <div className="workspace-main">
-          <header className="mobile-topbar">
-            <button
-              className="icon-button menu-toggle"
-              type="button"
-              aria-controls="workspace-navigation"
-              aria-expanded={menuOpen}
-              aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
-              onClick={() => setMenuOpen((open) => !open)}
-            >
-              <i className={`bi ${menuOpen ? 'bi-x-lg' : 'bi-list'}`} aria-hidden="true" />
-            </button>
-            <Link className="brand-mark" to="/dashboard">
-              <span className="brand-icon"><i className="bi bi-flower1" aria-hidden="true" /></span>
-              <span>Agri<span className="brand-accent">Tech</span></span>
-            </Link>
-            <Link to="/profile" className="avatar avatar-small text-decoration-none">{initials || 'F'}</Link>
+          <header className="workspace-topbar">
+            <div className="d-flex align-items-center gap-3">
+              <button
+                className="icon-button menu-toggle"
+                type="button"
+                aria-controls="workspace-navigation"
+                aria-expanded={menuOpen}
+                aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+                onClick={() => setMenuOpen((open) => !open)}
+              >
+                <i className={`bi ${menuOpen ? 'bi-x-lg' : 'bi-list'}`} aria-hidden="true" />
+              </button>
+              <Link className="brand-mark d-md-none" to="/dashboard">
+                <span className="brand-icon"><i className="bi bi-flower1" aria-hidden="true" /></span>
+                <span>Agri<span className="brand-accent">Tech</span></span>
+              </Link>
+              <div className="d-none d-md-flex align-items-center gap-2">
+                <span className="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-3 py-1-5 small fw-semibold d-inline-flex align-items-center gap-2">
+                  <span className="spinner-grow spinner-grow-sm text-success" style={{ width: '0.5rem', height: '0.5rem' }} role="status" aria-hidden="true" />
+                  AgriTech Intelligence Hub
+                </span>
+              </div>
+            </div>
+
+            <div className="d-flex align-items-center gap-3">
+              <LanguageToggle />
+              <Link to="/profile" className="avatar avatar-small text-decoration-none" title="User Profile">
+                {initials || 'F'}
+              </Link>
+            </div>
           </header>
+
           <main className="workspace-content">
             {user && !user.emailVerified && (
               <div className="alert alert-warning border-0 rounded-3 shadow-sm d-flex align-items-center justify-content-between py-2 px-3 mb-4" role="alert">
@@ -201,7 +342,8 @@ function App() {
               <Route path="/monitoring" element={<ProtectedRoute><MonitoringPage /></ProtectedRoute>} />
               <Route path="/inventory" element={<ProtectedRoute><InventoryPage /></ProtectedRoute>} />
               <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
-              <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
+              {/* Farmers cannot access /admin - redirect to dashboard */}
+              <Route path="/admin" element={<Navigate to="/dashboard" replace />} />
               <Route path="/verify-email" element={<VerifyEmailPage />} />
               <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
@@ -209,27 +351,33 @@ function App() {
           </main>
         </div>
       </div>
-    ) : (
-      <div className="public-app">
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/dashboard" element={<Navigate to="/login" replace />} />
-          <Route path="/login" element={<AuthPage mode="login" />} />
-          <Route path="/register" element={<AuthPage mode="register" />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
-          <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
-          <Route path="/verify-email" element={<VerifyEmailPage />} />
-          <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
-          <Route path="/farms/*" element={<Navigate to="/login" replace />} />
-          <Route path="/operations" element={<Navigate to="/login" replace />} />
-          <Route path="/monitoring" element={<Navigate to="/login" replace />} />
-          <Route path="/inventory" element={<Navigate to="/login" replace />} />
-          <Route path="/analytics" element={<Navigate to="/login" replace />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </div>
-    )
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // 3. UNAUTHENTICATED: PUBLIC APPLICATION
+  // -------------------------------------------------------------------------
+  return (
+    <div className="public-app">
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/dashboard" element={<Navigate to="/login" replace />} />
+        <Route path="/login" element={<AuthPage mode="login" />} />
+        <Route path="/register" element={<AuthPage mode="register" />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
+        <Route path="/farms/*" element={<Navigate to="/login" replace />} />
+        <Route path="/operations" element={<Navigate to="/login" replace />} />
+        <Route path="/monitoring" element={<Navigate to="/login" replace />} />
+        <Route path="/inventory" element={<Navigate to="/login" replace />} />
+        <Route path="/analytics" element={<Navigate to="/login" replace />} />
+        <Route path="/admin" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </div>
   );
 }
 

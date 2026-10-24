@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/useAuth.js';
+import { useLanguage } from '../context/useLanguage.js';
 
 export const ResetPasswordPage = () => {
   const { isAuthenticated, resetPassword } = useAuth();
+  const { t } = useLanguage();
   const [searchParams] = useSearchParams();
   const routeParams = useParams();
 
@@ -54,8 +56,8 @@ export const ResetPasswordPage = () => {
           <span className="brand-icon"><i className="bi bi-flower1" aria-hidden="true" /></span>
           <span>Agri<span className="brand-accent">Tech</span></span>
         </Link>
-        <span className="eyebrow">Account recovery</span>
-        <h1>Choose new password</h1>
+        <span className="eyebrow">{t('auth.appName')}</span>
+        <h1>{t('auth.passwordLabel')}</h1>
         <p className="text-secondary">
           Set a new, secure password for your AgriTech farm account.
         </p>
@@ -79,19 +81,19 @@ export const ResetPasswordPage = () => {
             <div className="success-icon mb-3">
               <i className="bi bi-shield-check text-success" style={{ fontSize: '2.5rem' }} aria-hidden="true" />
             </div>
-            <h2 className="h5 fw-bold mb-2">Password reset complete</h2>
+            <h2 className="h5 fw-bold mb-2">{t('common.confirm')}</h2>
             <p className="text-muted small mb-4">
-              Your password has been securely updated and previous sessions have been invalidated. You can now sign in with your new password.
+              Your password has been securely updated. You can now sign in with your new password.
             </p>
             <Link to="/login" className="btn btn-primary w-100">
-              Sign in with new password
+              {t('auth.signInBtn')}
             </Link>
           </div>
         ) : (
           token && (
             <form onSubmit={handleSubmit}>
               <div className="mb-3">
-                <label className="form-label" htmlFor="new-password">New password</label>
+                <label className="form-label" htmlFor="new-password">{t('auth.passwordLabel')}</label>
                 <input
                   id="new-password"
                   name="password"
@@ -104,11 +106,11 @@ export const ResetPasswordPage = () => {
                   maxLength={128}
                   required
                 />
-                <div className="form-text">Must be at least 10 characters long.</div>
+                <div className="form-text">{t('auth.passwordHint')}</div>
               </div>
 
               <div className="mb-4">
-                <label className="form-label" htmlFor="confirm-password">Confirm new password</label>
+                <label className="form-label" htmlFor="confirm-password">{t('common.confirm')} {t('auth.passwordLabel')}</label>
                 <input
                   id="confirm-password"
                   name="confirmPassword"
@@ -125,9 +127,9 @@ export const ResetPasswordPage = () => {
 
               <button className="btn btn-primary w-100" type="submit" disabled={submitting || !password}>
                 {submitting ? (
-                  <><span className="spinner-border spinner-border-sm me-2" aria-hidden="true" />Updating password…</>
+                  <><span className="spinner-border spinner-border-sm me-2" aria-hidden="true" />{t('auth.submitting')}</>
                 ) : (
-                  'Reset password'
+                  t('common.confirm')
                 )}
               </button>
             </form>
@@ -135,7 +137,7 @@ export const ResetPasswordPage = () => {
         )}
 
         <p className="auth-switch">
-          <Link to="/login">Back to sign in</Link>
+          <Link to="/login">{t('auth.signInBtn')}</Link>
         </p>
       </div>
     </section>

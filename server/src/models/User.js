@@ -99,7 +99,7 @@ const userSchema = new mongoose.Schema(
     },
     language: {
       type: String,
-      enum: ['en', 'hi'],
+      enum: ['en', 'hi', 'pa', 'mr', 'gu', 'te', 'kn', 'ta', 'bn'],
       default: 'en'
     },
     farmName: {
@@ -129,6 +129,11 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true,
       maxlength: [200, 'Address cannot exceed 200 characters'],
+      default: '',
+    },
+    profilePhoto: {
+      type: String,
+      trim: true,
       default: '',
     }
   },

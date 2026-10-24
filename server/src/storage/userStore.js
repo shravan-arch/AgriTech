@@ -1,6 +1,11 @@
+import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import User from '../models/User.js';
 import AuditLog from '../models/AuditLog.js';
+import PlatformSetting from '../models/PlatformSetting.js';
+import Notification from '../models/Notification.js';
+import Farm from '../models/Farm.js';
+import Field from '../models/Field.js';
 import { getDBStatus } from '../config/db.js';
 import { newLocalId, readLocalCollection, writeLocalCollection } from './localJsonStore.js';
 import { ownedUserFilter } from './ownershipQueries.js';
@@ -502,6 +507,17 @@ export const userStore = {
     return createLocalUser(users[index]);
   },
 
+  async changeUserRole(options) {
+    return this.updateUserRole(options);
+  },
+
+  async changeUserStatus(options) {
+    return this.updateUserStatus({
+      ...options,
+      status: options.newStatus || options.status,
+    });
+  },
+
   async reviewRoleRequest({ targetUserId, decision, actor, reason = '', ipAddress = '' }) {
     const mode = getStorageMode();
     if (mode === 'mongodb') {
@@ -846,6 +862,637 @@ export const userStore = {
     }
     if (!user.password) return false;
     return bcrypt.compare(candidatePassword, user.password);
+  },
+
+  async getUserDetails(userId) {
+    const mode = getStorageMode();
+    if (mode === 'mongodb') {
+      const user = await User.findById(userId)
+        .select('-password -resetPasswordToken -resetPasswordExpires -emailVerificationToken -emailVerificationExpires')
+        .lean();
+      if (!user) return null;
+      const farmCount = await Farm.countDocuments({ ownerId: user._id });
+      const fieldCount = await Field.countDocuments({ ownerId: user._id });
+      return { ...user, farmCount, fieldCount };
+    }
+    if (mode !== 'local-json-development') throw unavailableError();
+    const users = readLocalCollection('users');
+    const u = users.find((item) => item._id === userId || item.id === userId);
+    if (!u) return null;
+    const farms = readLocalCollection('farms');
+    const fields = readLocalCollection('fields');
+    const farmCount = farms.filter((f) => String(f.ownerId) === String(userId)).length;
+    const fieldCount = fields.filter((fld) => String(fld.ownerId) === String(userId)).length;
+    const safe = createLocalUser(u);
+    return { ...safe, farmCount, fieldCount };
+  },
+
+  async verifyUserEmailAdmin({ targetUserId, actor, reason = '', ipAddress = '' }) {
+    const mode = getStorageMode();
+    if (mode === 'mongodb') {
+      const user = await User.findById(targetUserId);
+      if (!user) return null;
+      user.emailVerified = true;
+      user.emailVerificationToken = undefined;
+      user.emailVerificationExpires = undefined;
+      await user.save();
+
+      await this.createAuditLog({
+        action: 'SUPPORT_EMAIL_VERIFIED',
+        actorId: actor._id || actor.id,
+        actorEmail: actor.email,
+        actorName: actor.name,
+        targetUserId: user._id,
+        targetUserEmail: user.email,
+        targetUserName: user.name,
+        reason: reason || 'Email verified manually by administrator assistance',
+        ipAddress,
+      });
+
+      return user;
+    }
+    if (mode !== 'local-json-development') throw unavailableError();
+    const users = readLocalCollection('users');
+    const index = users.findIndex((u) => u.id === targetUserId || u._id === targetUserId);
+    if (index === -1) return null;
+    users[index].emailVerified = true;
+    delete users[index].emailVerificationToken;
+    delete users[index].emailVerificationExpires;
+    users[index].updatedAt = new Date().toISOString();
+    writeLocalCollection('users', users);
+
+    await this.createAuditLog({
+      action: 'SUPPORT_EMAIL_VERIFIED',
+      actorId: actor.id || actor._id,
+      actorEmail: actor.email,
+      actorName: actor.name,
+      targetUserId,
+      targetUserEmail: users[index].email,
+      targetUserName: users[index].name,
+      reason: reason || 'Email verified manually by administrator assistance',
+      ipAddress,
+    });
+
+    return createLocalUser(users[index]);
+  },
+
+  async createPasswordResetAdmin({ targetUserId, actor, reason = '', ipAddress = '' }) {
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    const mode = getStorageMode();
+    if (mode === 'mongodb') {
+      const user = await User.findById(targetUserId);
+      if (!user) return null;
+      user.resetPasswordToken = hashedToken;
+      user.resetPasswordExpires = expiresAt;
+      await user.save();
+
+      await this.createAuditLog({
+        action: 'SUPPORT_PASSWORD_RESET',
+        actorId: actor._id || actor.id,
+        actorEmail: actor.email,
+        actorName: actor.name,
+        targetUserId: user._id,
+        targetUserEmail: user.email,
+        targetUserName: user.name,
+        reason: reason || 'Password reset link generated by administrator assistance',
+        ipAddress,
+      });
+
+      return { user, resetToken: rawToken };
+    }
+    if (mode !== 'local-json-development') throw unavailableError();
+    const users = readLocalCollection('users');
+    const index = users.findIndex((u) => u.id === targetUserId || u._id === targetUserId);
+    if (index === -1) return null;
+    users[index].resetPasswordToken = hashedToken;
+    users[index].resetPasswordExpires = expiresAt.toISOString();
+    users[index].updatedAt = new Date().toISOString();
+    writeLocalCollection('users', users);
+
+    await this.createAuditLog({
+      action: 'SUPPORT_PASSWORD_RESET',
+      actorId: actor.id || actor._id,
+      actorEmail: actor.email,
+      actorName: actor.name,
+      targetUserId,
+      targetUserEmail: users[index].email,
+      targetUserName: users[index].name,
+      reason: reason || 'Password reset link generated by administrator assistance',
+      ipAddress,
+    });
+
+    return { user: createLocalUser(users[index]), resetToken: rawToken };
+  },
+
+  async updateUserProfileAdmin({ targetUserId, profileData, actor, reason = '', ipAddress = '' }) {
+    const mode = getStorageMode();
+    if (mode === 'mongodb') {
+      const user = await User.findById(targetUserId);
+      if (!user) return null;
+
+      if (profileData.name !== undefined) user.name = profileData.name;
+      if (profileData.phone !== undefined) user.phone = profileData.phone;
+      if (profileData.address !== undefined) user.address = profileData.address;
+      if (profileData.language !== undefined) user.language = profileData.language;
+      if (profileData.farmName !== undefined) user.farmName = profileData.farmName;
+      if (profileData.farmSizeHectares !== undefined) user.farmSizeHectares = profileData.farmSizeHectares;
+      if (profileData.primaryCrops !== undefined) user.primaryCrops = profileData.primaryCrops;
+      if (profileData.profilePhoto !== undefined) user.profilePhoto = profileData.profilePhoto;
+
+      await user.save();
+
+      await this.createAuditLog({
+        action: 'ADMIN_PROFILE_UPDATE',
+        actorId: actor._id || actor.id,
+        actorEmail: actor.email,
+        actorName: actor.name,
+        targetUserId: user._id,
+        targetUserEmail: user.email,
+        targetUserName: user.name,
+        reason: reason || 'Profile updated by administrator',
+        ipAddress,
+      });
+
+      return user;
+    }
+    if (mode !== 'local-json-development') throw unavailableError();
+    const users = readLocalCollection('users');
+    const index = users.findIndex((u) => u.id === targetUserId || u._id === targetUserId);
+    if (index === -1) return null;
+
+    if (profileData.name !== undefined) users[index].name = profileData.name;
+    if (profileData.phone !== undefined) users[index].phone = profileData.phone;
+    if (profileData.address !== undefined) users[index].address = profileData.address;
+    if (profileData.language !== undefined) users[index].language = profileData.language;
+    if (profileData.farmName !== undefined) users[index].farmName = profileData.farmName;
+    if (profileData.farmSizeHectares !== undefined) users[index].farmSizeHectares = profileData.farmSizeHectares;
+    if (profileData.primaryCrops !== undefined) users[index].primaryCrops = profileData.primaryCrops;
+    if (profileData.profilePhoto !== undefined) users[index].profilePhoto = profileData.profilePhoto;
+    users[index].updatedAt = new Date().toISOString();
+    writeLocalCollection('users', users);
+
+    await this.createAuditLog({
+      action: 'ADMIN_PROFILE_UPDATE',
+      actorId: actor.id || actor._id,
+      actorEmail: actor.email,
+      actorName: actor.name,
+      targetUserId,
+      targetUserEmail: users[index].email,
+      targetUserName: users[index].name,
+      reason: reason || 'Profile updated by administrator',
+      ipAddress,
+    });
+
+    return createLocalUser(users[index]);
+  },
+
+  async getPlatformSettings() {
+    const mode = getStorageMode();
+    const defaults = {
+      key: 'default',
+      supportedLanguages: ['en', 'hi', 'pa', 'mr', 'gu', 'te', 'kn', 'ta', 'bn'],
+      allowPublicRegistration: true,
+      requireEmailVerification: false,
+      maintenanceMode: false,
+      systemNotice: '',
+    };
+    if (mode === 'mongodb') {
+      const setting = await PlatformSetting.findOne({ key: 'default' });
+      return setting ? setting.toObject() : defaults;
+    }
+    if (mode !== 'local-json-development') return defaults;
+    const settings = readLocalCollection('platform_settings');
+    return settings[0] || defaults;
+  },
+
+  async updatePlatformSettings(settingsData, actor, ipAddress = '') {
+    const mode = getStorageMode();
+    if (mode === 'mongodb') {
+      const updated = await PlatformSetting.findOneAndUpdate(
+        { key: 'default' },
+        {
+          $set: {
+            ...settingsData,
+            updatedBy: actor._id || actor.id,
+          },
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+
+      await this.createAuditLog({
+        action: 'PLATFORM_SETTINGS_UPDATE',
+        actorId: actor._id || actor.id,
+        actorEmail: actor.email,
+        actorName: actor.name,
+        reason: 'Platform settings updated by administrator',
+        ipAddress,
+      });
+
+      return updated.toObject ? updated.toObject() : updated;
+    }
+    if (mode !== 'local-json-development') throw unavailableError();
+    const settings = readLocalCollection('platform_settings');
+    const existing = settings[0] || { key: 'default' };
+    const merged = {
+      ...existing,
+      ...settingsData,
+      updatedBy: actor.id || actor._id,
+      updatedAt: new Date().toISOString(),
+    };
+    writeLocalCollection('platform_settings', [merged]);
+
+    await this.createAuditLog({
+      action: 'PLATFORM_SETTINGS_UPDATE',
+      actorId: actor.id || actor._id,
+      actorEmail: actor.email,
+      actorName: actor.name,
+      reason: 'Platform settings updated by administrator',
+      ipAddress,
+    });
+
+    return merged;
+  },
+
+  async createAnnouncement({ title, message, severity = 'info', actor, ipAddress = '' }) {
+    const mode = getStorageMode();
+    if (mode === 'mongodb') {
+      const users = await User.find({ status: { $ne: 'suspended' } }).select('_id');
+      const notifications = users.map((u) => ({
+        ownerId: u._id,
+        userId: u._id,
+        title,
+        message,
+        type: 'system',
+        severity: ['info', 'warning', 'critical'].includes(severity) ? severity : 'info',
+        read: false,
+      }));
+      if (notifications.length > 0) {
+        await Notification.insertMany(notifications);
+      }
+
+      await this.createAuditLog({
+        action: 'SYSTEM_ANNOUNCEMENT',
+        actorId: actor._id || actor.id,
+        actorEmail: actor.email,
+        actorName: actor.name,
+        reason: `Broadcast announcement: ${title}`,
+        ipAddress,
+      });
+
+      return { count: notifications.length, title, severity };
+    }
+    if (mode !== 'local-json-development') throw unavailableError();
+    const users = readLocalCollection('users').filter((u) => (u.status || 'active') !== 'suspended');
+    const notifications = readLocalCollection('notifications');
+    const now = new Date().toISOString();
+    let count = 0;
+    for (const u of users) {
+      const uid = u._id || u.id;
+      const notif = {
+        _id: newLocalId(),
+        id: undefined,
+        ownerId: uid,
+        userId: uid,
+        title,
+        message,
+        type: 'system',
+        severity: ['info', 'warning', 'critical'].includes(severity) ? severity : 'info',
+        read: false,
+        createdAt: now,
+        updatedAt: now,
+      };
+      notif.id = notif._id;
+      notifications.unshift(notif);
+      count++;
+    }
+    writeLocalCollection('notifications', notifications);
+
+    await this.createAuditLog({
+      action: 'SYSTEM_ANNOUNCEMENT',
+      actorId: actor.id || actor._id,
+      actorEmail: actor.email,
+      actorName: actor.name,
+      reason: `Broadcast announcement: ${title}`,
+      ipAddress,
+    });
+
+    return { count, title, severity };
+  },
+
+  async getSystemHealth() {
+    const mode = getStorageMode();
+    const uptimeSeconds = Math.floor(process.uptime());
+    const memory = process.memoryUsage();
+
+    if (mode === 'mongodb') {
+      const [totalUsers, activeUsers, suspendedUsers, activeAdmins, recentAuthFailures] =
+        await Promise.all([
+          User.countDocuments(),
+          User.countDocuments({ status: { $ne: 'suspended' } }),
+          User.countDocuments({ status: 'suspended' }),
+          User.countDocuments({ role: 'admin', status: { $ne: 'suspended' } }),
+          AuditLog.countDocuments({
+            action: 'AUTH_FAILURE',
+            createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+          }),
+        ]);
+
+      return {
+        status: 'healthy',
+        databaseMode: mode,
+        uptimeSeconds,
+        memoryUsageMb: Math.round((memory.heapUsed / 1024 / 1024) * 100) / 100,
+        totalUsers,
+        activeUsers,
+        suspendedUsers,
+        activeAdmins,
+        recentAuthFailures,
+        timestamp: new Date().toISOString(),
+      };
+    }
+
+    if (mode !== 'local-json-development') throw unavailableError();
+    const users = readLocalCollection('users');
+    const auditLogs = readLocalCollection('audit_logs');
+    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+    const totalUsers = users.length;
+    const activeUsers = users.filter((u) => (u.status || 'active') !== 'suspended').length;
+    const suspendedUsers = users.filter((u) => u.status === 'suspended').length;
+    const activeAdmins = users.filter((u) => u.role === 'admin' && (u.status || 'active') !== 'suspended').length;
+    const recentAuthFailures = auditLogs.filter(
+      (log) => log.action === 'AUTH_FAILURE' && (log.createdAt || '') >= dayAgo
+    ).length;
+
+    return {
+      status: 'healthy',
+      databaseMode: mode,
+      uptimeSeconds,
+      memoryUsageMb: Math.round((memory.heapUsed / 1024 / 1024) * 100) / 100,
+      totalUsers,
+      activeUsers,
+      suspendedUsers,
+      activeAdmins,
+      recentAuthFailures,
+      timestamp: new Date().toISOString(),
+    };
+  },
+
+  async updateFarmExceptional({ farmId, updates, reason, actor, ipAddress = '' }) {
+    const mode = getStorageMode();
+    if (mode === 'mongodb') {
+      const farm = await Farm.findById(farmId);
+      if (!farm) return null;
+
+      if (updates.name) farm.name = updates.name.trim();
+      if (updates.location) {
+        farm.location = { ...(farm.location?.toObject?.() || farm.location), ...updates.location };
+      }
+      await farm.save();
+
+      await this.createAuditLog({
+        action: 'ADMIN_FARM_UPDATE',
+        actorId: actor._id || actor.id,
+        actorEmail: actor.email,
+        actorName: actor.name,
+        targetUserId: farm.ownerId,
+        reason: reason || 'Exceptional farm administrative maintenance',
+        ipAddress,
+      });
+
+      return farm;
+    }
+    if (mode !== 'local-json-development') throw unavailableError();
+    const farms = readLocalCollection('farms');
+    const index = farms.findIndex((f) => f._id === farmId || f.id === farmId);
+    if (index === -1) return null;
+
+    if (updates.name) farms[index].name = updates.name.trim();
+    if (updates.location) {
+      farms[index].location = { ...(farms[index].location || {}), ...updates.location };
+    }
+    farms[index].updatedAt = new Date().toISOString();
+    writeLocalCollection('farms', farms);
+
+    await this.createAuditLog({
+      action: 'ADMIN_FARM_UPDATE',
+      actorId: actor.id || actor._id,
+      actorEmail: actor.email,
+      actorName: actor.name,
+      targetUserId: farms[index].ownerId,
+      reason: reason || 'Exceptional farm administrative maintenance',
+      ipAddress,
+    });
+
+    return farms[index];
+  },
+
+  async countActiveAdmins() {
+    const mode = getStorageMode();
+    if (mode === 'mongodb') {
+      return User.countDocuments({ role: 'admin', status: { $ne: 'suspended' } });
+    }
+    if (mode !== 'local-json-development') throw unavailableError();
+    const users = readLocalCollection('users');
+    return users.filter((u) => u.role === 'admin' && (u.status || 'active') !== 'suspended').length;
+  },
+
+  async bootstrapAdmin({ email, password, name, ipAddress = '' }) {
+    const mode = getStorageMode();
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Check if any active admin already exists
+    const adminCount = await this.countActiveAdmins();
+    if (adminCount > 0) {
+      const err = new Error('An active administrator is already configured in the system.');
+      err.code = 'BOOTSTRAP_DISABLED';
+      throw err;
+    }
+
+    if (mode === 'mongodb') {
+      let user = await User.findOne({ email: normalizedEmail });
+      if (user) {
+        user.name = name.trim();
+        user.password = password;
+        user.role = 'admin';
+        user.emailVerified = true;
+        user.status = 'active';
+        await user.save();
+      } else {
+        user = await User.create({
+          name: name.trim(),
+          email: normalizedEmail,
+          password,
+          role: 'admin',
+          emailVerified: true,
+          status: 'active',
+        });
+      }
+
+      await this.createAuditLog({
+        action: 'SYSTEM_BOOTSTRAP',
+        actorId: user._id,
+        actorEmail: user.email,
+        actorName: user.name,
+        reason: 'Initial root administrator established via system bootstrap',
+        ipAddress,
+      });
+
+      return user.toJSON ? user.toJSON() : user;
+    }
+
+    if (mode !== 'local-json-development') throw unavailableError();
+
+    const users = readLocalCollection('users');
+    let recordIndex = users.findIndex((u) => u.email?.toLowerCase() === normalizedEmail);
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    const now = new Date().toISOString();
+
+    let savedRecord;
+    if (recordIndex !== -1) {
+      users[recordIndex] = {
+        ...users[recordIndex],
+        name: name.trim(),
+        password: hashedPassword,
+        role: 'admin',
+        emailVerified: true,
+        status: 'active',
+        updatedAt: now,
+      };
+      savedRecord = users[recordIndex];
+    } else {
+      const id = newLocalId();
+      savedRecord = {
+        _id: id,
+        id,
+        name: name.trim(),
+        email: normalizedEmail,
+        password: hashedPassword,
+        role: 'admin',
+        emailVerified: true,
+        status: 'active',
+        createdAt: now,
+        updatedAt: now,
+      };
+      users.push(savedRecord);
+    }
+    writeLocalCollection('users', users);
+
+    await this.createAuditLog({
+      action: 'SYSTEM_BOOTSTRAP',
+      actorId: savedRecord.id,
+      actorEmail: savedRecord.email,
+      actorName: savedRecord.name,
+      reason: 'Initial root administrator established via system bootstrap',
+      ipAddress,
+    });
+
+    return createLocalUser(savedRecord, false);
+  },
+
+  async bootstrapFirstAdmin(options) {
+    const { targetEmail, name, password, ipAddress } = options;
+    return this.bootstrapAdmin({ email: targetEmail, name, password, ipAddress });
+  },
+
+  async updateAdminSelfProfile({ adminId, updates, ipAddress }) {
+    const mode = getStorageMode();
+    if (mode === 'mongodb') {
+      const user = await User.findById(adminId);
+      if (!user) return null;
+      if (updates.name !== undefined) user.name = updates.name;
+      if (updates.phone !== undefined) user.phone = updates.phone;
+      if (updates.address !== undefined) user.address = updates.address;
+      if (updates.language !== undefined) user.language = updates.language;
+      if (updates.profilePhoto !== undefined) user.profilePhoto = updates.profilePhoto;
+      await user.save();
+      await this.createAuditLog({
+        action: 'ADMIN_SELF_PROFILE_UPDATE',
+        actorId: adminId,
+        actorEmail: user.email,
+        actorName: user.name,
+        targetUserId: adminId,
+        targetUserEmail: user.email,
+        targetUserName: user.name,
+        reason: 'Admin updated personal profile details',
+        ipAddress,
+      });
+      return user;
+    }
+    if (mode !== 'local-json-development') throw unavailableError();
+    const users = readLocalCollection('users');
+    const index = users.findIndex((u) => u.id === adminId || u._id === adminId);
+    if (index === -1) return null;
+    if (updates.name !== undefined) users[index].name = updates.name;
+    if (updates.phone !== undefined) users[index].phone = updates.phone;
+    if (updates.address !== undefined) users[index].address = updates.address;
+    if (updates.language !== undefined) users[index].language = updates.language;
+    if (updates.profilePhoto !== undefined) users[index].profilePhoto = updates.profilePhoto;
+    users[index].updatedAt = new Date().toISOString();
+    writeLocalCollection('users', users);
+    await this.createAuditLog({
+      action: 'ADMIN_SELF_PROFILE_UPDATE',
+      actorId: adminId,
+      actorEmail: users[index].email,
+      actorName: users[index].name,
+      targetUserId: adminId,
+      targetUserEmail: users[index].email,
+      targetUserName: users[index].name,
+      reason: 'Admin updated personal profile details',
+      ipAddress,
+    });
+    return createLocalUser(users[index]);
+  },
+
+  async updateAdminPassword({ adminId, currentPassword, newPassword, ipAddress }) {
+    const mode = getStorageMode();
+    if (mode === 'mongodb') {
+      const user = await User.findById(adminId);
+      if (!user) return { success: false, code: 'USER_NOT_FOUND', message: 'User not found.' };
+      const isMatch = await user.comparePassword(currentPassword);
+      if (!isMatch) return { success: false, code: 'INVALID_CREDENTIALS', message: 'Current password is incorrect.' };
+      user.password = newPassword;
+      user.passwordChangedAt = new Date();
+      await user.save();
+      await this.createAuditLog({
+        action: 'ADMIN_PASSWORD_CHANGED',
+        actorId: adminId,
+        actorEmail: user.email,
+        actorName: user.name,
+        targetUserId: adminId,
+        targetUserEmail: user.email,
+        targetUserName: user.name,
+        reason: 'Admin changed password via secure authentication flow',
+        ipAddress,
+      });
+      return { success: true };
+    }
+    if (mode !== 'local-json-development') throw unavailableError();
+    const users = readLocalCollection('users');
+    const index = users.findIndex((u) => u.id === adminId || u._id === adminId);
+    if (index === -1) return { success: false, code: 'USER_NOT_FOUND', message: 'User not found.' };
+    const isMatch = await bcrypt.compare(currentPassword, users[index].password);
+    if (!isMatch) return { success: false, code: 'INVALID_CREDENTIALS', message: 'Current password is incorrect.' };
+    users[index].password = await bcrypt.hash(newPassword, 10);
+    users[index].passwordChangedAt = new Date().toISOString();
+    users[index].updatedAt = new Date().toISOString();
+    writeLocalCollection('users', users);
+    await this.createAuditLog({
+      action: 'ADMIN_PASSWORD_CHANGED',
+      actorId: adminId,
+      actorEmail: users[index].email,
+      actorName: users[index].name,
+      targetUserId: adminId,
+      targetUserEmail: users[index].email,
+      targetUserName: users[index].name,
+      reason: 'Admin changed password via secure authentication flow',
+      ipAddress,
+    });
+    return { success: true };
   },
 };
 

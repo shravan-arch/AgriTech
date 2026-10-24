@@ -15,6 +15,13 @@ export const createFinanceController = (farmStore = defaultFarmStore) => ({
   },
 
   async createRecord(req, res, next) {
+    if (req.user && req.user.role === 'admin') {
+      return res.status(403).json({
+        error: 'Forbidden',
+        code: 'ADMIN_WRITE_RESTRICTED',
+        message: 'Administrators manage the platform and users; they cannot create personal agricultural resources or workspaces.',
+      });
+    }
     try {
       const { farmId, type, category, amount } = req.body;
       if (!farmId) {
@@ -57,6 +64,17 @@ export const createFinanceController = (farmStore = defaultFarmStore) => ({
         return res.status(400).json({ error: 'Validation Error', message: 'Amount must be a positive number.' });
       }
 
+      if (req.user && req.user.role === 'admin') {
+        const records = await farmStore.listFinanceRecords(req.user._id, {});
+        const match = records.find((r) => String(r._id) === String(req.params.id));
+        if (!match) return res.status(404).json({ error: 'Not Found', message: 'Finance record not found.' });
+        return res.status(403).json({
+          error: 'Forbidden',
+          code: 'ADMIN_WRITE_RESTRICTED',
+          message: 'Administrators cannot modify financial records directly.',
+        });
+      }
+
       const result = await farmStore.updateFinanceRecord(req.user._id, req.params.id, req.body);
       if (!result) {
         return res.status(404).json({ error: 'Not Found', message: 'Finance record not found.' });
@@ -79,6 +97,17 @@ export const createFinanceController = (farmStore = defaultFarmStore) => ({
 
   async deleteRecord(req, res, next) {
     try {
+      if (req.user && req.user.role === 'admin') {
+        const records = await farmStore.listFinanceRecords(req.user._id, {});
+        const match = records.find((r) => String(r._id) === String(req.params.id));
+        if (!match) return res.status(404).json({ error: 'Not Found', message: 'Finance record not found.' });
+        return res.status(403).json({
+          error: 'Forbidden',
+          code: 'ADMIN_WRITE_RESTRICTED',
+          message: 'Administrators cannot delete financial records directly.',
+        });
+      }
+
       const deleted = await farmStore.deleteFinanceRecord(req.user._id, req.params.id);
       if (!deleted) {
         return res.status(404).json({ error: 'Not Found', message: 'Finance record not found.' });

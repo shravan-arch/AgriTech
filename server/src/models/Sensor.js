@@ -70,6 +70,17 @@ const sensorSchema = new mongoose.Schema(
       max: { type: Number },
       unit: { type: String, default: '%' },
     },
+    isSimulated: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    source: {
+      type: String,
+      enum: ['physical', 'simulated'],
+      default: 'physical',
+      index: true,
+    },
   },
   { timestamps: true }
 );

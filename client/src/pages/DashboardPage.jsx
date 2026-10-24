@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/useAuth.js';
+import { useLanguage } from '../context/useLanguage.js';
 import { apiRequest } from '../lib/api.js';
 import { Badge, Card, DataTable, EmptyState, ErrorState, LoadingState, PageHeader } from '../components/ui.jsx';
 
@@ -29,6 +30,7 @@ const TASK_TYPE_ICONS = {
 
 const DashboardPage = () => {
   const { token, user } = useAuth();
+  const { t } = useLanguage();
   const [farms, setFarms] = useState([]);
   const [fieldCounts, setFieldCounts] = useState({});
   const [fieldCount, setFieldCount] = useState(null);
@@ -239,24 +241,48 @@ const DashboardPage = () => {
   return (
     <section className="page-shell dashboard-page">
       <PageHeader
-        eyebrow="Your workspace"
-        title={`Good to see you${user?.name ? `, ${user.name.split(' ')[0]}` : ''}`}
-        description="A clear view of your farms, operational tasks, growth cycles, and recent activities."
+        eyebrow={t('dashboard.eyebrow')}
+        title={t('dashboard.title')}
+        description={t('dashboard.description')}
         actions={
           <div className="d-flex align-items-center gap-2">
             {notifications.filter((n) => !n.read).length > 0 && (
               <span className="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-3 py-2">
                 <i className="bi bi-bell-fill me-1" />
-                {notifications.filter((n) => !n.read).length} active alert{notifications.filter((n) => !n.read).length > 1 ? 's' : ''}
+                {notifications.filter((n) => !n.read).length} alerts
               </span>
             )}
-            <Link className="btn btn-primary" to="/farms#add-farm">
-              <i className="bi bi-plus-lg me-2" aria-hidden="true" />
-              Add a farm
-            </Link>
+            {user?.role === 'admin' ? (
+              <Link className="btn btn-primary" to="/admin">
+                <i className="bi bi-shield-shaded me-2" aria-hidden="true" />
+                Admin Dashboard
+              </Link>
+            ) : (
+              <Link className="btn btn-primary" to="/farms#add-farm">
+                <i className="bi bi-plus-lg me-2" aria-hidden="true" />
+                {t('dashboard.quickAddFarm')}
+              </Link>
+            )}
           </div>
         }
       />
+
+      {user?.role === 'admin' && (
+        <div className="alert alert-primary border-0 rounded-3 shadow-sm d-flex flex-wrap align-items-center justify-content-between p-3 mb-4" role="alert">
+          <div className="d-flex align-items-center gap-3">
+            <i className="bi bi-shield-lock-fill fs-3 text-primary flex-shrink-0" />
+            <div>
+              <h4 className="h6 fw-bold mb-1 text-primary">Administrator Platform Workspace</h4>
+              <p className="small mb-0 text-secondary">
+                You are authenticated with Administrator governance privileges. Administrators manage platform settings, user profiles, and security audit logs, and do not maintain a personal farm workspace.
+              </p>
+            </div>
+          </div>
+          <Link to="/admin" className="btn btn-primary btn-sm fw-semibold text-nowrap ms-auto mt-2 mt-md-0">
+            Open Dedicated Admin Dashboard <i className="bi bi-arrow-right ms-1" />
+          </Link>
+        </div>
+      )}
 
       {error && <ErrorState message={error} retrying={loading} onRetry={retryDashboard} />}
 
@@ -342,7 +368,7 @@ const DashboardPage = () => {
       <div className="dashboard-metrics" aria-label="Farm record summary">
         <Card className="metric-card">
           <div className="metric-card-top">
-            <span>Farms</span>
+            <span>{t('dashboard.metricFarms')}</span>
             <span className="metric-icon">
               <i className="bi bi-houses" aria-hidden="true" />
             </span>
@@ -350,14 +376,14 @@ const DashboardPage = () => {
           {loading ? (
             <span className="metric-value metric-loading">—</span>
           ) : (
-            <strong className="metric-value">{error ? 'Unavailable' : farms.length}</strong>
+            <strong className="metric-value">{error ? t('common.unavailable') : farms.length}</strong>
           )}
-          <span className="metric-note">Farms in your workspace</span>
+          <span className="metric-note">{t('dashboard.metricFarmsNote')}</span>
         </Card>
 
         <Card className="metric-card">
           <div className="metric-card-top">
-            <span>Fields</span>
+            <span>{t('dashboard.metricFields')}</span>
             <span className="metric-icon metric-icon-sage">
               <i className="bi bi-bounding-box" aria-hidden="true" />
             </span>
@@ -365,14 +391,14 @@ const DashboardPage = () => {
           {loading ? (
             <span className="metric-value metric-loading">—</span>
           ) : (
-            <strong className="metric-value">{error ? 'Unavailable' : formatMetric(fieldCount)}</strong>
+            <strong className="metric-value">{error ? t('common.unavailable') : formatMetric(fieldCount)}</strong>
           )}
-          <span className="metric-note">Fields recorded across your farms</span>
+          <span className="metric-note">{t('dashboard.metricFieldsNote')}</span>
         </Card>
 
         <Card className="metric-card">
           <div className="metric-card-top">
-            <span>Recorded area</span>
+            <span>{t('dashboard.metricArea')}</span>
             <span className="metric-icon metric-icon-gold">
               <i className="bi bi-aspect-ratio" aria-hidden="true" />
             </span>
@@ -380,29 +406,29 @@ const DashboardPage = () => {
           {loading ? (
             <span className="metric-value metric-loading">—</span>
           ) : (
-            <strong className="metric-value">{error ? 'Unavailable' : formatMetric(area, ' ha')}</strong>
+            <strong className="metric-value">{error ? t('common.unavailable') : formatMetric(area, ' ha')}</strong>
           )}
-          <span className="metric-note">Total area of recorded fields</span>
+          <span className="metric-note">{t('dashboard.metricAreaNote')}</span>
         </Card>
 
         <Card className="metric-card">
           <div className="metric-card-top">
-            <span>Active crops</span>
+            <span>{t('dashboard.metricCrops')}</span>
             <span className="metric-icon metric-icon-sage">
-              <i className="bi bi-sprout" aria-hidden="true" />
+              <i className="bi bi-leaf" aria-hidden="true" />
             </span>
           </div>
           {loading ? (
             <span className="metric-value metric-loading">—</span>
           ) : (
-            <strong className="metric-value">{error ? 'Unavailable' : activeCrops.length}</strong>
+            <strong className="metric-value">{error ? t('common.unavailable') : activeCrops.length}</strong>
           )}
-          <span className="metric-note">Fields currently planted</span>
+          <span className="metric-note">{t('dashboard.metricCropsNote')}</span>
         </Card>
 
         <Card className="metric-card">
           <div className="metric-card-top">
-            <span>Net Operating Profit</span>
+            <span>{t('dashboard.metricProfit')}</span>
             <span className="metric-icon metric-icon-sage">
               <i className="bi bi-currency-rupee" />
             </span>
@@ -411,17 +437,17 @@ const DashboardPage = () => {
             <span className="metric-value metric-loading">—</span>
           ) : (
             <strong className="metric-value" style={{ color: (summaryData?.finances?.netProfit || 0) >= 0 ? '#285d43' : '#b94a48' }}>
-              {error ? 'Unavailable' : `₹${new Intl.NumberFormat('en-IN').format(summaryData?.finances?.netProfit || 0)}`}
+              {error ? t('common.unavailable') : `₹${new Intl.NumberFormat('en-IN').format(summaryData?.finances?.netProfit || 0)}`}
             </strong>
           )}
           <Link to="/analytics" className="metric-note text-decoration-none">
-            Revenue: ₹{new Intl.NumberFormat('en-IN').format(summaryData?.finances?.totalIncome || 0)} <i className="bi bi-arrow-right" />
+            {t('dashboard.metricRevenue')}: ₹{new Intl.NumberFormat('en-IN').format(summaryData?.finances?.totalIncome || 0)} <i className="bi bi-arrow-right" />
           </Link>
         </Card>
 
         <Card className="metric-card">
           <div className="metric-card-top">
-            <span>Supplies & Inventory</span>
+            <span>{t('dashboard.metricInventory')}</span>
             <span className="metric-icon">
               <i className="bi bi-boxes" />
             </span>
@@ -429,10 +455,10 @@ const DashboardPage = () => {
           {loading ? (
             <span className="metric-value metric-loading">—</span>
           ) : (
-            <strong className="metric-value">{error ? 'Unavailable' : summaryData?.inventory?.totalItems || 0}</strong>
+            <strong className="metric-value">{error ? t('common.unavailable') : summaryData?.inventory?.totalItems || 0}</strong>
           )}
           <Link to="/inventory" className="metric-note text-decoration-none">
-            {summaryData?.inventory?.lowStockCount || 0} low stock <i className="bi bi-arrow-right" />
+            {summaryData?.inventory?.lowStockCount || 0} {t('dashboard.metricLowStock')} <i className="bi bi-arrow-right" />
           </Link>
         </Card>
       </div>
@@ -477,12 +503,12 @@ const DashboardPage = () => {
         <Card className="p-4">
           <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
             <div>
-              <span className="eyebrow">Operational planning</span>
-              <h2 className="h4 mb-0">Farm Tasks</h2>
+              <span className="eyebrow">{t('operations.eyebrow')}</span>
+              <h2 className="h4 mb-0">{t('operations.title')}</h2>
             </div>
             <div className="d-flex align-items-center gap-2 flex-wrap">
               <Link to="/operations" className="btn btn-outline-secondary btn-sm">
-                Manage all tasks <i className="bi bi-arrow-right ms-1" />
+                {t('operations.tabTasks')} <i className="bi bi-arrow-right ms-1" />
               </Link>
               <div className="segment-tabs" role="tablist" aria-label="Task filter tabs">
               <button
@@ -490,37 +516,37 @@ const DashboardPage = () => {
                 className={`segment-tab ${taskFilter === 'today' ? 'active' : ''}`}
                 onClick={() => setTaskFilter('today')}
               >
-                Due today ({dueTodayTasks.length})
+                {t('operations.filterToday')} ({dueTodayTasks.length})
               </button>
               <button
                 type="button"
                 className={`segment-tab ${taskFilter === 'overdue' ? 'active' : ''}`}
                 onClick={() => setTaskFilter('overdue')}
               >
-                Overdue ({overdueTasks.length})
+                {t('operations.filterOverdue')} ({overdueTasks.length})
               </button>
               <button
                 type="button"
                 className={`segment-tab ${taskFilter === 'upcoming' ? 'active' : ''}`}
                 onClick={() => setTaskFilter('upcoming')}
               >
-                Upcoming ({upcomingTasks.length})
+                {t('operations.filterUpcoming')} ({upcomingTasks.length})
               </button>
               <button
                 type="button"
                 className={`segment-tab ${taskFilter === 'completed' ? 'active' : ''}`}
                 onClick={() => setTaskFilter('completed')}
               >
-                Completed ({completedTasks.length})
+                {t('operations.filterCompleted')} ({completedTasks.length})
               </button>
               <button
                 type="button"
                 className={`segment-tab ${taskFilter === 'all' ? 'active' : ''}`}
                 onClick={() => setTaskFilter('all')}
               >
-                All ({tasks.length})
+                {t('operations.filterAll')} ({tasks.length})
               </button>
-            </div>
+              </div>
             </div>
           </div>
 
@@ -697,7 +723,7 @@ const DashboardPage = () => {
                       {activeCycle ? (
                         <div>
                           <div className="field-status-crop-info">
-                            <i className="bi bi-sprout text-success" />
+                            <i className="bi bi-leaf text-success" />
                             <span className="field-status-crop-name">{activeCycle.cropName}</span>
                             {activeCycle.variety && (
                               <span className="small text-muted">({activeCycle.variety})</span>
@@ -748,11 +774,11 @@ const DashboardPage = () => {
           <Card className="p-4 h-100">
             <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
               <div>
-                <span className="eyebrow">Field Activity Log</span>
-                <h2 className="h4 mb-0">Recent Activities</h2>
+                <span className="eyebrow">{t('operations.tabActivities')}</span>
+                <h2 className="h4 mb-0">{t('dashboard.recentActivities')}</h2>
               </div>
               <Link to="/operations" className="btn btn-outline-secondary btn-sm">
-                View full activity log <i className="bi bi-arrow-right ms-1" />
+                {t('operations.tabActivities')} <i className="bi bi-arrow-right ms-1" />
               </Link>
             </div>
 
@@ -829,11 +855,11 @@ const DashboardPage = () => {
           <Card className="dashboard-records p-4 h-100">
             <div className="card-section-heading">
               <div>
-                <span className="eyebrow">Your land</span>
-                <h2>Recent farms</h2>
+                <span className="eyebrow">{t('farms.eyebrow')}</span>
+                <h2>{t('farms.title')}</h2>
               </div>
               <Link className="text-link" to="/farms">
-                View all <i className="bi bi-arrow-right ms-1" aria-hidden="true" />
+                {t('common.view')} {t('common.all')} <i className="bi bi-arrow-right ms-1" aria-hidden="true" />
               </Link>
             </div>
             {loading && <LoadingState>Loading your farm records…</LoadingState>}

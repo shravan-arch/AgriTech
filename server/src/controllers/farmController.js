@@ -37,7 +37,7 @@ export const photoUploadMiddleware = (req, res, next) => {
 
 const farmKeys = new Set(['name', 'location']);
 const fieldKeys = new Set(['name', 'areaHectares', 'soilType', 'waterSource']);
-const locationKeys = new Set(['region', 'country', 'city']);
+const locationKeys = new Set(['region', 'country', 'city', 'latitude', 'longitude']);
 const cropCycleKeys = new Set([
   'cropName',
   'variety',
@@ -100,12 +100,38 @@ const validObject = (value) => value && typeof value === 'object' && !Array.isAr
 const validateName = (name) =>
   typeof name === 'string' && name.trim().length > 0 && name.trim().length <= 100;
 
-const validateLocation = (location) =>
-  validObject(location) &&
-  Object.keys(location).every((key) => locationKeys.has(key)) &&
-  Object.values(location).every((value) =>
-    typeof value === 'string' && value.trim().length <= 100
-  );
+const validateLocation = (location) => {
+  if (!validObject(location)) return false;
+  if (!Object.keys(location).every((key) => locationKeys.has(key))) return false;
+  for (const [key, value] of Object.entries(location)) {
+    if (value === undefined || value === null || value === '') continue;
+    if (key === 'latitude') {
+      const lat = Number(value);
+      if (!Number.isFinite(lat) || lat < -90 || lat > 90) return false;
+    } else if (key === 'longitude') {
+      const lon = Number(value);
+      if (!Number.isFinite(lon) || lon < -180 || lon > 180) return false;
+    } else {
+      if (typeof value !== 'string' || value.trim().length > 100) return false;
+    }
+  }
+  return true;
+};
+
+const cleanLocation = (loc) => {
+  if (!loc) return undefined;
+  const cleaned = {};
+  if (loc.region !== undefined) cleaned.region = loc.region.trim();
+  if (loc.country !== undefined) cleaned.country = loc.country.trim();
+  if (loc.city !== undefined) cleaned.city = loc.city.trim();
+  if (loc.latitude !== undefined && loc.latitude !== null && loc.latitude !== '') {
+    cleaned.latitude = Number(loc.latitude);
+  }
+  if (loc.longitude !== undefined && loc.longitude !== null && loc.longitude !== '') {
+    cleaned.longitude = Number(loc.longitude);
+  }
+  return cleaned;
+};
 
 const validateFarm = (body, partial = false) => {
   if (!validObject(body) || !Object.keys(body).every((key) => farmKeys.has(key))) {
@@ -116,7 +142,7 @@ const validateFarm = (body, partial = false) => {
     return 'Farm name must contain 1 to 100 characters.';
   }
   if (body.location !== undefined && !validateLocation(body.location)) {
-    return 'Location must contain valid region, country, or city text.';
+    return 'Location must contain valid region, country, city, or coordinates.';
   }
   if (partial && !Object.keys(body).length) return 'At least one farm field is required.';
   return null;
@@ -382,12 +408,19 @@ export const createFarmController = (farmStore, activePhotoStorage = photoStorag
   },
 
   createFarm: async (req, res, next) => {
+    if (req.user && req.user.role === 'admin') {
+      return res.status(403).json({
+        error: 'Forbidden',
+        code: 'ADMIN_WRITE_RESTRICTED',
+        message: 'Administrators manage the platform and users; they cannot create personal agricultural resources or workspaces.',
+      });
+    }
     const validationError = validateFarm(req.body);
     if (validationError) return sendValidationError(res, validationError);
     try {
       const farm = await farmStore.createFarm(req.user._id || req.user.id, {
         name: req.body.name.trim(),
-        ...(req.body.location ? { location: cleanField(req.body.location) } : {}),
+        ...(req.body.location ? { location: cleanLocation(req.body.location) } : {}),
       });
       return res.status(201).json({ success: true, farm });
     } catch (error) {
@@ -411,12 +444,23 @@ export const createFarmController = (farmStore, activePhotoStorage = photoStorag
     const validationError = validateFarm(req.body, true);
     if (validationError) return sendValidationError(res, validationError);
     try {
+      const ownerId = req.user._id || req.user.id;
+      if (req.user && req.user.role === 'admin') {
+        const farm = await farmStore.findFarm(ownerId, req.params.farmId);
+        if (!farm) return res.status(404).json({ error: 'Not Found', message: 'Farm not found.' });
+        return res.status(403).json({
+          error: 'Forbidden',
+          code: 'ADMIN_WRITE_RESTRICTED',
+          message: 'Administrators cannot modify their own farm data directly. Changes must be performed by another administrator.',
+        });
+      }
+
       const values = {
         ...(req.body.name !== undefined ? { name: req.body.name.trim() } : {}),
-        ...(req.body.location !== undefined ? { location: cleanField(req.body.location) } : {}),
+        ...(req.body.location !== undefined ? { location: cleanLocation(req.body.location) } : {}),
       };
       const farm = await farmStore.updateFarm(
-        req.user._id || req.user.id,
+        ownerId,
         req.params.farmId,
         values
       );
@@ -430,7 +474,18 @@ export const createFarmController = (farmStore, activePhotoStorage = photoStorag
   deleteFarm: async (req, res, next) => {
     if (getIdError(req.params.farmId)) return sendValidationError(res, 'Farm ID is invalid.');
     try {
-      const result = await farmStore.deleteFarm(req.user._id || req.user.id, req.params.farmId);
+      const ownerId = req.user._id || req.user.id;
+      if (req.user && req.user.role === 'admin') {
+        const farm = await farmStore.findFarm(ownerId, req.params.farmId);
+        if (!farm) return res.status(404).json({ error: 'Not Found', message: 'Farm not found.' });
+        return res.status(403).json({
+          error: 'Forbidden',
+          code: 'ADMIN_WRITE_RESTRICTED',
+          message: 'Administrators cannot delete their own farm data directly. Changes must be performed by another administrator.',
+        });
+      }
+
+      const result = await farmStore.deleteFarm(ownerId, req.params.farmId);
       if (result.hasFields) {
         return res.status(409).json({
           error: 'Conflict',
@@ -458,6 +513,13 @@ export const createFarmController = (farmStore, activePhotoStorage = photoStorag
   },
 
   createField: async (req, res, next) => {
+    if (req.user && req.user.role === 'admin') {
+      return res.status(403).json({
+        error: 'Forbidden',
+        code: 'ADMIN_WRITE_RESTRICTED',
+        message: 'Administrators manage the platform and users; they cannot create personal agricultural resources or workspaces.',
+      });
+    }
     if (getIdError(req.params.farmId)) return sendValidationError(res, 'Farm ID is invalid.');
     const validationError = validateField(req.body);
     if (validationError) return sendValidationError(res, validationError);
@@ -477,8 +539,21 @@ export const createFarmController = (farmStore, activePhotoStorage = photoStorag
     const validationError = validateField(req.body, true);
     if (validationError) return sendValidationError(res, validationError);
     try {
+      const ownerId = req.user._id || req.user.id;
+      if (req.user && req.user.role === 'admin') {
+        const existing = typeof farmStore.findField === 'function'
+          ? await farmStore.findField(ownerId, req.params.fieldId)
+          : null;
+        if (!existing) return res.status(404).json({ error: 'Not Found', message: 'Field not found.' });
+        return res.status(403).json({
+          error: 'Forbidden',
+          code: 'ADMIN_WRITE_RESTRICTED',
+          message: 'Administrators cannot modify their own field data directly. Changes must be performed by another administrator.',
+        });
+      }
+
       const field = await farmStore.updateField(
-        req.user._id || req.user.id,
+        ownerId,
         req.params.fieldId,
         cleanField(req.body)
       );
@@ -492,7 +567,20 @@ export const createFarmController = (farmStore, activePhotoStorage = photoStorag
   deleteField: async (req, res, next) => {
     if (getIdError(req.params.fieldId)) return sendValidationError(res, 'Field ID is invalid.');
     try {
-      const field = await farmStore.deleteField(req.user._id || req.user.id, req.params.fieldId);
+      const ownerId = req.user._id || req.user.id;
+      if (req.user && req.user.role === 'admin') {
+        const existing = typeof farmStore.findField === 'function'
+          ? await farmStore.findField(ownerId, req.params.fieldId)
+          : null;
+        if (!existing) return res.status(404).json({ error: 'Not Found', message: 'Field not found.' });
+        return res.status(403).json({
+          error: 'Forbidden',
+          code: 'ADMIN_WRITE_RESTRICTED',
+          message: 'Administrators cannot delete their own field data directly. Changes must be performed by another administrator.',
+        });
+      }
+
+      const field = await farmStore.deleteField(ownerId, req.params.fieldId);
       if (!field) return res.status(404).json({ error: 'Not Found', message: 'Field not found.' });
       return res.json({ success: true });
     } catch (error) {
@@ -543,6 +631,13 @@ export const createFarmController = (farmStore, activePhotoStorage = photoStorag
   },
 
   createCropCycle: async (req, res, next) => {
+    if (req.user && req.user.role === 'admin') {
+      return res.status(403).json({
+        error: 'Forbidden',
+        code: 'ADMIN_WRITE_RESTRICTED',
+        message: 'Administrators manage the platform and users; they cannot create personal agricultural resources or workspaces.',
+      });
+    }
     if (getIdError(req.params.farmId)) return sendValidationError(res, 'Farm ID is invalid.');
     if (getIdError(req.params.fieldId)) return sendValidationError(res, 'Field ID is invalid.');
     const validationError = validateCropCycle(req.body);
@@ -716,6 +811,13 @@ export const createFarmController = (farmStore, activePhotoStorage = photoStorag
   },
 
   createActivity: async (req, res, next) => {
+    if (req.user && req.user.role === 'admin') {
+      return res.status(403).json({
+        error: 'Forbidden',
+        code: 'ADMIN_WRITE_RESTRICTED',
+        message: 'Administrators manage the platform and users; they cannot create personal agricultural resources or workspaces.',
+      });
+    }
     const farmId = req.params.farmId || req.body.farmId;
     const fieldId = req.params.fieldId || req.body.fieldId;
     if (!farmId || getIdError(farmId)) return sendValidationError(res, 'Farm ID is invalid.');
@@ -853,6 +955,13 @@ export const createFarmController = (farmStore, activePhotoStorage = photoStorag
   },
 
   createTask: async (req, res, next) => {
+    if (req.user && req.user.role === 'admin') {
+      return res.status(403).json({
+        error: 'Forbidden',
+        code: 'ADMIN_WRITE_RESTRICTED',
+        message: 'Administrators manage the platform and users; they cannot create personal agricultural resources or workspaces.',
+      });
+    }
     const validationError = validateTask(req.body);
     if (validationError) return sendValidationError(res, validationError);
 
@@ -987,6 +1096,13 @@ export const createFarmController = (farmStore, activePhotoStorage = photoStorag
   },
 
   uploadPhoto: async (req, res, next) => {
+    if (req.user && req.user.role === 'admin') {
+      return res.status(403).json({
+        error: 'Forbidden',
+        code: 'ADMIN_WRITE_RESTRICTED',
+        message: 'Administrators manage the platform and users; they cannot create personal agricultural resources or workspaces.',
+      });
+    }
     try {
       const ownerId = req.user._id || req.user.id;
       if (!req.file || !req.file.buffer) {

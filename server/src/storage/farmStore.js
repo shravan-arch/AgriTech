@@ -10,6 +10,7 @@ import InventoryMovement from '../models/InventoryMovement.js';
 import Sensor from '../models/Sensor.js';
 import SensorReading from '../models/SensorReading.js';
 import Notification from '../models/Notification.js';
+import WeatherSnapshot from '../models/WeatherSnapshot.js';
 import photoStorage from './photoStorage.js';
 import { getDBStatus } from '../config/db.js';
 import { newLocalId, readLocalCollection, writeLocalCollection } from './localJsonStore.js';
@@ -33,6 +34,62 @@ export const farmStore = {
     return readLocalCollection('farms')
       .filter((farm) => farm.ownerId === String(ownerId))
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+  },
+
+  async listAllFarmsWithCoordinates() {
+    const mode = getStorageMode();
+    if (mode === 'mongodb') {
+      return Farm.find({
+        'location.latitude': { $ne: null },
+        'location.longitude': { $ne: null },
+      });
+    }
+    if (mode !== 'local-json-development') return [];
+    return readLocalCollection('farms').filter(
+      (f) => f.location?.latitude != null && f.location?.longitude != null
+    );
+  },
+
+  async listAllFarmsAdmin(filters = {}) {
+    const mode = getStorageMode();
+    if (mode === 'mongodb') {
+      const query = {};
+      if (filters.ownerId) query.ownerId = filters.ownerId;
+      const farms = await Farm.find(query).populate('ownerId', 'name email role status phone location').sort({ createdAt: -1 });
+      const farmIds = farms.map((f) => f._id);
+      const fields = await Field.find({ farmId: { $in: farmIds } }).sort({ createdAt: -1 });
+      const fieldMap = new Map();
+      for (const field of fields) {
+        const key = String(field.farmId);
+        if (!fieldMap.has(key)) fieldMap.set(key, []);
+        fieldMap.get(key).push(field);
+      }
+      return farms.map((f) => {
+        const obj = f.toObject ? f.toObject() : f;
+        obj.fields = fieldMap.get(String(f._id)) || [];
+        return obj;
+      });
+    }
+    if (mode !== 'local-json-development') return [];
+    const farms = readLocalCollection('farms');
+    const fields = readLocalCollection('fields');
+    const users = readLocalCollection('users');
+    const userMap = new Map(users.map((u) => [String(u._id || u.id), u]));
+    let filteredFarms = farms;
+    if (filters.ownerId) {
+      filteredFarms = farms.filter((f) => String(f.ownerId) === String(filters.ownerId));
+    }
+    return filteredFarms.map((f) => {
+      const owner = userMap.get(String(f.ownerId)) || null;
+      const flds = fields.filter((fld) => String(fld.farmId) === String(f._id));
+      return {
+        ...f,
+        ownerId: owner
+          ? { _id: owner._id, name: owner.name, email: owner.email, role: owner.role, status: owner.status }
+          : f.ownerId,
+        fields: flds,
+      };
+    });
   },
 
   async createFarm(ownerId, values) {
@@ -150,6 +207,15 @@ export const farmStore = {
     fields.push(record);
     writeLocalCollection('fields', fields);
     return record;
+  },
+
+  async findField(ownerId, fieldId) {
+    const mode = getStorageMode();
+    if (mode === 'mongodb') return Field.findOne(ownedResourceFilter(fieldId, ownerId));
+    if (mode !== 'local-json-development') throw unavailableError();
+    return readLocalCollection('fields').find(
+      (field) => (field._id === fieldId || field.id === fieldId) && field.ownerId === String(ownerId)
+    ) || null;
   },
 
   async updateField(ownerId, fieldId, values) {
@@ -672,20 +738,20 @@ export const farmStore = {
       if (filters.status) query.status = filters.status;
       if (filters.type) query.type = filters.type;
       if (filters.priority) query.priority = filters.priority;
+      const now = new Date();
+      const localStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+      const localEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      const utcStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
+      const utcEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
+      const start = new Date(Math.min(localStart.getTime(), utcStart.getTime()));
+      const end = new Date(Math.max(localEnd.getTime(), utcEnd.getTime()));
+
       if (filters.due === 'overdue') {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        query.dueDate = { $lt: today };
+        query.dueDate = { $lt: start };
         if (!filters.status) query.status = { $nin: ['completed', 'cancelled'] };
       } else if (filters.due === 'today') {
-        const start = new Date();
-        start.setHours(0, 0, 0, 0);
-        const end = new Date();
-        end.setHours(23, 59, 59, 999);
         query.dueDate = { $gte: start, $lte: end };
       } else if (filters.due === 'upcoming') {
-        const start = new Date();
-        start.setHours(0, 0, 0, 0);
         query.dueDate = { $gte: start };
       }
       let cursor = Task.find(query).sort({ dueDate: 1, createdAt: -1 });
@@ -695,8 +761,12 @@ export const farmStore = {
     if (mode !== 'local-json-development') throw unavailableError();
 
     const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const todayEnd = todayStart + 86400000 - 1;
+    const localStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).getTime();
+    const localEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
+    const utcStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0)).getTime();
+    const utcEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999)).getTime();
+    const todayStart = Math.min(localStart, utcStart);
+    const todayEnd = Math.max(localEnd, utcEnd);
 
     let list = readLocalCollection('tasks')
       .filter((task) => {
@@ -1699,6 +1769,8 @@ export const farmStore = {
     const mode = getStorageMode();
     const timestamp = readingData.timestamp ? new Date(readingData.timestamp) : new Date();
     const val = Number(readingData.value);
+    const isSimulated = Boolean(readingData.isSimulated || sensor.isSimulated);
+    const source = readingData.source || (isSimulated ? 'simulated' : 'physical');
 
     let reading;
     if (mode === 'mongodb') {
@@ -1710,6 +1782,8 @@ export const farmStore = {
         value: val,
         unit: readingData.unit || (sensor.thresholds && sensor.thresholds.unit) || '%',
         timestamp,
+        isSimulated,
+        source,
       });
       await Sensor.findByIdAndUpdate(sensor._id, {
         $set: {
@@ -1729,6 +1803,8 @@ export const farmStore = {
         value: val,
         unit: readingData.unit || (sensor.thresholds && sensor.thresholds.unit) || '%',
         timestamp: timestamp.toISOString(),
+        isSimulated,
+        source,
         createdAt: now,
         updatedAt: now,
       });
@@ -1750,23 +1826,68 @@ export const farmStore = {
       throw unavailableError();
     }
 
-    // Check thresholds and generate notification if breached
+    // Check thresholds and generate alert if breached with duplicate prevention
     if (sensor.thresholds) {
       const { min, max, unit } = sensor.thresholds;
-      if (min !== undefined && val < min) {
-        await this.createNotification(sensor.ownerId, {
-          title: `Sensor Alert: Low Reading on ${sensor.name}`,
-          message: `${sensor.name} measured ${val} ${unit || ''}, below the minimum threshold of ${min} ${unit || ''}.`,
-          type: 'weather_alert',
-          link: '/monitoring',
-        }).catch(() => {});
-      } else if (max !== undefined && val > max) {
-        await this.createNotification(sensor.ownerId, {
-          title: `Sensor Alert: High Reading on ${sensor.name}`,
-          message: `${sensor.name} measured ${val} ${unit || ''}, above the maximum threshold of ${max} ${unit || ''}.`,
-          type: 'weather_alert',
-          link: '/monitoring',
-        }).catch(() => {});
+      const isLow = min !== undefined && val < min;
+      const isHigh = max !== undefined && val > max;
+
+      if (isLow || isHigh) {
+        const thresholdLimit = isLow ? min : max;
+        const breachType = isLow ? 'low' : 'high';
+        const alertKey = `sensor:${sensor._id}:${breachType}`;
+
+        // Severity: if deviation >= 25% -> critical, else warning
+        const diffRatio = thresholdLimit !== 0 ? Math.abs(val - thresholdLimit) / Math.abs(thresholdLimit) : 0.5;
+        const severity = diffRatio >= 0.25 ? 'critical' : 'warning';
+
+        const prefix = isSimulated ? '[SIMULATED] ' : '';
+        const title = isLow
+          ? `${prefix}Sensor Alert: Low Reading on ${sensor.name}`
+          : `${prefix}Sensor Alert: High Reading on ${sensor.name}`;
+        const message = isLow
+          ? `${sensor.name} measured ${val} ${unit || ''}, below the minimum threshold of ${min} ${unit || ''}.`
+          : `${sensor.name} measured ${val} ${unit || ''}, above the maximum threshold of ${max} ${unit || ''}.`;
+
+        // Check if an unacknowledged alert with this alertKey exists within 30 minutes
+        const thirtyMinsAgo = new Date(Date.now() - 30 * 60 * 1000);
+        let recentDuplicate = false;
+
+        if (mode === 'mongodb') {
+          const existing = await Notification.findOne({
+            ownerId: sensor.ownerId,
+            alertKey,
+            acknowledged: false,
+            createdAt: { $gte: thirtyMinsAgo },
+          });
+          if (existing) recentDuplicate = true;
+        } else if (mode === 'local-json-development') {
+          const notifs = readLocalCollection('notifications');
+          const existing = notifs.find(
+            (n) =>
+              n.ownerId === String(sensor.ownerId) &&
+              n.alertKey === alertKey &&
+              !n.acknowledged &&
+              new Date(n.createdAt) >= thirtyMinsAgo
+          );
+          if (existing) recentDuplicate = true;
+        }
+
+        if (!recentDuplicate) {
+          await this.createNotification(sensor.ownerId, {
+            title,
+            message,
+            type: 'weather_alert',
+            severity,
+            alertKey,
+            acknowledged: false,
+            sensorId: sensor._id,
+            farmId: sensor.farmId,
+            fieldId: sensor.fieldId,
+            isSimulated,
+            link: '/monitoring',
+          }).catch(() => {});
+        }
       }
     }
 
@@ -1787,6 +1908,192 @@ export const farmStore = {
       .sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0))
       .slice(0, Number(limit));
   },
+
+  async listSensorReadingsForCharts(ownerId, filters = {}) {
+    const mode = getStorageMode();
+    const query = { ownerId };
+    if (filters.farmId) query.farmId = filters.farmId;
+    if (filters.fieldId) query.fieldId = filters.fieldId;
+    if (filters.sensorId) query.sensorId = filters.sensorId;
+
+    let since = null;
+    if (filters.range === '24h') {
+      since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    } else if (filters.range === '7d') {
+      since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    } else if (filters.range === '30d') {
+      since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    } else if (filters.from) {
+      since = new Date(filters.from);
+    }
+
+    if (since) {
+      query.timestamp = { $gte: since };
+      if (filters.to) {
+        query.timestamp.$lte = new Date(filters.to);
+      }
+    }
+
+    if (mode === 'mongodb') {
+      return SensorReading.find(query).sort({ timestamp: 1 }).limit(1000);
+    }
+    if (mode !== 'local-json-development') throw unavailableError();
+
+    return readLocalCollection('sensor_readings')
+      .filter((r) => {
+        if (r.ownerId !== String(ownerId)) return false;
+        if (filters.farmId && r.farmId !== String(filters.farmId)) return false;
+        if (filters.fieldId && r.fieldId !== String(filters.fieldId)) return false;
+        if (filters.sensorId && r.sensorId !== String(filters.sensorId)) return false;
+        if (since && new Date(r.timestamp) < since) return false;
+        if (filters.to && new Date(r.timestamp) > new Date(filters.to)) return false;
+        return true;
+      })
+      .sort((a, b) => new Date(a.timestamp || 0) - new Date(b.timestamp || 0))
+      .slice(-1000);
+  },
+
+  // ==================== WEATHER SNAPSHOTS ====================
+  async saveWeatherSnapshot(ownerId, farmId, data) {
+    const mode = getStorageMode();
+    const snapshotData = {
+      ownerId,
+      farmId,
+      timestamp: data.timestamp ? new Date(data.timestamp) : new Date(),
+      temperature: data.temperature,
+      apparentTemperature: data.apparentTemperature,
+      humidity: data.humidity,
+      precipitation: data.precipitation || 0,
+      rain: data.rain || 0,
+      windSpeed: data.windSpeed,
+      windDirection: data.windDirection,
+      weatherCode: data.weatherCode,
+      condition: data.condition,
+      source: data.source || 'Open-Meteo Meteorological Model',
+      isSimulated: Boolean(data.isSimulated),
+      coordinates: data.coordinates,
+    };
+
+    if (mode === 'mongodb') {
+      return WeatherSnapshot.create(snapshotData);
+    }
+    if (mode !== 'local-json-development') throw unavailableError();
+
+    const now = new Date().toISOString();
+    const validated = await validateLocalDocument(WeatherSnapshot, {
+      ...snapshotData,
+      _id: newLocalId(),
+      createdAt: now,
+      updatedAt: now,
+    });
+    const snapshots = readLocalCollection('weather_snapshots');
+    snapshots.push(validated);
+    writeLocalCollection('weather_snapshots', snapshots);
+    return validated;
+  },
+
+  async getLatestWeatherSnapshot(ownerId, farmId) {
+    const mode = getStorageMode();
+    if (mode === 'mongodb') {
+      return WeatherSnapshot.findOne({ ownerId, farmId }).sort({ timestamp: -1 });
+    }
+    if (mode !== 'local-json-development') throw unavailableError();
+
+    const snapshots = readLocalCollection('weather_snapshots')
+      .filter((w) => w.ownerId === String(ownerId) && w.farmId === String(farmId))
+      .sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+    return snapshots[0] || null;
+  },
+
+  async listWeatherSnapshots(ownerId, farmId, filters = {}) {
+    const mode = getStorageMode();
+    const query = { ownerId, farmId };
+
+    let since = null;
+    if (filters.range === '24h') {
+      since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    } else if (filters.range === '7d') {
+      since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    } else if (filters.range === '30d') {
+      since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    } else if (filters.from) {
+      since = new Date(filters.from);
+    }
+
+    if (since) {
+      query.timestamp = { $gte: since };
+      if (filters.to) {
+        query.timestamp.$lte = new Date(filters.to);
+      }
+    }
+
+    const limit = Number(filters.limit) || 500;
+
+    if (mode === 'mongodb') {
+      return WeatherSnapshot.find(query).sort({ timestamp: 1 }).limit(limit);
+    }
+    if (mode !== 'local-json-development') throw unavailableError();
+
+    return readLocalCollection('weather_snapshots')
+      .filter((w) => {
+        if (w.ownerId !== String(ownerId) || w.farmId !== String(farmId)) return false;
+        if (since && new Date(w.timestamp) < since) return false;
+        if (filters.to && new Date(w.timestamp) > new Date(filters.to)) return false;
+        return true;
+      })
+      .sort((a, b) => new Date(a.timestamp || 0) - new Date(b.timestamp || 0))
+      .slice(-limit);
+  },
+
+  async acknowledgeAlert(ownerId, alertId) {
+    const mode = getStorageMode();
+    if (mode === 'mongodb') {
+      return Notification.findOneAndUpdate(
+        { _id: alertId, ownerId },
+        { $set: { acknowledged: true, acknowledgedAt: new Date(), read: true } },
+        { new: true }
+      );
+    }
+    if (mode !== 'local-json-development') throw unavailableError();
+
+    const notifs = readLocalCollection('notifications');
+    const alert = notifs.find((n) => n._id === String(alertId) && n.ownerId === String(ownerId));
+    if (alert) {
+      alert.acknowledged = true;
+      alert.acknowledgedAt = new Date().toISOString();
+      alert.read = true;
+      writeLocalCollection('notifications', notifs);
+    }
+    return alert || null;
+  },
+
+  async listAlerts(ownerId, filters = {}) {
+    const mode = getStorageMode();
+    const query = { ownerId, type: 'weather_alert' };
+    if (filters.farmId) query.farmId = filters.farmId;
+    if (filters.acknowledged !== undefined) {
+      query.acknowledged = filters.acknowledged === 'true' || filters.acknowledged === true;
+    }
+
+    if (mode === 'mongodb') {
+      return Notification.find(query).sort({ createdAt: -1 }).limit(Number(filters.limit) || 100);
+    }
+    if (mode !== 'local-json-development') throw unavailableError();
+
+    return readLocalCollection('notifications')
+      .filter((n) => {
+        if (n.ownerId !== String(ownerId) || n.type !== 'weather_alert') return false;
+        if (filters.farmId && n.farmId !== String(filters.farmId)) return false;
+        if (filters.acknowledged !== undefined) {
+          const isAck = filters.acknowledged === 'true' || filters.acknowledged === true;
+          if (Boolean(n.acknowledged) !== isAck) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+      .slice(0, Number(filters.limit) || 100);
+  },
+
 
   // ==================== NOTIFICATIONS ====================
   async listNotifications(ownerId, limit = 50) {

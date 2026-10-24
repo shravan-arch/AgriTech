@@ -265,8 +265,12 @@ const createMemoryStores = () => {
     // Tasks
     async listTasks(ownerId, filters = {}) {
       const now = new Date();
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-      const todayEnd = todayStart + 86400000 - 1;
+      const localStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).getTime();
+      const localEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
+      const utcStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0)).getTime();
+      const utcEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999)).getTime();
+      const todayStart = Math.min(localStart, utcStart);
+      const todayEnd = Math.max(localEnd, utcEnd);
 
       return [...tasks.values()].filter((task) => {
         if (task.ownerId !== String(ownerId)) return false;

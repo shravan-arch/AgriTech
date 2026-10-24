@@ -49,9 +49,52 @@ const notificationSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    severity: {
+      type: String,
+      enum: ['info', 'warning', 'critical'],
+      default: 'info',
+      index: true,
+    },
+    acknowledged: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    acknowledgedAt: {
+      type: Date,
+    },
+    sensorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Sensor',
+      index: true,
+    },
+    farmId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Farm',
+      index: true,
+    },
+    fieldId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Field',
+      index: true,
+    },
+    isSimulated: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    alertKey: {
+      type: String,
+      trim: true,
+      index: true,
+    },
   },
   { timestamps: true }
 );
+
+notificationSchema.index({ ownerId: 1, alertKey: 1, createdAt: -1 });
+notificationSchema.index({ ownerId: 1, acknowledged: 1, createdAt: -1 });
+
 
 notificationSchema.index({ ownerId: 1, read: 1, createdAt: -1 });
 

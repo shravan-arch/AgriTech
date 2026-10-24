@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/useAuth.js';
+import { useLanguage } from '../context/useLanguage.js';
 
 const VerifyEmailPage = () => {
   const { token: paramToken } = useParams();
@@ -9,6 +10,7 @@ const VerifyEmailPage = () => {
   const token = paramToken || queryToken || '';
 
   const { checkVerifyEmail, verifyEmail, resendVerification } = useAuth();
+  const { t } = useLanguage();
 
   const [status, setStatus] = useState(token ? 'checking' : 'request_new');
   const [maskedEmail, setMaskedEmail] = useState('');
@@ -120,7 +122,7 @@ const VerifyEmailPage = () => {
             <div className="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle bg-success bg-opacity-10 text-success p-3" style={{ width: '64px', height: '64px' }}>
               <i className="bi bi-shield-check" style={{ fontSize: '2rem' }} aria-hidden="true" />
             </div>
-            <h1 className="h3 fw-bold mb-2">Verify Your Email</h1>
+            <h1 className="h3 fw-bold mb-2">{t('profile.emailVerification')}</h1>
             <p className="text-secondary small mb-4">
               Click the button below to confirm your address
               {maskedEmail ? <> for <strong className="text-dark">{maskedEmail}</strong></> : ''} and activate your AgriTech account.
@@ -131,7 +133,7 @@ const VerifyEmailPage = () => {
               onClick={handleConfirmVerification}
             >
               <i className="bi bi-check2-circle me-2" aria-hidden="true" />
-              Confirm & Verify Email
+              {t('common.confirm')} &amp; {t('profile.emailVerification')}
             </button>
             <p className="text-muted small">
               This confirmation step prevents automated scanners from consuming your one-time link.

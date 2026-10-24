@@ -21,6 +21,7 @@ export const createApp = ({
   farmStore = defaultFarmStore,
   photoStorage,
   weatherService,
+  simulatorService,
   googleAuthService,
   emailService,
   rateLimiter,
@@ -57,7 +58,7 @@ export const createApp = ({
   app.use('/api/farms', createFarmRouter(farmStore, userStore, photoStorage));
   app.use('/api/finances', createFinanceRouter(farmStore, userStore));
   app.use('/api/inventory', createInventoryRouter(farmStore, userStore));
-  app.use('/api/sensors', createSensorRouter(farmStore, userStore));
+  app.use('/api/sensors', createSensorRouter(farmStore, userStore, simulatorService));
   app.use('/api/notifications', createNotificationRouter(farmStore, userStore));
   app.use('/api/weather', createWeatherRouter(farmStore, userStore, weatherService));
   app.use('/api/analytics', createAnalyticsRouter(farmStore, userStore));

@@ -5,15 +5,40 @@ import { useLanguage } from '../context/useLanguage.js';
 import GoogleSignInButton from '../components/GoogleSignInButton.jsx';
 import LanguageToggle from '../components/LanguageToggle.jsx';
 
+const AUTH_SLIDES = [
+  {
+    image: '/images/smart-drone-field.jpg',
+    quote: 'Precision drone intelligence and telemetry keeps every hectare in optimal condition.',
+    author: 'Harpreet Singh • Punjab Agro Collective',
+    badge: '98.4% Spatial Precision',
+  },
+  {
+    image: '/images/golden-wheat-sunset.jpg',
+    quote: 'Predictive growth stages helped us forecast our seasonal harvest 4 weeks ahead.',
+    author: 'Rajendra Patel • Central Grain Producers',
+    badge: '+24% YoY Yield Boost',
+  },
+  {
+    image: '/images/smart-greenhouse-iot.jpg',
+    quote: 'Automated climate telemetry and soil alerts cut irrigation waste by over 30%.',
+    author: 'Ananya Sharma • AgriTech Smart Greenhouse',
+    badge: 'Real-time IoT Telemetry',
+  },
+];
+
 const AuthPage = ({ mode }) => {
   const isRegister = mode === 'register';
-  const { isAuthenticated, loading, authError, login, googleLogin, register, resendVerification } = useAuth();
+  const { user, isAuthenticated, loading, authError, login, googleLogin, register, resendVerification, logout } = useAuth();
   const { t, language } = useLanguage();
   const navigate = useNavigate();
+
   const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [authPortal, setAuthPortal] = useState('user'); // 'user' or 'admin'
   const [selectedRole, setSelectedRole] = useState('user'); // 'user' or 'admin'
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [activeSlide, setActiveSlide] = useState(0);
 
   // Email verification and admin approval pending states
   const [verificationPendingEmail, setVerificationPendingEmail] = useState('');
@@ -22,6 +47,14 @@ const AuthPage = ({ mode }) => {
   const [resending, setResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState('');
   const [cooldown, setCooldown] = useState(0);
+
+  // Background slideshow rotation
+  useEffect(() => {
+    const slideTimer = setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % AUTH_SLIDES.length);
+    }, 6000);
+    return () => clearInterval(slideTimer);
+  }, []);
 
   // Cooldown countdown timer
   useEffect(() => {
@@ -32,11 +65,13 @@ const AuthPage = ({ mode }) => {
     return () => clearInterval(timer);
   }, [cooldown]);
 
-  if (isAuthenticated && !adminApprovalNotice) return <Navigate to="/dashboard" replace />;
+  if (isAuthenticated && !adminApprovalNotice) {
+    return <Navigate to={user?.role === 'admin' ? '/admin' : '/dashboard'} replace />;
+  }
   if (loading) {
     return (
-      <section className="auth-layout">
-        <div className="loading-panel" role="status" aria-live="polite">
+      <section className="auth-split-wrapper">
+        <div className="loading-panel m-auto" role="status" aria-live="polite">
           <span className="spinner-border text-success" aria-hidden="true" />
           <span>{t('common.loading')}</span>
         </div>
@@ -48,6 +83,23 @@ const AuthPage = ({ mode }) => {
     setForm((previous) => ({ ...previous, [event.target.name]: event.target.value }));
   };
 
+  // Password strength calculation for registration
+  const getPasswordStrength = (pwd) => {
+    if (!pwd) return { percent: 0, label: '', color: 'bg-secondary' };
+    let score = 0;
+    if (pwd.length >= 8) score += 25;
+    if (pwd.length >= 12) score += 25;
+    if (/[A-Z]/.test(pwd) && /[a-z]/.test(pwd)) score += 25;
+    if (/[0-9]/.test(pwd) || /[^A-Za-z0-9]/.test(pwd)) score += 25;
+
+    if (score <= 25) return { percent: 25, label: 'Weak', color: 'bg-danger' };
+    if (score <= 50) return { percent: 50, label: 'Fair', color: 'bg-warning' };
+    if (score <= 75) return { percent: 75, label: 'Good', color: 'bg-info' };
+    return { percent: 100, label: 'Strong', color: 'bg-success' };
+  };
+
+  const strength = isRegister ? getPasswordStrength(form.password) : null;
+
   const submit = async (event) => {
     event.preventDefault();
     setError('');
@@ -56,11 +108,12 @@ const AuthPage = ({ mode }) => {
     setSubmitting(true);
     try {
       if (isRegister) {
+        const roleToRegister = authPortal === 'admin' ? 'admin' : selectedRole;
         const result = await register({
           name: form.name.trim(),
           email: form.email.trim(),
           password: form.password,
-          selectedRole,
+          selectedRole: roleToRegister,
           language,
         });
 
@@ -74,10 +127,29 @@ const AuthPage = ({ mode }) => {
           setCooldown(60);
           return;
         }
+
+        const registeredRole = result?.user?.role;
+        navigate(registeredRole === 'admin' ? '/admin' : '/dashboard', { replace: true });
       } else {
-        await login(form.email.trim(), form.password);
+        const result = await login(form.email.trim(), form.password);
+        const loggedUser = result?.user;
+
+        if (authPortal === 'admin') {
+          if (loggedUser?.role !== 'admin') {
+            logout();
+            setError('Access Denied: This account does not possess Administrative privileges. Please switch to the Farmer Portal or submit an administrator request.');
+            return;
+          }
+          navigate('/admin', { replace: true });
+        } else {
+          // In farmer portal: if an admin signs in, user features are terminated so redirect to /admin
+          if (loggedUser?.role === 'admin') {
+            navigate('/admin', { replace: true });
+          } else {
+            navigate('/dashboard', { replace: true });
+          }
+        }
       }
-      navigate('/dashboard', { replace: true });
     } catch (requestError) {
       if (
         requestError.data?.code === 'EMAIL_NOT_VERIFIED' ||
@@ -120,8 +192,22 @@ const AuthPage = ({ mode }) => {
     setError('');
     setSubmitting(true);
     try {
-      await googleLogin(credential);
-      navigate('/dashboard', { replace: true });
+      const result = await googleLogin(credential);
+      const loggedUser = result?.user;
+      if (authPortal === 'admin') {
+        if (loggedUser?.role !== 'admin') {
+          logout();
+          setError('Access Denied: This Google account does not have Administrator privileges. Please sign in via the Farmer Portal.');
+          return;
+        }
+        navigate('/admin', { replace: true });
+      } else {
+        if (loggedUser?.role === 'admin') {
+          navigate('/admin', { replace: true });
+        } else {
+          navigate('/dashboard', { replace: true });
+        }
+      }
     } catch (googleError) {
       if (googleError.data?.code === 'ACCOUNT_SUSPENDED') {
         setError(t('auth.accountSuspended'));
@@ -136,12 +222,20 @@ const AuthPage = ({ mode }) => {
   // Dedicated "Admin Request Submitted" screen
   if (adminApprovalNotice) {
     return (
-      <section className="auth-layout">
-        <div className="auth-panel text-center">
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <Link className="brand-mark auth-brand mb-0" to="/" aria-label="AgriTech home">
-              <span className="brand-icon"><i className="bi bi-flower1" aria-hidden="true" /></span>
-              <span>Agri<span className="brand-accent">Tech</span></span>
+      <section className="auth-split-wrapper">
+        <div className="auth-single-card text-center shadow-lg">
+          <div className="d-flex justify-content-between align-items-center mb-4">
+            <Link className="landing-brand mb-0" to="/" aria-label="AgriTech home">
+              <span className="brand-logo-glow">
+                <svg viewBox="0 0 40 40" width="34" height="34" className="brand-svg-icon" aria-hidden="true">
+                  <rect x="2" y="2" width="36" height="36" rx="10" fill="#0f291e" stroke="#10b981" strokeWidth="1.5" />
+                  <path d="M20 32 C20 24 19 18 16 13" stroke="#34d399" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+                  <path d="M19 21 C12 20 8 14 9 9 C14 9 18 13 19 21 Z" fill="#10b981" />
+                  <path d="M20 17 C26 14 31 17 31 22 C26 23 21 21 20 17 Z" fill="#34d399" />
+                  <circle cx="29" cy="11" r="3" fill="#f59e0b" />
+                </svg>
+              </span>
+              <span className="brand-text">Agri<span className="brand-text-accent">Tech</span></span>
             </Link>
             <LanguageToggle />
           </div>
@@ -177,12 +271,20 @@ const AuthPage = ({ mode }) => {
   // Dedicated "Check your email" pending screen
   if (verificationPendingEmail) {
     return (
-      <section className="auth-layout">
-        <div className="auth-panel text-center">
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <Link className="brand-mark auth-brand mb-0" to="/" aria-label="AgriTech home">
-              <span className="brand-icon"><i className="bi bi-flower1" aria-hidden="true" /></span>
-              <span>Agri<span className="brand-accent">Tech</span></span>
+      <section className="auth-split-wrapper">
+        <div className="auth-single-card text-center shadow-lg">
+          <div className="d-flex justify-content-between align-items-center mb-4">
+            <Link className="landing-brand mb-0" to="/" aria-label="AgriTech home">
+              <span className="brand-logo-glow">
+                <svg viewBox="0 0 40 40" width="34" height="34" className="brand-svg-icon" aria-hidden="true">
+                  <rect x="2" y="2" width="36" height="36" rx="10" fill="#0f291e" stroke="#10b981" strokeWidth="1.5" />
+                  <path d="M20 32 C20 24 19 18 16 13" stroke="#34d399" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+                  <path d="M19 21 C12 20 8 14 9 9 C14 9 18 13 19 21 Z" fill="#10b981" />
+                  <path d="M20 17 C26 14 31 17 31 22 C26 23 21 21 20 17 Z" fill="#34d399" />
+                  <circle cx="29" cy="11" r="3" fill="#f59e0b" />
+                </svg>
+              </span>
+              <span className="brand-text">Agri<span className="brand-text-accent">Tech</span></span>
             </Link>
             <LanguageToggle />
           </div>
@@ -255,205 +357,410 @@ const AuthPage = ({ mode }) => {
   }
 
   return (
-    <section className="auth-layout">
-      <div className="auth-panel">
-        <div className="d-flex justify-content-between align-items-center mb-2">
-          <Link className="brand-mark auth-brand mb-0" to="/" aria-label="AgriTech home">
-            <span className="brand-icon"><i className="bi bi-flower1" aria-hidden="true" /></span>
-            <span>Agri<span className="brand-accent">Tech</span></span>
-          </Link>
-          <LanguageToggle />
-        </div>
-
-        <span className="eyebrow">{t('auth.tagline')}</span>
-        <h1>{isRegister ? t('auth.createAccount') : t('auth.welcomeBack')}</h1>
-        <p className="text-secondary">
-          {isRegister ? t('auth.startSubtext') : t('auth.loginSubtext')}
-        </p>
-
-        {unverifiedLoginEmail ? (
-          <div className="alert alert-warning border-warning border-opacity-25 mb-3" role="alert">
-            <div className="d-flex align-items-center gap-2 mb-2">
-              <i className="bi bi-exclamation-triangle-fill text-warning flex-shrink-0" />
-              <strong className="text-dark">Email Not Verified</strong>
-            </div>
-            <p className="small mb-2 text-dark">
-              Please verify your email address before logging in. Check your inbox for the verification link.
-            </p>
-            {resendSuccess && (
-              <div className="alert alert-success py-1 px-2 small mb-2">{resendSuccess}</div>
-            )}
-            <button
-              type="button"
-              className="btn btn-outline-dark btn-sm w-100"
-              onClick={() => handleResend(unverifiedLoginEmail)}
-              disabled={resending || cooldown > 0}
+    <div className="auth-split-wrapper">
+      <div className="row g-0 w-100 min-vh-100">
+        {/* Left Visual Column with Animated Farm Slideshow */}
+        <div className="col-12 col-lg-5 col-xl-6 d-none d-lg-block position-relative auth-visual-side">
+          {AUTH_SLIDES.map((slide, idx) => (
+            <div
+              key={idx}
+              className={`auth-visual-slide ${idx === activeSlide ? 'is-active' : ''}`}
             >
-              {resending ? (
-                <><span className="spinner-border spinner-border-sm me-1" aria-hidden="true" />Sending link…</>
-              ) : cooldown > 0 ? (
-                `Resend available in ${cooldown}s`
-              ) : (
-                <>
-                  <i className="bi bi-send me-1" aria-hidden="true" />
-                  {t('auth.resendEmail')}
-                </>
-              )}
-            </button>
+              <img
+                src={slide.image}
+                alt="AgriTech Farm"
+                className="auth-visual-img"
+              />
+              <div className="auth-visual-scrim" />
+              <div className="auth-visual-caption">
+                <span className="badge bg-success bg-opacity-25 text-white border border-white border-opacity-25 px-3 py-1 rounded-pill mb-3">
+                  <i className="bi bi-shield-check me-1" />
+                  {slide.badge}
+                </span>
+                <blockquote className="auth-visual-quote">
+                  &ldquo;{slide.quote}&rdquo;
+                </blockquote>
+                <p className="auth-visual-author">{slide.author}</p>
+              </div>
+            </div>
+          ))}
+
+          {/* Floating animated telemetry pill */}
+          <div className="floating-badge auth-floating-pill">
+            <span className="live-pulse-dot" />
+            <div>
+              <div className="floating-badge-title">Telemetry Sensor Node</div>
+              <div className="floating-badge-val">99.8% Reliability • Live</div>
+            </div>
           </div>
-        ) : (
-          (error || authError) && <div className="alert alert-danger" role="alert">{error || authError}</div>
-        )}
-
-        <div className="mb-3">
-          <GoogleSignInButton
-            onCredentialReceived={handleGoogleCredential}
-            disabled={submitting}
-            text={isRegister ? 'Sign up with Google' : 'Continue with Google'}
-          />
         </div>
 
-        <div className="auth-divider">
-          <span>{t('auth.orContinueWithEmail')}</span>
-        </div>
+        {/* Right Form Column */}
+        <div className="col-12 col-lg-7 col-xl-6 d-flex align-items-center justify-content-center p-3 p-sm-4 p-md-5 auth-form-side">
+          <div className="auth-card-panel animate-fadeIn">
+            {/* Header: Brand and Language Toggle */}
+            <div className="d-flex justify-content-between align-items-center mb-4">
+              <Link className="landing-brand mb-0" to="/" aria-label="AgriTech home">
+                <span className="brand-logo-glow">
+                  <svg viewBox="0 0 40 40" width="34" height="34" className="brand-svg-icon" aria-hidden="true">
+                    <rect x="2" y="2" width="36" height="36" rx="10" fill="#0f291e" stroke="#10b981" strokeWidth="1.5" />
+                    <path d="M20 32 C20 24 19 18 16 13" stroke="#34d399" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+                    <path d="M19 21 C12 20 8 14 9 9 C14 9 18 13 19 21 Z" fill="#10b981" />
+                    <path d="M20 17 C26 14 31 17 31 22 C26 23 21 21 20 17 Z" fill="#34d399" />
+                    <circle cx="29" cy="11" r="3" fill="#f59e0b" />
+                  </svg>
+                </span>
+                <span className="brand-text">Agri<span className="brand-text-accent">Tech</span></span>
+              </Link>
+              <LanguageToggle />
+            </div>
 
-        <form onSubmit={submit}>
-          {isRegister && (
+            {/* Portal Switcher: Farmer / User Portal vs Administrator Portal */}
+            <div className="auth-portal-selector mb-3" role="tablist" aria-label="Portal Selection">
+              <button
+                type="button"
+                className={`auth-portal-tab ${authPortal === 'user' ? 'active' : ''}`}
+                onClick={() => {
+                  setAuthPortal('user');
+                  setSelectedRole('user');
+                  setError('');
+                }}
+              >
+                <i className="bi bi-person-fill" />
+                <span>Farmer Portal</span>
+              </button>
+              <button
+                type="button"
+                className={`auth-portal-tab admin-portal ${authPortal === 'admin' ? 'active' : ''}`}
+                onClick={() => {
+                  setAuthPortal('admin');
+                  setSelectedRole('admin');
+                  setError('');
+                }}
+              >
+                <i className="bi bi-shield-lock-fill" />
+                <span>Admin Portal</span>
+              </button>
+            </div>
+
+            {authPortal === 'admin' && (
+              <div className="admin-portal-banner d-flex align-items-center gap-2 small mb-3">
+                <i className="bi bi-shield-shaded text-primary fs-5 flex-shrink-0" />
+                <div>
+                  <strong className="text-dark d-block">Enterprise Governance Gateway</strong>
+                  <span className="text-secondary" style={{ fontSize: '0.78rem' }}>
+                    {isRegister
+                      ? 'Admin applications require review and verification by an existing administrator.'
+                      : 'Restricted administrative suite. Only authorized platform administrators may access this gateway.'}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Segmented Mode Switcher */}
+            <div className="auth-mode-pills mb-4">
+              <Link
+                to="/login"
+                className={`auth-mode-pill ${!isRegister ? 'active' : ''}`}
+              >
+                <i className="bi bi-box-arrow-in-right me-1" />
+                {authPortal === 'admin' ? 'Admin Sign In' : t('auth.signInBtn')}
+              </Link>
+              <Link
+                to="/register"
+                className={`auth-mode-pill ${isRegister ? 'active' : ''}`}
+              >
+                <i className="bi bi-person-plus me-1" />
+                {authPortal === 'admin' ? 'Admin Request' : t('auth.createAccountBtn')}
+              </Link>
+            </div>
+
+            <div className="auth-header-titles mb-3">
+              <h1 className="h3 fw-bold mb-1">
+                {authPortal === 'admin'
+                  ? isRegister
+                    ? 'Request Administrator Access'
+                    : 'Administrator Sign In'
+                  : isRegister
+                  ? t('auth.createAccount')
+                  : t('auth.welcomeBack')}
+              </h1>
+              <p className="text-secondary small mb-0">
+                {authPortal === 'admin'
+                  ? isRegister
+                    ? 'Submit an administrative credential request for verification by existing platform administrators.'
+                    : 'Enter your authorized administrator credentials to access the Governance suite.'
+                  : isRegister
+                  ? t('auth.startSubtext')
+                  : t('auth.loginSubtext')}
+              </p>
+            </div>
+
+            {unverifiedLoginEmail ? (
+              <div className="alert alert-warning border-warning border-opacity-25 mb-3" role="alert">
+                <div className="d-flex align-items-center gap-2 mb-2">
+                  <i className="bi bi-exclamation-triangle-fill text-warning flex-shrink-0" />
+                  <strong className="text-dark">Email Not Verified</strong>
+                </div>
+                <p className="small mb-2 text-dark">
+                  Please verify your email address before logging in. Check your inbox for the verification link.
+                </p>
+                {resendSuccess && (
+                  <div className="alert alert-success py-1 px-2 small mb-2">{resendSuccess}</div>
+                )}
+                <button
+                  type="button"
+                  className="btn btn-outline-dark btn-sm w-100"
+                  onClick={() => handleResend(unverifiedLoginEmail)}
+                  disabled={resending || cooldown > 0}
+                >
+                  {resending ? (
+                    <><span className="spinner-border spinner-border-sm me-1" aria-hidden="true" />Sending link…</>
+                  ) : cooldown > 0 ? (
+                    `Resend available in ${cooldown}s`
+                  ) : (
+                    <>
+                      <i className="bi bi-send me-1" aria-hidden="true" />
+                      {t('auth.resendEmail')}
+                    </>
+                  )}
+                </button>
+              </div>
+            ) : (
+              (error || authError) && <div className="alert alert-danger" role="alert">{error || authError}</div>
+            )}
+
+            {/* Google Sign-in */}
             <div className="mb-3">
-              <label className="form-label" htmlFor="name">{t('auth.nameLabel')}</label>
-              <input
-                id="name"
-                name="name"
-                className="form-control"
-                value={form.name}
-                onChange={update}
-                autoComplete="name"
-                maxLength={50}
-                required
+              <GoogleSignInButton
+                onCredentialReceived={handleGoogleCredential}
+                disabled={submitting}
+                text={isRegister ? 'Sign up with Google' : 'Continue with Google'}
               />
             </div>
-          )}
-          <div className="mb-3">
-            <label className="form-label" htmlFor="email">{t('auth.emailLabel')}</label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              className="form-control"
-              value={form.email}
-              onChange={update}
-              autoComplete="email"
-              required
-            />
-          </div>
-          <div className="mb-3">
-            <div className="d-flex justify-content-between align-items-center mb-1">
-              <label className="form-label mb-0" htmlFor="password">{t('auth.passwordLabel')}</label>
-              {!isRegister && (
-                <Link to="/forgot-password" className="auth-forgot-link">
-                  {t('auth.forgotPassword')}
-                </Link>
-              )}
-            </div>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              className="form-control"
-              value={form.password}
-              onChange={update}
-              autoComplete={isRegister ? 'new-password' : 'current-password'}
-              minLength={isRegister ? 10 : undefined}
-              maxLength={128}
-              required
-            />
-            {isRegister && <div className="form-text">{t('auth.passwordHint')}</div>}
-          </div>
 
-          {/* Role Selection during Registration */}
-          {isRegister && (
-            <div className="mb-4">
-              <label className="form-label fw-semibold text-dark d-block mb-2">
-                {t('auth.roleSelectionLabel')}
-              </label>
-              <div className="row g-2">
-                <div className="col-12 col-sm-6">
-                  <div
-                    className={`card p-3 h-100 border text-start cursor-pointer position-relative ${selectedRole === 'user' ? 'border-primary bg-primary bg-opacity-10 shadow-sm' : 'border-light-subtle bg-white'}`}
-                    style={{ cursor: 'pointer', transition: 'all 0.2s ease' }}
-                    onClick={() => setSelectedRole('user')}
-                  >
-                    <div className="d-flex align-items-center justify-content-between mb-1">
-                      <div className="d-flex align-items-center gap-2">
-                        <i className={`bi bi-person-badge ${selectedRole === 'user' ? 'text-primary' : 'text-secondary'}`} style={{ fontSize: '1.25rem' }} />
-                        <span className="fw-bold small text-dark">{t('auth.roleUserTitle')}</span>
-                      </div>
-                      <input
-                        type="radio"
-                        name="selectedRole"
-                        value="user"
-                        checked={selectedRole === 'user'}
-                        onChange={() => setSelectedRole('user')}
-                        className="form-check-input mt-0"
-                      />
-                    </div>
-                    <p className="text-secondary small mb-0" style={{ fontSize: '0.78rem', lineHeight: '1.3' }}>
-                      {t('auth.roleUserDesc')}
-                    </p>
+            <div className="auth-divider">
+              <span>{t('auth.orContinueWithEmail')}</span>
+            </div>
+
+            <form onSubmit={submit}>
+              {isRegister && (
+                <div className="mb-3">
+                  <label className="form-label" htmlFor="name">{t('auth.nameLabel')}</label>
+                  <div className="input-group">
+                    <span className="input-group-text bg-light text-secondary border-end-0">
+                      <i className="bi bi-person" />
+                    </span>
+                    <input
+                      id="name"
+                      name="name"
+                      className="form-control border-start-0 ps-1"
+                      placeholder="e.g. Gurpreet Singh"
+                      value={form.name}
+                      onChange={update}
+                      autoComplete="name"
+                      maxLength={50}
+                      required
+                    />
                   </div>
                 </div>
+              )}
 
-                <div className="col-12 col-sm-6">
-                  <div
-                    className={`card p-3 h-100 border text-start cursor-pointer position-relative ${selectedRole === 'admin' ? 'border-primary bg-primary bg-opacity-10 shadow-sm' : 'border-light-subtle bg-white'}`}
-                    style={{ cursor: 'pointer', transition: 'all 0.2s ease' }}
-                    onClick={() => setSelectedRole('admin')}
-                  >
-                    <div className="d-flex align-items-center justify-content-between mb-1">
-                      <div className="d-flex align-items-center gap-2">
-                        <i className={`bi bi-shield-lock ${selectedRole === 'admin' ? 'text-primary' : 'text-secondary'}`} style={{ fontSize: '1.25rem' }} />
-                        <span className="fw-bold small text-dark">{t('auth.roleAdminTitle')}</span>
-                      </div>
-                      <input
-                        type="radio"
-                        name="selectedRole"
-                        value="admin"
-                        checked={selectedRole === 'admin'}
-                        onChange={() => setSelectedRole('admin')}
-                        className="form-check-input mt-0"
-                      />
-                    </div>
-                    <p className="text-secondary small mb-0" style={{ fontSize: '0.78rem', lineHeight: '1.3' }}>
-                      {t('auth.roleAdminDesc')}
-                    </p>
-                  </div>
+              <div className="mb-3">
+                <label className="form-label" htmlFor="email">{t('auth.emailLabel')}</label>
+                <div className="input-group">
+                  <span className="input-group-text bg-light text-secondary border-end-0">
+                    <i className="bi bi-envelope" />
+                  </span>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    className="form-control border-start-0 ps-1"
+                    placeholder={authPortal === 'admin' ? 'admin@agritech.com' : 'farmer@agritech.com'}
+                    value={form.email}
+                    onChange={update}
+                    autoComplete="email"
+                    required
+                  />
                 </div>
               </div>
 
-              {selectedRole === 'admin' && (
-                <div className="alert alert-warning py-2 px-3 small mt-2 mb-0 d-flex align-items-start gap-2 border-0 bg-warning bg-opacity-10 text-dark">
-                  <i className="bi bi-shield-exclamation text-warning flex-shrink-0 mt-1" />
-                  <span>{t('auth.roleAdminDesc')}</span>
+              <div className="mb-3">
+                <div className="d-flex justify-content-between align-items-center mb-1">
+                  <label className="form-label mb-0" htmlFor="password">{t('auth.passwordLabel')}</label>
+                  {!isRegister && (
+                    <Link to="/forgot-password" className="auth-forgot-link">
+                      {t('auth.forgotPassword')}
+                    </Link>
+                  )}
+                </div>
+                <div className="input-group">
+                  <span className="input-group-text bg-light text-secondary border-end-0">
+                    <i className="bi bi-lock" />
+                  </span>
+                  <input
+                    id="password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    className="form-control border-start-0 border-end-0 ps-1"
+                    placeholder="••••••••••••"
+                    value={form.password}
+                    onChange={update}
+                    autoComplete={isRegister ? 'new-password' : 'current-password'}
+                    minLength={isRegister ? 10 : undefined}
+                    maxLength={128}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="input-group-text bg-light border-start-0 text-secondary"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    title={showPassword ? 'Hide password' : 'Show password'}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    <i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'}`} />
+                  </button>
+                </div>
+
+                {isRegister && (
+                  <div className="mt-2">
+                    <div className="d-flex align-items-center justify-content-between small text-secondary mb-1">
+                      <span>{t('auth.passwordHint')}</span>
+                      {strength?.label && (
+                        <span className="fw-semibold">{strength.label}</span>
+                      )}
+                    </div>
+                    {form.password && (
+                      <div className="progress" style={{ height: '5px' }}>
+                        <div
+                          className={`progress-bar ${strength.color} transition-all`}
+                          style={{ width: `${strength.percent}%` }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Role Selection during Registration */}
+              {isRegister && (
+                <div className="mb-4">
+                  <label className="form-label fw-semibold text-dark d-block mb-2">
+                    {t('auth.roleSelectionLabel')}
+                  </label>
+                  <div className="row g-2">
+                    <div className="col-12 col-sm-6">
+                      <div
+                        className={`card p-3 h-100 border text-start cursor-pointer role-select-card ${selectedRole === 'user' ? 'selected' : ''}`}
+                        onClick={() => {
+                          setSelectedRole('user');
+                          setAuthPortal('user');
+                        }}
+                      >
+                        <div className="d-flex align-items-center justify-content-between mb-1">
+                          <div className="d-flex align-items-center gap-2">
+                            <i className="bi bi-person-badge text-success fs-5" />
+                            <span className="fw-bold small text-dark">{t('auth.roleUserTitle')}</span>
+                          </div>
+                          <input
+                            type="radio"
+                            name="selectedRole"
+                            value="user"
+                            checked={selectedRole === 'user'}
+                            onChange={() => {
+                              setSelectedRole('user');
+                              setAuthPortal('user');
+                            }}
+                            className="form-check-input mt-0"
+                          />
+                        </div>
+                        <p className="text-secondary small mb-0" style={{ fontSize: '0.78rem', lineHeight: '1.3' }}>
+                          {t('auth.roleUserDesc')}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="col-12 col-sm-6">
+                      <div
+                        className={`card p-3 h-100 border text-start cursor-pointer role-select-card ${selectedRole === 'admin' ? 'selected' : ''}`}
+                        onClick={() => {
+                          setSelectedRole('admin');
+                          setAuthPortal('admin');
+                        }}
+                      >
+                        <div className="d-flex align-items-center justify-content-between mb-1">
+                          <div className="d-flex align-items-center gap-2">
+                            <i className="bi bi-shield-lock text-success fs-5" />
+                            <span className="fw-bold small text-dark">{t('auth.roleAdminTitle')}</span>
+                          </div>
+                          <input
+                            type="radio"
+                            name="selectedRole"
+                            value="admin"
+                            checked={selectedRole === 'admin'}
+                            onChange={() => {
+                              setSelectedRole('admin');
+                              setAuthPortal('admin');
+                            }}
+                            className="form-check-input mt-0"
+                          />
+                        </div>
+                        <p className="text-secondary small mb-0" style={{ fontSize: '0.78rem', lineHeight: '1.3' }}>
+                          {t('auth.roleAdminDesc')}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {selectedRole === 'admin' && (
+                    <div className="alert alert-warning py-2 px-3 small mt-2 mb-0 d-flex align-items-start gap-2 border-0 bg-warning bg-opacity-10 text-dark">
+                      <i className="bi bi-shield-exclamation text-warning flex-shrink-0 mt-1" />
+                      <span>{t('auth.roleAdminDesc')}</span>
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
-          )}
 
-          <button className="btn btn-primary w-100" type="submit" disabled={submitting}>
-            {submitting ? (
-              <><span className="spinner-border spinner-border-sm me-2" aria-hidden="true" />{t('auth.submitting')}</>
-            ) : isRegister ? t('auth.createAccountBtn') : t('auth.signInBtn')}
-          </button>
-        </form>
+              <button className="btn btn-primary w-100 btn-lg shadow-sm landing-btn-cta" type="submit" disabled={submitting}>
+                {submitting ? (
+                  <><span className="spinner-border spinner-border-sm me-2" aria-hidden="true" />{t('auth.submitting')}</>
+                ) : authPortal === 'admin' ? (
+                  isRegister ? (
+                    <>
+                      <span>Submit Admin Request</span>
+                      <i className="bi bi-shield-check ms-2" />
+                    </>
+                  ) : (
+                    <>
+                      <span>Sign In as Administrator</span>
+                      <i className="bi bi-shield-lock ms-2" />
+                    </>
+                  )
+                ) : isRegister ? (
+                  <>
+                    <span>{t('auth.createAccountBtn')}</span>
+                    <i className="bi bi-arrow-right ms-2" />
+                  </>
+                ) : (
+                  <>
+                    <span>{t('auth.signInBtn')}</span>
+                    <i className="bi bi-box-arrow-in-right ms-2" />
+                  </>
+                )}
+              </button>
+            </form>
 
-        <p className="auth-switch">
-          {isRegister ? t('auth.alreadyHaveAccount') : t('auth.newToApp')}{' '}
-          <Link to={isRegister ? '/login' : '/register'}>
-            {isRegister ? t('auth.signInBtn') : t('auth.createAccountBtn')}
-          </Link>
-        </p>
+            <p className="auth-switch text-center mt-4 mb-0">
+              {isRegister ? t('auth.alreadyHaveAccount') : t('auth.newToApp')}{' '}
+              <Link to={isRegister ? '/login' : '/register'} className="fw-bold text-success">
+                {isRegister ? t('auth.signInBtn') : t('auth.createAccountBtn')}
+              </Link>
+            </p>
+          </div>
+        </div>
       </div>
-    </section>
+    </div>
   );
 };
 

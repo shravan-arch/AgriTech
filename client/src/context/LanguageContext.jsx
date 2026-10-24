@@ -18,7 +18,7 @@ export const LanguageProvider = ({ children }) => {
   }
 
   const setLanguage = useCallback(async (newLang) => {
-    if (!['en', 'hi'].includes(newLang)) return;
+    if (!['en', 'hi', 'pa', 'mr', 'gu', 'te', 'kn', 'ta', 'bn'].includes(newLang)) return;
     setLanguageState(newLang);
     localStorage.setItem('agritech_lang', newLang);
 

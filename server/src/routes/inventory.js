@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { createInventoryController } from '../controllers/inventoryController.js';
-import { createProtect } from '../middleware/auth.js';
+import { createProtect, restrictAdminFromAgriculturalWrites } from '../middleware/auth.js';
 import { farmStore as defaultFarmStore } from '../storage/farmStore.js';
 import { userStore as defaultUserStore } from '../storage/userStore.js';
 

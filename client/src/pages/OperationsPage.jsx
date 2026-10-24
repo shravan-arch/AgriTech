@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/useAuth.js';
+import { useLanguage } from '../context/useLanguage.js';
 import { apiRequest } from '../lib/api.js';
 import { Card, EmptyState, ErrorState, LoadingState, PageHeader } from '../components/ui.jsx';
 
@@ -23,6 +24,7 @@ const ACTIVITY_INFO = {
 
 const OperationsPage = () => {
   const { token } = useAuth();
+  const { t } = useLanguage();
   const [farms, setFarms] = useState([]);
   const [fields, setFields] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -345,9 +347,9 @@ const OperationsPage = () => {
   return (
     <section className="page-shell">
       <PageHeader
-        eyebrow="Farm Operations"
-        title="Operations & Tasks"
-        description="Unified management for your daily farm tasks, schedules, and field activity logs."
+        eyebrow={t('operations.eyebrow')}
+        title={t('operations.title')}
+        description={t('operations.description')}
         actions={
           <div className="d-flex align-items-center gap-2">
             {activeTab === 'tasks' ? (
@@ -360,7 +362,7 @@ const OperationsPage = () => {
                 }}
               >
                 <i className="bi bi-plus-lg me-2" aria-hidden="true" />
-                Add task
+                {t('operations.createTask')}
               </button>
             ) : (
               <button
@@ -376,7 +378,7 @@ const OperationsPage = () => {
                 }}
               >
                 <i className="bi bi-journal-plus me-2" aria-hidden="true" />
-                Log activity
+                {t('operations.logActivity')}
               </button>
             )}
           </div>
@@ -413,7 +415,7 @@ const OperationsPage = () => {
             onClick={() => setActiveTab('tasks')}
           >
             <i className="bi bi-check2-square me-2" />
-            Tasks & Schedule
+            {t('operations.tabTasks')}
             {pendingTaskCount > 0 && (
               <span className={`badge ms-2 ${overdueCount > 0 ? 'bg-danger text-white' : 'bg-light text-dark'}`}>
                 {pendingTaskCount}
@@ -428,7 +430,7 @@ const OperationsPage = () => {
             onClick={() => setActiveTab('activities')}
           >
             <i className="bi bi-journal-text me-2" />
-            Activity Log
+            {t('operations.tabActivities')}
             <span className="badge bg-light text-dark ms-2">{activities.length}</span>
           </button>
         </div>
@@ -460,11 +462,11 @@ const OperationsPage = () => {
           {/* Quick Sub-filters */}
           <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
             {[
-              { id: 'all', label: 'All Tasks', count: tasks.length },
-              { id: 'today', label: 'Due Today', count: tasks.filter((t) => t.status !== 'completed' && new Date(t.dueDate).getTime() >= todayStartMs && new Date(t.dueDate).getTime() < todayStartMs + 86400000).length },
-              { id: 'overdue', label: 'Overdue', count: overdueCount },
-              { id: 'upcoming', label: 'Upcoming', count: tasks.filter((t) => t.status !== 'completed' && new Date(t.dueDate).getTime() >= todayStartMs + 86400000).length },
-              { id: 'completed', label: 'Completed', count: tasks.filter((t) => t.status === 'completed').length },
+              { id: 'all', label: t('operations.filterAll'), count: tasks.length },
+              { id: 'today', label: t('operations.filterToday'), count: tasks.filter((t) => t.status !== 'completed' && new Date(t.dueDate).getTime() >= todayStartMs && new Date(t.dueDate).getTime() < todayStartMs + 86400000).length },
+              { id: 'overdue', label: t('operations.filterOverdue'), count: overdueCount },
+              { id: 'upcoming', label: t('operations.filterUpcoming'), count: tasks.filter((t) => t.status !== 'completed' && new Date(t.dueDate).getTime() >= todayStartMs + 86400000).length },
+              { id: 'completed', label: t('operations.filterCompleted'), count: tasks.filter((t) => t.status === 'completed').length },
             ].map((f) => (
               <button
                 key={f.id}

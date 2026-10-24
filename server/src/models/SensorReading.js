@@ -40,12 +40,25 @@ const sensorReadingSchema = new mongoose.Schema(
       default: Date.now,
       index: true,
     },
+    isSimulated: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    source: {
+      type: String,
+      enum: ['physical', 'simulated'],
+      default: 'physical',
+      index: true,
+    },
   },
   { timestamps: true }
 );
 
 sensorReadingSchema.index({ sensorId: 1, timestamp: -1 });
 sensorReadingSchema.index({ fieldId: 1, timestamp: -1 });
+sensorReadingSchema.index({ farmId: 1, fieldId: 1, timestamp: -1 });
+sensorReadingSchema.index({ ownerId: 1, farmId: 1, timestamp: -1 });
 
 const SensorReading =
   mongoose.models.SensorReading || mongoose.model('SensorReading', sensorReadingSchema);

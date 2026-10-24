@@ -57,8 +57,9 @@ const validateRegistration = (body) => {
   if (selectedRole !== undefined && !['user', 'farmer', 'admin'].includes(selectedRole)) {
     return 'Role must be either User or Admin.';
   }
-  if (body.language !== undefined && !['en', 'hi'].includes(body.language)) {
-    return 'Language must be either en or hi.';
+  const SUPPORTED_LANGUAGES = ['en', 'hi', 'pa', 'mr', 'gu', 'te', 'kn', 'ta', 'bn'];
+  if (body.language !== undefined && !SUPPORTED_LANGUAGES.includes(body.language)) {
+    return 'Language must be one of: ' + SUPPORTED_LANGUAGES.join(', ') + '.';
   }
   return null;
 };
@@ -413,6 +414,20 @@ export const createAuthController = (
 
         const user = await userStore.findByEmail(email.trim().toLowerCase());
         if (!user || !(await userStore.verifyPassword(user, password))) {
+          try {
+            if (typeof userStore.createAuditLog === 'function') {
+              await userStore.createAuditLog({
+                action: 'AUTH_FAILURE',
+                targetUserEmail: email.trim().toLowerCase(),
+                targetUserId: user ? (user._id || user.id) : null,
+                targetUserName: user ? user.name : 'Unknown User',
+                reason: 'Failed login attempt: invalid credentials',
+                ipAddress: getClientIp(req),
+              });
+            }
+          } catch {
+            // Non-blocking security audit logging
+          }
           return res.status(401).json({
             error: 'Unauthorized',
             message: 'Invalid email or password.',
@@ -420,6 +435,20 @@ export const createAuthController = (
         }
 
         if (user.status === 'suspended') {
+          try {
+            if (typeof userStore.createAuditLog === 'function') {
+              await userStore.createAuditLog({
+                action: 'AUTH_FAILURE',
+                targetUserEmail: user.email,
+                targetUserId: user._id || user.id,
+                targetUserName: user.name,
+                reason: 'Failed login attempt: account is suspended',
+                ipAddress: getClientIp(req),
+              });
+            }
+          } catch {
+            // Non-blocking security audit logging
+          }
           return res.status(403).json({
             error: 'Forbidden',
             code: 'ACCOUNT_SUSPENDED',
@@ -766,6 +795,14 @@ export const createAuthController = (
 
     updateProfile: async (req, res, next) => {
       try {
+        if (req.user && req.user.role === 'admin') {
+          return res.status(403).json({
+            error: 'Forbidden',
+            code: 'ADMIN_SELF_MODIFICATION_RESTRICTED',
+            message: 'Administrators cannot modify their own profile. Profile changes must be performed by another administrator.',
+          });
+        }
+
         const userId = req.user._id || req.user.id;
         const { name, phone, address, farmName, farmSizeHectares, primaryCrops, language } = req.body || {};
 
@@ -775,8 +812,9 @@ export const createAuthController = (
           }
         }
         if (language !== undefined) {
-          if (!['en', 'hi'].includes(language)) {
-            return invalid(res, 'Language must be either en or hi.');
+          const SUPPORTED_LANGUAGES = ['en', 'hi', 'pa', 'mr', 'gu', 'te', 'kn', 'ta', 'bn'];
+          if (!SUPPORTED_LANGUAGES.includes(language)) {
+            return invalid(res, 'Language must be one of: ' + SUPPORTED_LANGUAGES.join(', ') + '.');
           }
         }
         if (phone !== undefined && phone !== null && phone !== '') {

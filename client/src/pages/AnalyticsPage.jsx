@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useAuth } from '../context/useAuth.js';
+import { useLanguage } from '../context/useLanguage.js';
 import { apiRequest } from '../lib/api.js';
 import {
   Badge,
@@ -50,6 +51,7 @@ const createInitialTxForm = () => ({
 
 export default function AnalyticsPage() {
   const { token } = useAuth();
+  const { t } = useLanguage();
   const [farms, setFarms] = useState([]);
   const [fields, setFields] = useState([]);
   const [cropCycles, setCropCycles] = useState([]);
@@ -352,13 +354,13 @@ export default function AnalyticsPage() {
     <section className="page-shell analytics-page">
       {/* Page Header */}
       <PageHeader
-        eyebrow="Financial Intelligence & Yield Performance"
-        title="Farm Finances & Production Analytics"
-        description="Database-backed double-entry ledger, input cost categorization, yield metrics normalized to kilograms, and verifiable national commodity market rates."
+        eyebrow={t('analytics.eyebrow')}
+        title={t('analytics.title')}
+        description={t('analytics.description')}
         actions={
           <div className="d-flex gap-2 align-items-center">
             <Button variant="primary" onClick={handleOpenAdd}>
-              <i className="bi bi-plus-lg me-1" /> Log Income / Expense
+              <i className="bi bi-plus-lg me-1" /> {t('analytics.recordTransaction')}
             </Button>
           </div>
         }
@@ -390,7 +392,7 @@ export default function AnalyticsPage() {
         <div className="filter-group-wrap">
           {/* Farm Filter */}
           <div className="filter-item">
-            <label htmlFor="filter-farm">Farm Location</label>
+            <label htmlFor="filter-farm">{t('farms.title')}</label>
             <select
               id="filter-farm"
               className="form-select"
@@ -400,7 +402,7 @@ export default function AnalyticsPage() {
                 setSelectedFieldId('all');
               }}
             >
-              <option value="all">All Farms ({farms.length})</option>
+              <option value="all">{t('common.all')} ({farms.length})</option>
               {farms.map((f) => (
                 <option key={f._id} value={f._id}>
                   {f.name}
@@ -411,7 +413,7 @@ export default function AnalyticsPage() {
 
           {/* Field Filter */}
           <div className="filter-item">
-            <label htmlFor="filter-field">Plot / Field</label>
+            <label htmlFor="filter-field">{t('farms.totalFields')}</label>
             <select
               id="filter-field"
               className="form-select"
@@ -420,7 +422,7 @@ export default function AnalyticsPage() {
               onChange={(e) => setSelectedFieldId(e.target.value)}
             >
               <option value="all">
-                {selectedFarmId === 'all' ? 'Select farm first' : `All Fields (${fields.length})`}
+                {selectedFarmId === 'all' ? t('operations.selectFarm') : `${t('common.all')} (${fields.length})`}
               </option>
               {fields.map((fld) => (
                 <option key={fld._id} value={fld._id}>
@@ -432,14 +434,14 @@ export default function AnalyticsPage() {
 
           {/* Crop Filter */}
           <div className="filter-item">
-            <label htmlFor="filter-crop">Crop Type</label>
+            <label htmlFor="filter-crop">{t('farms.activeCrops')}</label>
             <select
               id="filter-crop"
               className="form-select"
               value={selectedCrop}
               onChange={(e) => setSelectedCrop(e.target.value)}
             >
-              <option value="all">All Crops</option>
+              <option value="all">{t('common.all')}</option>
               {availableCrops.map((c) => (
                 <option key={c} value={c}>
                   {c}
@@ -450,17 +452,17 @@ export default function AnalyticsPage() {
 
           {/* Date Range Filter */}
           <div className="filter-item">
-            <label htmlFor="filter-dates">Date Horizon</label>
+            <label htmlFor="filter-dates">{t('monitoring.timeRange')}</label>
             <select
               id="filter-dates"
               className="form-select"
               value={selectedDateRange}
               onChange={(e) => setSelectedDateRange(e.target.value)}
             >
-              <option value="all">All Historical Records</option>
-              <option value="30d">Last 30 Days</option>
-              <option value="90d">Last 90 Days</option>
-              <option value="year">Current Year (2026)</option>
+              <option value="all">{t('common.all')}</option>
+              <option value="30d">{t('monitoring.range30d')}</option>
+              <option value="90d">90 Days</option>
+              <option value="year">2026</option>
             </select>
           </div>
 
@@ -468,7 +470,7 @@ export default function AnalyticsPage() {
           {hasActiveFilters && (
             <div className="d-flex align-items-end">
               <Button variant="outline-secondary" className="btn-sm" onClick={handleResetFilters}>
-                <i className="bi bi-x-circle me-1" /> Reset Filters
+                <i className="bi bi-x-circle me-1" /> {t('common.filter')}
               </Button>
             </div>
           )}
@@ -482,7 +484,7 @@ export default function AnalyticsPage() {
         {/* Metric 1: Total Revenue */}
         <Card className="metric-card">
           <div className="metric-card-top">
-            <span>Total Farm Revenue</span>
+            <span>{t('analytics.totalRevenue')}</span>
             <span className="metric-icon metric-icon-sage">
               <i className="bi bi-graph-up-arrow" />
             </span>
@@ -496,7 +498,7 @@ export default function AnalyticsPage() {
         {/* Metric 2: Operating Expenses */}
         <Card className="metric-card">
           <div className="metric-card-top">
-            <span>Operating Expenses</span>
+            <span>{t('analytics.totalExpenses')}</span>
             <span className="metric-icon metric-icon-gold">
               <i className="bi bi-receipt" />
             </span>
@@ -510,7 +512,7 @@ export default function AnalyticsPage() {
         {/* Metric 3: Net Operating Profit / Loss */}
         <Card className="metric-card">
           <div className="metric-card-top">
-            <span>Net Operating Margin</span>
+            <span>{t('analytics.netProfit')}</span>
             <span className="metric-icon">
               <i className="bi bi-wallet2" />
             </span>
@@ -522,14 +524,14 @@ export default function AnalyticsPage() {
             {loading ? '—' : formatINR(metrics.netProfit)}
           </strong>
           <span className="metric-note">
-            {metrics.netProfit >= 0 ? 'Operating profit (Revenue - Expenses)' : 'Operating loss incurred'}
+            {metrics.netProfit >= 0 ? t('analytics.profitableSeason') : t('analytics.operatingDeficit')}
           </span>
         </Card>
 
         {/* Metric 4: Profit Margin % */}
         <Card className="metric-card">
           <div className="metric-card-top">
-            <span>Operating Margin</span>
+            <span>{t('analytics.margin')}</span>
             <span className="metric-icon metric-icon-sage">
               <i className="bi bi-pie-chart" />
             </span>
@@ -552,7 +554,7 @@ export default function AnalyticsPage() {
         {/* Metric 5: Total Production */}
         <Card className="metric-card">
           <div className="metric-card-top">
-            <span>Total Production</span>
+            <span>{t('analytics.tabYields')}</span>
             <span className="metric-icon metric-icon-sage">
               <i className="bi bi-basket2-fill" />
             </span>
@@ -570,7 +572,7 @@ export default function AnalyticsPage() {
         {/* Metric 6: Field Productivity */}
         <Card className="metric-card">
           <div className="metric-card-top">
-            <span>Yield Productivity</span>
+            <span>{t('farms.hectares')}</span>
             <span className="metric-icon metric-icon-gold">
               <i className="bi bi-speedometer2" />
             </span>
@@ -679,27 +681,27 @@ export default function AnalyticsPage() {
             className={`segment-tab ${activeSection === 'finances' ? 'active' : ''}`}
             onClick={() => setActiveSection('finances')}
           >
-            <i className="bi bi-cash-coin" /> Financial Ledger ({financeRecords.length})
+            <i className="bi bi-cash-coin" /> {t('analytics.tabFinances')} ({financeRecords.length})
           </button>
           <button
             type="button"
             className={`segment-tab ${activeSection === 'yields' ? 'active' : ''}`}
             onClick={() => setActiveSection('yields')}
           >
-            <i className="bi bi-bar-chart-line" /> Harvest Yields ({completedHarvests.length})
+            <i className="bi bi-bar-chart-line" /> {t('analytics.tabYields')} ({completedHarvests.length})
           </button>
           <button
             type="button"
             className={`segment-tab ${activeSection === 'market' ? 'active' : ''}`}
             onClick={() => setActiveSection('market')}
           >
-            <i className="bi bi-shop" /> Market Price Series ({marketPrices.length})
+            <i className="bi bi-shop" /> {t('analytics.tabMsp')} ({marketPrices.length})
           </button>
         </div>
 
         {activeSection === 'finances' && (
           <Button variant="primary" className="btn-sm" onClick={handleOpenAdd}>
-            <i className="bi bi-plus-lg me-1" /> Add Transaction
+            <i className="bi bi-plus-lg me-1" /> {t('analytics.recordTransaction')}
           </Button>
         )}
       </div>

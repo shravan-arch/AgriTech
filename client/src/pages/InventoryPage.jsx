@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/useAuth.js';
+import { useLanguage } from '../context/useLanguage.js';
 import { apiRequest } from '../lib/api.js';
 import {
   Badge,
@@ -45,6 +46,7 @@ const createEmptyMoveData = () => ({
 
 export default function InventoryPage() {
   const { token } = useAuth();
+  const { t } = useLanguage();
   const [items, setItems] = useState([]);
   const [movements, setMovements] = useState([]);
   const [farms, setFarms] = useState([]);
@@ -247,9 +249,9 @@ export default function InventoryPage() {
   return (
     <div className="inventory-page-wrap">
       <PageHeader
-        eyebrow="Agricultural Supplies & Warehouse"
-        title="Farm Inventory & Materials"
-        description="Track seeds, fertilizers, treatments, fuel, and supplies across your farm storage with real-time stock balances and threshold alerts."
+        eyebrow={t('inventory.eyebrow')}
+        title={t('inventory.title')}
+        description={t('inventory.description')}
         actions={
           <div className="d-flex gap-2">
             <Button
@@ -260,7 +262,7 @@ export default function InventoryPage() {
               {activeTab === 'catalog' ? 'Movement History' : 'Stock Catalog'}
             </Button>
             <Button variant="primary" onClick={handleOpenAdd}>
-              <i className="bi bi-plus-lg me-1" /> Add Stock Item
+              <i className="bi bi-plus-lg me-1" /> {t('inventory.addItem')}
             </Button>
           </div>
         }
@@ -284,7 +286,7 @@ export default function InventoryPage() {
       <div className="dashboard-metrics mb-4">
         <Card className="metric-card">
           <div className="metric-card-top">
-            <span>Total Catalog Items</span>
+            <span>{t('inventory.totalItems')}</span>
             <span className="metric-icon">
               <i className="bi bi-box-seam" />
             </span>
@@ -295,7 +297,7 @@ export default function InventoryPage() {
 
         <Card className="metric-card">
           <div className="metric-card-top">
-            <span>Low Stock Alerts</span>
+            <span>{t('inventory.lowStock')}</span>
             <span className="metric-icon metric-icon-gold">
               <i className="bi bi-exclamation-triangle" />
             </span>

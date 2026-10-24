@@ -63,5 +63,16 @@ export const authorize = (...roles) => (req, res, next) => {
   return next();
 };
 
+export const restrictAdminFromAgriculturalWrites = (req, res, next) => {
+  if (req.user && req.user.role === 'admin') {
+    return res.status(403).json({
+      error: 'Forbidden',
+      code: 'ADMIN_WRITE_RESTRICTED',
+      message: 'Administrators manage the platform and users; they cannot create or modify personal agricultural resources. Profile and farm changes for administrators must be performed by another administrator.',
+    });
+  }
+  return next();
+};
+
 export const protect = createProtect();
-export default { protect, authorize, createProtect };
+export default { protect, authorize, createProtect, restrictAdminFromAgriculturalWrites };

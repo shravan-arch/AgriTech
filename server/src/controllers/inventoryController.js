@@ -37,6 +37,13 @@ export const createInventoryController = (farmStore = defaultFarmStore) => ({
   },
 
   async createItem(req, res, next) {
+    if (req.user && req.user.role === 'admin') {
+      return res.status(403).json({
+        error: 'Forbidden',
+        code: 'ADMIN_WRITE_RESTRICTED',
+        message: 'Administrators manage the platform and users; they cannot create personal agricultural resources or workspaces.',
+      });
+    }
     try {
       const { farmId, name, category, unit } = req.body;
       if (!farmId) {
@@ -68,10 +75,19 @@ export const createInventoryController = (farmStore = defaultFarmStore) => ({
 
   async updateItem(req, res, next) {
     try {
-      const updated = await farmStore.updateInventoryItem(req.user._id, req.params.id, req.body);
-      if (!updated) {
+      const existing = await farmStore.findInventoryItem(req.user._id, req.params.id);
+      if (!existing) {
         return res.status(404).json({ error: 'Not Found', message: 'Inventory item not found.' });
       }
+      if (req.user.role === 'admin') {
+        return res.status(403).json({
+          error: 'Forbidden',
+          code: 'ADMIN_WRITE_RESTRICTED',
+          message: 'Administrators cannot modify their own inventory directly.',
+        });
+      }
+
+      const updated = await farmStore.updateInventoryItem(req.user._id, req.params.id, req.body);
       return res.status(200).json({
         success: true,
         data: updated,
@@ -83,10 +99,19 @@ export const createInventoryController = (farmStore = defaultFarmStore) => ({
 
   async deleteItem(req, res, next) {
     try {
-      const deleted = await farmStore.deleteInventoryItem(req.user._id, req.params.id);
-      if (!deleted) {
+      const existing = await farmStore.findInventoryItem(req.user._id, req.params.id);
+      if (!existing) {
         return res.status(404).json({ error: 'Not Found', message: 'Inventory item not found.' });
       }
+      if (req.user.role === 'admin') {
+        return res.status(403).json({
+          error: 'Forbidden',
+          code: 'ADMIN_WRITE_RESTRICTED',
+          message: 'Administrators cannot delete their own inventory directly.',
+        });
+      }
+
+      const deleted = await farmStore.deleteInventoryItem(req.user._id, req.params.id);
       return res.status(200).json({
         success: true,
         message: 'Inventory item deleted.',
@@ -98,6 +123,13 @@ export const createInventoryController = (farmStore = defaultFarmStore) => ({
   },
 
   async logMovement(req, res, next) {
+    if (req.user && req.user.role === 'admin') {
+      return res.status(403).json({
+        error: 'Forbidden',
+        code: 'ADMIN_WRITE_RESTRICTED',
+        message: 'Administrators manage the platform and users; they cannot create personal agricultural resources or workspaces.',
+      });
+    }
     try {
       const { itemId, type, quantity, reason } = req.body;
       if (!itemId) {

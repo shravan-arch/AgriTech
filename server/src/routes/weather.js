@@ -19,6 +19,9 @@ export const createWeatherRouter = (
   router.route('/farms/:farmId')
     .get(controller.getFarmWeather);
 
+  router.route('/farms/:farmId/history')
+    .get(controller.getWeatherHistory);
+
   return router;
 };
 

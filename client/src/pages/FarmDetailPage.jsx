@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../context/useAuth.js';
+import { useLanguage } from '../context/useLanguage.js';
 import { apiRequest } from '../lib/api.js';
 import { Badge, Card, EmptyState, ErrorState, FormField, LoadingState, PageHeader } from '../components/ui.jsx';
 import { AuthenticatedImage } from '../components/AuthenticatedImage.jsx';
@@ -94,6 +95,7 @@ const TASK_TYPE_ICONS = {
 const FarmDetailPage = () => {
   const { farmId } = useParams();
   const { token } = useAuth();
+  const { t } = useLanguage();
   const [farm, setFarm] = useState(null);
   const [fields, setFields] = useState([]);
   const [cropCycles, setCropCycles] = useState([]);
@@ -709,16 +711,16 @@ const FarmDetailPage = () => {
     <section className="page-shell">
       <Link to="/farms" className="back-link">
         <i className="bi bi-arrow-left me-2" aria-hidden="true" />
-        All farms
+        {t('nav.farms')}
       </Link>
       <PageHeader
-        eyebrow="Farm overview"
+        eyebrow={t('farms.eyebrow')}
         title={farm?.name}
         description={[farm?.location?.region, farm?.location?.country].filter(Boolean).join(', ') || 'Location not specified'}
         actions={
           <Link className="btn btn-outline-secondary" to="/farms">
             <i className="bi bi-arrow-left me-2" aria-hidden="true" />
-            All farms
+            {t('nav.farms')}
           </Link>
         }
       />
@@ -730,8 +732,8 @@ const FarmDetailPage = () => {
         <div className="col-12 col-xl-7">
           <div className="section-heading">
             <div>
-              <span className="eyebrow">Field records & operations</span>
-              <h2>Fields <span className="count-chip">{fields.length}</span></h2>
+              <span className="eyebrow">{t('operations.eyebrow')}</span>
+              <h2>{t('farms.totalFields')} <span className="count-chip">{fields.length}</span></h2>
             </div>
           </div>
 
@@ -2048,12 +2050,12 @@ const FarmDetailPage = () => {
 
         <div className="col-12 col-xl-5">
           <Card className="form-card" id="add-field">
-            <span className="eyebrow">Field details</span>
-            <h2>Add a field</h2>
+            <span className="eyebrow">{t('farms.eyebrow')}</span>
+            <h2>{t('farms.quickAddField')}</h2>
             <form onSubmit={submitField}>
               <FormField
                 id="field-name"
-                label="Field name"
+                label={t('farms.fieldNameLabel')}
                 value={form.name}
                 onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
                 maxLength={100}
@@ -2061,7 +2063,7 @@ const FarmDetailPage = () => {
               />
               <FormField
                 id="field-area"
-                label="Area in hectares"
+                label={t('farms.fieldAreaLabel')}
                 type="number"
                 min="0.01"
                 max="1000000"
@@ -2072,7 +2074,7 @@ const FarmDetailPage = () => {
               />
               <FormField
                 id="field-soil"
-                label="Soil type"
+                label={t('farms.soilTypeLabel')}
                 optional
                 value={form.soilType}
                 onChange={(event) => setForm((current) => ({ ...current, soilType: event.target.value }))}
@@ -2080,7 +2082,7 @@ const FarmDetailPage = () => {
               />
               <FormField
                 id="field-water"
-                label="Water source"
+                label={t('farms.waterSourceLabel')}
                 optional
                 value={form.waterSource}
                 onChange={(event) => setForm((current) => ({ ...current, waterSource: event.target.value }))}
@@ -2097,9 +2099,9 @@ const FarmDetailPage = () => {
               />
               <button className="btn btn-primary w-100" type="submit" disabled={saving}>
                 {saving ? (
-                  <><span className="spinner-border spinner-border-sm me-2" aria-hidden="true" />Saving…</>
+                  <><span className="spinner-border spinner-border-sm me-2" aria-hidden="true" />{t('common.saving')}</>
                 ) : (
-                  <><i className="bi bi-plus-lg me-2" aria-hidden="true" />Add field</>
+                  <><i className="bi bi-plus-lg me-2" aria-hidden="true" />{t('farms.quickAddField')}</>
                 )}
               </button>
             </form>

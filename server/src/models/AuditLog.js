@@ -12,6 +12,13 @@ const auditLogSchema = new mongoose.Schema(
         'USER_SUSPENDED',
         'USER_ACTIVATED',
         'ADMIN_BOOTSTRAP',
+        'ADMIN_PROFILE_UPDATE',
+        'ADMIN_FARM_UPDATE',
+        'SUPPORT_EMAIL_VERIFIED',
+        'SUPPORT_PASSWORD_RESET',
+        'AUTH_FAILURE',
+        'PLATFORM_SETTINGS_UPDATE',
+        'SYSTEM_ANNOUNCEMENT',
       ],
     },
     actorId: {
@@ -30,11 +37,11 @@ const auditLogSchema = new mongoose.Schema(
     targetUserId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      default: null,
     },
     targetUserEmail: {
       type: String,
-      required: true,
+      default: '',
     },
     targetUserName: {
       type: String,
