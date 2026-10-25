@@ -12,9 +12,13 @@
   "dependencies": {
     "bootstrap": "^5.3.8",
     "bootstrap-icons": "^1.13.2",
+    "leaflet": "^1.9.4",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "react-router-dom": "^7.18.4"
+    "react-router-dom": "^7.18.4",
+    "terra-draw": "^1.38.0",
+    "terra-draw-google-maps-adapter": "^1.7.0",
+    "terra-draw-leaflet-adapter": "^1.4.0"
   },
   "devDependencies": {
     "@types/react": "^19.3.0",
