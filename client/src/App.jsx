@@ -8,6 +8,7 @@ import ProfilePage from './pages/ProfilePage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
 import FarmDetailPage from './pages/FarmDetailPage.jsx';
 import FarmsPage from './pages/FarmsPage.jsx';
+import FieldMappingPage from './pages/FieldMappingPage.jsx';
 import OperationsPage from './pages/OperationsPage.jsx';
 import MonitoringPage from './pages/MonitoringPage.jsx';
 import InventoryPage from './pages/InventoryPage.jsx';
@@ -258,6 +259,10 @@ function App() {
               <i className="bi bi-houses" aria-hidden="true" />
               <span>{t('nav.farms')}</span>
             </NavLink>
+            <NavLink className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`} to="/mapping" onClick={closeMenu}>
+              <i className="bi bi-map" aria-hidden="true" />
+              <span>{t('nav.fieldMapping')}</span>
+            </NavLink>
             <NavLink className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`} to="/operations" onClick={closeMenu}>
               <i className="bi bi-calendar2-check" aria-hidden="true" />
               <span>{t('nav.operations')}</span>
@@ -358,6 +363,8 @@ function App() {
               <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
               <Route path="/farms" element={<ProtectedRoute><FarmsPage /></ProtectedRoute>} />
               <Route path="/farms/:farmId" element={<ProtectedRoute><FarmDetailPage /></ProtectedRoute>} />
+              <Route path="/mapping" element={<ProtectedRoute><FieldMappingPage /></ProtectedRoute>} />
+              <Route path="/farms/:farmId/mapping" element={<ProtectedRoute><FieldMappingPage /></ProtectedRoute>} />
               <Route path="/operations" element={<ProtectedRoute><OperationsPage /></ProtectedRoute>} />
               <Route path="/monitoring" element={<ProtectedRoute><MonitoringPage /></ProtectedRoute>} />
               <Route path="/inventory" element={<ProtectedRoute><InventoryPage /></ProtectedRoute>} />
@@ -390,6 +397,7 @@ function App() {
         <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
         <Route path="/farms/*" element={<Navigate to="/login" replace />} />
+        <Route path="/mapping" element={<Navigate to="/login" replace />} />
         <Route path="/operations" element={<Navigate to="/login" replace />} />
         <Route path="/monitoring" element={<Navigate to="/login" replace />} />
         <Route path="/inventory" element={<Navigate to="/login" replace />} />

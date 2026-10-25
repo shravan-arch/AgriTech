@@ -182,10 +182,12 @@ export const farmStore = {
 
   async listFields(ownerId, farmId) {
     const mode = getStorageMode();
-    if (mode === 'mongodb') return Field.find({ ownerId, farmId }).sort({ createdAt: -1 });
+    const query = { ownerId: String(ownerId) };
+    if (farmId) query.farmId = String(farmId);
+    if (mode === 'mongodb') return Field.find(query).sort({ createdAt: -1 });
     if (mode !== 'local-json-development') throw unavailableError();
     return readLocalCollection('fields')
-      .filter((field) => field.ownerId === String(ownerId) && field.farmId === farmId)
+      .filter((field) => field.ownerId === String(ownerId) && (!farmId || field.farmId === String(farmId)))
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
   },
 

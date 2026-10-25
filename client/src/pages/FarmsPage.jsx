@@ -834,6 +834,15 @@ const FarmsPage = () => {
                               <i className="bi bi-geo-alt" />
                             </button>
 
+                            <Link
+                              to={`/mapping?farmId=${farm._id}`}
+                              className="btn btn-outline-success btn-sm"
+                              title="Field Satellite Mapping"
+                            >
+                              <i className="bi bi-map me-1" />
+                              Map
+                            </Link>
+
                             {editingId !== farm._id && (
                               <>
                                 <button

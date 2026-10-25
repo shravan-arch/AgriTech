@@ -842,9 +842,25 @@ const FarmDetailPage = () => {
                           <div className="d-flex justify-content-between align-items-start gap-2 flex-wrap">
                             <div>
                               <h3>{field.name}</h3>
-                              <p className="field-area">{field.areaHectares} hectares</p>
+                              <p className="field-area">
+                                {field.areaHectares} hectares
+                                {field.calculatedMetrics?.approximateAreaAcres ? ` (${field.calculatedMetrics.approximateAreaAcres} ac approx)` : ''}
+                                {field.boundary?.coordinates && (
+                                  <span className="badge bg-light text-muted border ms-2" style={{ fontSize: '0.7rem' }} title="User-defined approximate boundary">
+                                    <i className="bi bi-geo me-1" />Approx. Boundary
+                                  </span>
+                                )}
+                              </p>
                             </div>
                             <div className="field-card-actions">
+                              <Link
+                                to={`/mapping?farmId=${farmId}&fieldId=${field._id}`}
+                                className="btn btn-outline-success btn-sm d-inline-flex align-items-center gap-1"
+                                title="Map boundary on satellite basemap"
+                              >
+                                <i className="bi bi-map" />
+                                <span>{field.boundary?.coordinates?.length ? 'Edit Boundary' : 'Map Boundary'}</span>
+                              </Link>
                               <button
                                 className="btn btn-outline-secondary btn-sm"
                                 type="button"

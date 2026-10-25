@@ -4,6 +4,12 @@ import { ACTIVITY_TYPES } from '../models/FarmActivity.js';
 import { TASK_TYPES, TASK_PRIORITIES, TASK_STATUSES } from '../models/Task.js';
 import { ALLOWED_PHOTO_MIME_TYPES } from '../models/FieldPhoto.js';
 import photoStorage, { detectImageMimeType } from '../storage/photoStorage.js';
+import {
+  validateGeoJSONPolygon,
+  calculatePolygonArea,
+  calculatePolygonPerimeter,
+  calculatePolygonCenter,
+} from '../utils/geoUtils.js';
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -36,7 +42,17 @@ export const photoUploadMiddleware = (req, res, next) => {
 };
 
 const farmKeys = new Set(['name', 'location']);
-const fieldKeys = new Set(['name', 'areaHectares', 'soilType', 'waterSource']);
+const fieldKeys = new Set([
+  'name',
+  'areaHectares',
+  'soilType',
+  'waterSource',
+  'irrigationDetails',
+  'coordinates',
+  'boundary',
+  'calculatedMetrics',
+  'boundaryMetadata',
+]);
 const locationKeys = new Set(['region', 'country', 'city', 'latitude', 'longitude']);
 const cropCycleKeys = new Set([
   'cropName',
@@ -156,6 +172,57 @@ const validateField = (body, partial = false) => {
   if (body.name !== undefined && !validateName(body.name)) {
     return 'Field name must contain 1 to 100 characters.';
   }
+
+  // Handle GeoJSON polygon boundary validation and automatic metric derivation
+  if (body.boundary !== undefined && body.boundary !== null) {
+    const geoValidation = validateGeoJSONPolygon(body.boundary);
+    if (!geoValidation.valid) {
+      return geoValidation.error;
+    }
+
+    const areaMetrics = calculatePolygonArea(body.boundary.coordinates);
+    const perimeterMetrics = calculatePolygonPerimeter(body.boundary.coordinates);
+
+    body.calculatedMetrics = {
+      approximateAreaSquareMeters: areaMetrics.squareMeters,
+      approximateAreaHectares: areaMetrics.hectares,
+      approximateAreaAcres: areaMetrics.acres,
+      approximatePerimeterMeters: perimeterMetrics.meters,
+      calculatedAt: new Date(),
+    };
+
+    // If areaHectares was not provided or 0, default to calculated geodesic area
+    if (body.areaHectares === undefined && areaMetrics.hectares > 0) {
+      body.areaHectares = areaMetrics.hectares;
+    }
+
+    // Centroid coordinate default if coordinates not specified
+    if (body.coordinates === undefined) {
+      body.coordinates = calculatePolygonCenter(body.boundary.coordinates);
+    }
+
+    // Boundary metadata labeling user-drawn status & legal disclaimer
+    if (body.boundaryMetadata === undefined || typeof body.boundaryMetadata !== 'object') {
+      body.boundaryMetadata = {
+        source: 'user_drawn_approximate',
+        verificationStatus: 'unverified_approximate',
+        legalDisclaimer:
+          'User-defined approximate boundary for operational farm management only. Not an official cadastral survey, legal title, or property deed verification.',
+        lastDrawnAt: new Date(),
+      };
+    } else {
+      body.boundaryMetadata.lastDrawnAt = new Date();
+      if (!body.boundaryMetadata.source) body.boundaryMetadata.source = 'user_drawn_approximate';
+      if (!body.boundaryMetadata.verificationStatus) {
+        body.boundaryMetadata.verificationStatus = 'unverified_approximate';
+      }
+      if (!body.boundaryMetadata.legalDisclaimer) {
+        body.boundaryMetadata.legalDisclaimer =
+          'User-defined approximate boundary for operational farm management only. Not an official cadastral survey, legal title, or property deed verification.';
+      }
+    }
+  }
+
   if (body.areaHectares !== undefined &&
       (!Number.isFinite(Number(body.areaHectares)) ||
        Number(body.areaHectares) <= 0 ||
@@ -163,7 +230,7 @@ const validateField = (body, partial = false) => {
     return 'Field area must be a positive number no greater than 1,000,000 hectares.';
   }
   if (!partial && body.areaHectares === undefined) return 'Field area is required.';
-  for (const key of ['soilType', 'waterSource']) {
+  for (const key of ['soilType', 'waterSource', 'irrigationDetails']) {
     if (body[key] !== undefined &&
         (typeof body[key] !== 'string' || body[key].trim().length > 100)) {
       return `${key} must be text of at most 100 characters.`;
@@ -179,6 +246,11 @@ const cleanField = (body) => ({
   ...(body.areaHectares !== undefined ? { areaHectares: Number(body.areaHectares) } : {}),
   ...(body.soilType !== undefined ? { soilType: body.soilType.trim() } : {}),
   ...(body.waterSource !== undefined ? { waterSource: body.waterSource.trim() } : {}),
+  ...(body.irrigationDetails !== undefined ? { irrigationDetails: body.irrigationDetails.trim() } : {}),
+  ...(body.coordinates !== undefined ? { coordinates: body.coordinates } : {}),
+  ...(body.boundary !== undefined ? { boundary: body.boundary } : {}),
+  ...(body.calculatedMetrics !== undefined ? { calculatedMetrics: body.calculatedMetrics } : {}),
+  ...(body.boundaryMetadata !== undefined ? { boundaryMetadata: body.boundaryMetadata } : {}),
 });
 
 const validateCropCycle = (body, partial = false) => {
@@ -506,6 +578,30 @@ export const createFarmController = (farmStore, activePhotoStorage = photoStorag
       const farm = await farmStore.findFarm(ownerId, req.params.farmId);
       if (!farm) return res.status(404).json({ error: 'Not Found', message: 'Farm not found.' });
       const fields = await farmStore.listFields(ownerId, req.params.farmId);
+      return res.json({ success: true, fields });
+    } catch (error) {
+      return next(error);
+    }
+  },
+
+  getField: async (req, res, next) => {
+    if (getIdError(req.params.fieldId)) return sendValidationError(res, 'Field ID is invalid.');
+    try {
+      const ownerId = req.user._id || req.user.id;
+      const field = await farmStore.findField(ownerId, req.params.fieldId);
+      if (!field) return res.status(404).json({ error: 'Not Found', message: 'Field not found.' });
+      return res.json({ success: true, field });
+    } catch (error) {
+      return next(error);
+    }
+  },
+
+  listAllFields: async (req, res, next) => {
+    try {
+      const ownerId = req.user._id || req.user.id;
+      const farmId = req.query.farmId || null;
+      if (farmId && getIdError(farmId)) return sendValidationError(res, 'Farm ID is invalid.');
+      const fields = await farmStore.listFields(ownerId, farmId);
       return res.json({ success: true, fields });
     } catch (error) {
       return next(error);
