@@ -16,6 +16,7 @@ const invalid = (res, message, fields) => res.status(400).json({
 
 const getSafeUser = (user) => {
   const payload = user.toJSON ? user.toJSON() : { ...user };
+  payload.hasPassword = Boolean(user.password);
   delete payload.password;
   delete payload.resetPasswordToken;
   delete payload.resetPasswordExpires;
@@ -361,15 +362,13 @@ export const createAuthController = (
             });
           }
 
-          const token = generateToken({ id: user._id || user.id });
           return res.status(201).json({
             success: true,
             requiresEmailVerification: true,
             requiresAdminApproval: requestedAdmin,
             message: requestedAdmin
-              ? 'User registered successfully. Your request for an Admin account has been submitted and is pending administrator approval.'
-              : 'User registered successfully. You can verify your email from your profile.',
-            token,
+              ? 'User registered successfully. Your request for an Admin account has been submitted and is pending administrator approval. Please check your email to verify your address.'
+              : 'User registered successfully. Please check your email and verify your address before logging in.',
             user: getSafeUser(user),
           });
         }
@@ -389,7 +388,7 @@ export const createAuthController = (
           ...(req.body.primaryCrops ? { primaryCrops: req.body.primaryCrops.map((crop) => crop.trim()) } : {}),
         });
 
-        const token = generateToken({ id: user._id || user.id });
+        const token = generateToken({ id: user._id || user.id, tokenVersion: user.tokenVersion || 0 });
         return res.status(201).json({
           success: true,
           requiresAdminApproval: requestedAdmin,
@@ -406,7 +405,7 @@ export const createAuthController = (
 
     login: async (req, res, next) => {
       try {
-        const { email, password } = req.body || {};
+        const { email, password, portal } = req.body || {};
         if (typeof email !== 'string' || !EMAIL_REGEX.test(email.trim()) ||
             typeof password !== 'string' || password.length < 1 || password.length > 128) {
           return invalid(res, 'A valid email address and password are required.');
@@ -456,10 +455,44 @@ export const createAuthController = (
           });
         }
 
+        if (shouldRequireEmailVerification && user.emailVerified === false) {
+          return res.status(403).json({
+            error: 'Forbidden',
+            code: 'EMAIL_NOT_VERIFIED',
+            message: 'Please verify your email address before logging in. Check your inbox for the verification link.',
+          });
+        }
+
+        const requestedPortal = portal ? String(portal).toLowerCase().trim() : null;
+        if (requestedPortal === 'admin') {
+          if (user.roleRequest?.status === 'pending') {
+            return res.status(403).json({
+              error: 'Forbidden',
+              code: 'ADMIN_PENDING_APPROVAL',
+              message: 'Your administrator account application is pending review by an authorized administrator.',
+            });
+          }
+          if (user.role !== 'admin') {
+            return res.status(403).json({
+              error: 'Forbidden',
+              code: 'NOT_AN_ADMIN',
+              message: 'Access Denied: This account does not possess Administrative privileges.',
+            });
+          }
+        } else if (requestedPortal === 'user' || requestedPortal === 'farmer') {
+          if (user.role === 'admin') {
+            return res.status(403).json({
+              error: 'Forbidden',
+              code: 'ADMIN_PORTAL_REQUIRED',
+              message: 'Administrator accounts must log in using the Admin Login option.',
+            });
+          }
+        }
+
         return res.status(200).json({
           success: true,
           message: 'Login successful',
-          token: generateToken({ id: user._id || user.id }),
+          token: generateToken({ id: user._id || user.id, tokenVersion: user.tokenVersion || 0 }),
           user: getSafeUser(user),
         });
       } catch (error) {
@@ -469,7 +502,7 @@ export const createAuthController = (
 
     googleAuth: async (req, res, next) => {
       try {
-        const { credential, idToken } = req.body || {};
+        const { credential, idToken, portal } = req.body || {};
         const tokenToVerify = credential || idToken;
         if (!tokenToVerify || typeof tokenToVerify !== 'string') {
           return invalid(res, 'Google identity token is required.');
@@ -515,7 +548,33 @@ export const createAuthController = (
           });
         }
 
-        const token = generateToken({ id: user._id || user.id });
+        const requestedPortal = portal ? String(portal).toLowerCase().trim() : null;
+        if (requestedPortal === 'admin') {
+          if (user.role !== 'admin') {
+            if (user.roleRequest?.status === 'pending') {
+              return res.status(403).json({
+                error: 'Forbidden',
+                code: 'ADMIN_PENDING_APPROVAL',
+                message: 'Your administrator account application is pending review by an authorized administrator.',
+              });
+            }
+            return res.status(403).json({
+              error: 'Forbidden',
+              code: 'NOT_AN_ADMIN',
+              message: 'Access Denied: This Google account does not possess Administrative privileges.',
+            });
+          }
+        } else if (requestedPortal === 'user' || requestedPortal === 'farmer') {
+          if (user.role === 'admin') {
+            return res.status(403).json({
+              error: 'Forbidden',
+              code: 'ADMIN_PORTAL_REQUIRED',
+              message: 'Administrator accounts must sign in using the Admin Login option.',
+            });
+          }
+        }
+
+        const token = generateToken({ id: user._id || user.id, tokenVersion: user.tokenVersion || 0 });
         return res.status(200).json({
           success: true,
           message: 'Google authentication successful',
@@ -870,6 +929,99 @@ export const createAuthController = (
         }
         return res.status(200).json({ success: true, user: getSafeUser(user) });
       } catch (error) {
+        return next(error);
+      }
+    },
+
+    deleteAccount: async (req, res, next) => {
+      try {
+        if (!req.user) {
+          return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required.' });
+        }
+
+        const userId = req.user._id || req.user.id;
+        const user = await userStore.findById(userId, { includePassword: true });
+        if (!user) {
+          return res.status(404).json({ error: 'Not Found', message: 'User account not found.' });
+        }
+
+        const { password, confirmation, confirmEmail } = req.body || {};
+
+        // 1. Explicit confirmation check
+        const isExplicitlyConfirmed =
+          confirmation === 'DELETE' ||
+          confirmation === true ||
+          (typeof confirmEmail === 'string' && confirmEmail.trim().toLowerCase() === user.email.toLowerCase());
+
+        if (!isExplicitlyConfirmed) {
+          return res.status(400).json({
+            error: 'Bad Request',
+            code: 'CONFIRMATION_REQUIRED',
+            message: 'Explicit confirmation is required to permanently delete your account.',
+          });
+        }
+
+        // 2. Reauthentication check
+        if (user.password) {
+          if (!password || typeof password !== 'string') {
+            return res.status(401).json({
+              error: 'Unauthorized',
+              code: 'PASSWORD_REQUIRED',
+              message: 'Password reauthentication is required to permanently delete your account.',
+            });
+          }
+
+          const isValidPassword = await userStore.verifyPassword(user, password);
+          if (!isValidPassword) {
+            return res.status(401).json({
+              error: 'Unauthorized',
+              code: 'INVALID_CREDENTIALS',
+              message: 'Incorrect password. Account deletion cannot proceed.',
+            });
+          }
+        } else if (user.googleId) {
+          if (!confirmEmail || typeof confirmEmail !== 'string' || confirmEmail.trim().toLowerCase() !== user.email.toLowerCase()) {
+            return res.status(401).json({
+              error: 'Unauthorized',
+              code: 'EMAIL_CONFIRMATION_REQUIRED',
+              message: 'Please enter your exact email address to confirm identity for account deletion.',
+            });
+          }
+        }
+
+        // 3. Admin last-admin protection check
+        if (user.role === 'admin' && user.status !== 'suspended') {
+          const activeAdmins = await userStore.countActiveAdmins();
+          if (activeAdmins <= 1) {
+            return res.status(403).json({
+              error: 'Forbidden',
+              code: 'LAST_ADMIN_PROTECTION',
+              message: 'Cannot delete the last active administrator account. Another active administrator must exist or be appointed before this account can be deleted.',
+            });
+          }
+        }
+
+        // 4. Perform complete permanent account deletion
+        const ip = getClientIp(req);
+        await userStore.deleteAccount({
+          userId,
+          actor: user,
+          ipAddress: ip,
+          reason: 'User confirmed permanent account deletion',
+        });
+
+        return res.status(200).json({
+          success: true,
+          message: 'Your account and all associated data have been permanently deleted.',
+        });
+      } catch (error) {
+        if (error.code === 'LAST_ADMIN_PROTECTION') {
+          return res.status(403).json({
+            error: 'Forbidden',
+            code: 'LAST_ADMIN_PROTECTION',
+            message: error.message,
+          });
+        }
         return next(error);
       }
     },

@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "test": "node --test tests/auth.test.js && node --test tests/admin_permissions_security.test.js && node --test tests/admin_domains_suite.test.js && node --test tests/monitoring_weather.test.js",
+    "test": "node --test tests/auth.test.js && node --test tests/auth_email_verification.test.js && node --test tests/admin_roles_approval.test.js && node --test tests/account_deletion.test.js && node --test tests/admin_permissions_security.test.js && node --test tests/admin_domains_suite.test.js && node --test tests/monitoring_weather.test.js",
     "test:integration": "node --test tests/integration/farms.integration.test.js",
     "bootstrap:admin": "node src/scripts/bootstrapAdmin.js",
     "seed:real": "node src/scripts/seedRealData.js"

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/useAuth.js';
 import { useLanguage } from '../context/useLanguage.js';
 import GoogleSignInButton from '../components/GoogleSignInButton.jsx';
@@ -28,9 +28,10 @@ const AUTH_SLIDES = [
 
 const AuthPage = ({ mode }) => {
   const isRegister = mode === 'register';
-  const { user, isAuthenticated, authError, clearAuthError, login, googleLogin, register, resendVerification, logout } = useAuth();
+  const { user, isAuthenticated, authError, clearAuthError, login, googleLogin, register, resendVerification, logout, verifyEmail } = useAuth();
   const { t, language } = useLanguage();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [authPortal, setAuthPortal] = useState('user'); // 'user' or 'admin'
@@ -47,6 +48,11 @@ const AuthPage = ({ mode }) => {
   const [resending, setResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState('');
   const [cooldown, setCooldown] = useState(0);
+
+  // OTP / Verification Token direct input states
+  const [manualToken, setManualToken] = useState('');
+  const [verifyingToken, setVerifyingToken] = useState(false);
+  const [verifySuccess, setVerifySuccess] = useState('');
 
   // Background slideshow rotation
   useEffect(() => {
@@ -98,10 +104,11 @@ const AuthPage = ({ mode }) => {
     if (clearAuthError) clearAuthError();
     setUnverifiedLoginEmail('');
     setResendSuccess('');
+    setVerifySuccess('');
     setSubmitting(true);
     try {
       if (isRegister) {
-        const roleToRegister = authPortal === 'admin' ? 'admin' : selectedRole;
+        const roleToRegister = selectedRole;
         const result = await register({
           name: form.name.trim(),
           email: form.email.trim(),
@@ -110,13 +117,9 @@ const AuthPage = ({ mode }) => {
           language,
         });
 
-        if (result?.requiresAdminApproval) {
-          setAdminApprovalNotice(true);
-          return;
-        }
-
-        if (result?.requiresEmailVerification && !result?.token) {
+        if (result?.requiresEmailVerification || !result?.token) {
           setVerificationPendingEmail(form.email.trim());
+          setAdminApprovalNotice(Boolean(result?.requiresAdminApproval));
           setCooldown(60);
           return;
         }
@@ -124,23 +127,23 @@ const AuthPage = ({ mode }) => {
         const registeredRole = result?.user?.role;
         navigate(registeredRole === 'admin' ? '/admin' : '/dashboard', { replace: true });
       } else {
-        const result = await login(form.email.trim(), form.password);
+        const result = await login(form.email.trim(), form.password, authPortal);
         const loggedUser = result?.user;
 
         if (authPortal === 'admin') {
           if (loggedUser?.role !== 'admin') {
             logout();
-            setError('Access Denied: This account does not possess Administrative privileges. Please switch to the Farmer Portal or submit an administrator request.');
+            setError('Access Denied: This account does not possess Administrative privileges. Please switch to Login as Farmer/User.');
             return;
           }
           navigate('/admin', { replace: true });
         } else {
-          // In farmer portal: if an admin signs in, user features are terminated so redirect to /admin
           if (loggedUser?.role === 'admin') {
-            navigate('/admin', { replace: true });
-          } else {
-            navigate('/dashboard', { replace: true });
+            logout();
+            setError('Administrator accounts must log in using the Login as Admin option.');
+            return;
           }
+          navigate('/dashboard', { replace: true });
         }
       }
     } catch (requestError) {
@@ -152,6 +155,12 @@ const AuthPage = ({ mode }) => {
       }
       if (requestError.data?.code === 'ACCOUNT_SUSPENDED') {
         setError(t('auth.accountSuspended'));
+      } else if (requestError.data?.code === 'ADMIN_PENDING_APPROVAL') {
+        setError('Your administrator account application is pending review by an authorized administrator.');
+      } else if (requestError.data?.code === 'ADMIN_PORTAL_REQUIRED') {
+        setError('Administrator accounts must log in using the Login as Admin option.');
+      } else if (requestError.data?.code === 'NOT_AN_ADMIN') {
+        setError('Access Denied: This account does not possess Administrative privileges.');
       } else {
         setError(requestError.message);
       }
@@ -181,30 +190,57 @@ const AuthPage = ({ mode }) => {
     }
   };
 
+  const handleTokenSubmit = async (e) => {
+    e.preventDefault();
+    if (!manualToken.trim() || verifyingToken) return;
+    setVerifyingToken(true);
+    setError('');
+    setVerifySuccess('');
+    try {
+      const result = await verifyEmail(manualToken.trim());
+      setVerifySuccess(result.message || 'Email verified successfully! You can now log in.');
+      setTimeout(() => {
+        setVerificationPendingEmail('');
+        navigate('/login');
+      }, 1500);
+    } catch (err) {
+      setError(err.message || 'Invalid or expired verification token.');
+    } finally {
+      setVerifyingToken(false);
+    }
+  };
+
   const handleGoogleCredential = useCallback(async (credential) => {
     setError('');
     if (clearAuthError) clearAuthError();
     setSubmitting(true);
     try {
-      const result = await googleLogin(credential);
+      const result = await googleLogin(credential, authPortal);
       const loggedUser = result?.user;
       if (authPortal === 'admin') {
         if (loggedUser?.role !== 'admin') {
           logout();
-          setError('Access Denied: This Google account does not have Administrator privileges. Please sign in via the Farmer Portal.');
+          setError('Access Denied: This Google account does not have Administrator privileges. Please sign in via Login as Farmer/User.');
           return;
         }
         navigate('/admin', { replace: true });
       } else {
         if (loggedUser?.role === 'admin') {
-          navigate('/admin', { replace: true });
-        } else {
-          navigate('/dashboard', { replace: true });
+          logout();
+          setError('Administrator accounts must sign in using the Login as Admin option.');
+          return;
         }
+        navigate('/dashboard', { replace: true });
       }
     } catch (googleError) {
       if (googleError.data?.code === 'ACCOUNT_SUSPENDED') {
         setError(t('auth.accountSuspended'));
+      } else if (googleError.data?.code === 'ADMIN_PENDING_APPROVAL') {
+        setError('Your administrator account application is pending review by an authorized administrator.');
+      } else if (googleError.data?.code === 'ADMIN_PORTAL_REQUIRED') {
+        setError('Administrator accounts must sign in using the Login as Admin option.');
+      } else if (googleError.data?.code === 'NOT_AN_ADMIN') {
+        setError('Access Denied: This Google account does not have Administrator privileges.');
       } else {
         setError(googleError.message || 'Google authentication failed. Please try again.');
       }
@@ -212,55 +248,6 @@ const AuthPage = ({ mode }) => {
       setSubmitting(false);
     }
   }, [googleLogin, clearAuthError, authPortal, logout, navigate, t]);
-
-  // Dedicated "Admin Request Submitted" screen
-  if (adminApprovalNotice) {
-    return (
-      <section className="auth-split-wrapper">
-        <div className="auth-single-card text-center shadow-lg">
-          <div className="d-flex justify-content-between align-items-center mb-4">
-            <Link className="landing-brand mb-0" to="/" aria-label="AgriTech home">
-              <span className="brand-logo-glow">
-                <svg viewBox="0 0 40 40" width="34" height="34" className="brand-svg-icon" aria-hidden="true">
-                  <rect x="2" y="2" width="36" height="36" rx="10" fill="#0f291e" stroke="#10b981" strokeWidth="1.5" />
-                  <path d="M20 32 C20 24 19 18 16 13" stroke="#34d399" strokeWidth="2.2" strokeLinecap="round" fill="none" />
-                  <path d="M19 21 C12 20 8 14 9 9 C14 9 18 13 19 21 Z" fill="#10b981" />
-                  <path d="M20 17 C26 14 31 17 31 22 C26 23 21 21 20 17 Z" fill="#34d399" />
-                  <circle cx="29" cy="11" r="3" fill="#f59e0b" />
-                </svg>
-              </span>
-              <span className="brand-text">Agri<span className="brand-text-accent">Tech</span></span>
-            </Link>
-            <LanguageToggle />
-          </div>
-
-          <div className="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle bg-warning bg-opacity-10 text-warning p-3" style={{ width: '64px', height: '64px' }}>
-            <i className="bi bi-shield-lock" style={{ fontSize: '2rem' }} aria-hidden="true" />
-          </div>
-
-          <h1 className="h3 fw-bold mb-2">{t('profile.adminPendingTitle')}</h1>
-          <p className="text-secondary small mb-4">
-            {t('auth.adminApprovalNotice')}
-          </p>
-
-          <div className="alert alert-info d-flex align-items-center gap-2 small mb-4 text-start" role="alert">
-            <i className="bi bi-info-circle-fill flex-shrink-0" />
-            <div>
-              <strong>{t('profile.personalInfo')}:</strong> {form.name} ({form.email})
-            </div>
-          </div>
-
-          <button
-            type="button"
-            className="btn btn-primary w-100 mb-3"
-            onClick={() => navigate('/dashboard', { replace: true })}
-          >
-            {t('common.confirm')} &amp; Enter Workspace
-          </button>
-        </div>
-      </section>
-    );
-  }
 
   // Dedicated "Check your email" pending screen
   if (verificationPendingEmail) {
@@ -287,10 +274,30 @@ const AuthPage = ({ mode }) => {
             <i className="bi bi-envelope-check" style={{ fontSize: '2rem' }} aria-hidden="true" />
           </div>
 
-          <h1 className="h3 fw-bold mb-2">{t('auth.checkEmail')}</h1>
+          <h1 className="h3 fw-bold mb-2">Verify Your Email Address</h1>
           <p className="text-secondary small mb-3">
-            {t('auth.checkEmailSubtext')} <strong className="text-dark">{verificationPendingEmail}</strong>.
+            We have sent a verification link to <strong className="text-dark">{verificationPendingEmail}</strong>.
+            Please verify your email before logging in.
           </p>
+
+          {adminApprovalNotice && (
+            <div className="alert alert-warning border-warning border-opacity-25 small mb-3 text-start" role="alert">
+              <div className="d-flex align-items-center gap-2 mb-1">
+                <i className="bi bi-shield-lock-fill text-warning flex-shrink-0" />
+                <strong className="text-dark">Admin Approval Required</strong>
+              </div>
+              <p className="mb-0 text-secondary" style={{ fontSize: '0.8rem' }}>
+                Your request for an Administrator account will be reviewed by an authorized administrator once your email address is verified.
+              </p>
+            </div>
+          )}
+
+          {verifySuccess && (
+            <div className="alert alert-success d-flex align-items-center gap-2 small mb-3" role="alert">
+              <i className="bi bi-check-circle-fill flex-shrink-0" />
+              <div>{verifySuccess}</div>
+            </div>
+          )}
 
           {resendSuccess && (
             <div className="alert alert-success d-flex align-items-center gap-2 small mb-3" role="alert">
@@ -305,6 +312,34 @@ const AuthPage = ({ mode }) => {
               <div>{error}</div>
             </div>
           )}
+
+          <div className="card bg-light border-0 p-3 mb-3 text-start small">
+            <label className="form-label small fw-semibold text-dark mb-1" htmlFor="manual-token-input">
+              Enter verification token / link
+            </label>
+            <form onSubmit={handleTokenSubmit} className="d-flex gap-2">
+              <input
+                id="manual-token-input"
+                type="text"
+                className="form-control form-control-sm"
+                placeholder="Paste token from email"
+                value={manualToken}
+                onChange={(e) => setManualToken(e.target.value)}
+                disabled={verifyingToken}
+              />
+              <button
+                type="submit"
+                className="btn btn-primary btn-sm flex-shrink-0"
+                disabled={verifyingToken || !manualToken.trim()}
+              >
+                {verifyingToken ? (
+                  <span className="spinner-border spinner-border-sm" aria-hidden="true" />
+                ) : (
+                  'Confirm'
+                )}
+              </button>
+            </form>
+          </div>
 
           <div className="card bg-light border-0 p-3 mb-4 text-start small">
             <div className="d-flex align-items-center justify-content-between mb-2">
@@ -411,45 +446,47 @@ const AuthPage = ({ mode }) => {
               <LanguageToggle />
             </div>
 
-            {/* Portal Switcher: Farmer / User Portal vs Administrator Portal */}
-            <div className="auth-portal-selector mb-3" role="tablist" aria-label="Portal Selection">
-              <button
-                type="button"
-                className={`auth-portal-tab ${authPortal === 'user' ? 'active' : ''}`}
-                onClick={() => {
-                  setAuthPortal('user');
-                  setSelectedRole('user');
-                  setError('');
-                  if (clearAuthError) clearAuthError();
-                }}
-              >
-                <i className="bi bi-person-fill" />
-                <span>Farmer Portal</span>
-              </button>
-              <button
-                type="button"
-                className={`auth-portal-tab admin-portal ${authPortal === 'admin' ? 'active' : ''}`}
-                onClick={() => {
-                  setAuthPortal('admin');
-                  setSelectedRole('admin');
-                  setError('');
-                  if (clearAuthError) clearAuthError();
-                }}
-              >
-                <i className="bi bi-shield-lock-fill" />
-                <span>Admin Portal</span>
-              </button>
-            </div>
+            {/* Login Options: Login as Farmer/User vs Login as Admin */}
+            {!isRegister ? (
+              <div className="auth-portal-selector mb-3" role="tablist" aria-label="Login Options">
+                <button
+                  type="button"
+                  className={`auth-portal-tab ${authPortal === 'user' ? 'active' : ''}`}
+                  onClick={() => {
+                    setAuthPortal('user');
+                    setSelectedRole('user');
+                    setError('');
+                    setUnverifiedLoginEmail('');
+                    if (clearAuthError) clearAuthError();
+                  }}
+                >
+                  <i className="bi bi-person-fill" />
+                  <span>Login as Farmer/User</span>
+                </button>
+                <button
+                  type="button"
+                  className={`auth-portal-tab admin-portal ${authPortal === 'admin' ? 'active' : ''}`}
+                  onClick={() => {
+                    setAuthPortal('admin');
+                    setSelectedRole('admin');
+                    setError('');
+                    setUnverifiedLoginEmail('');
+                    if (clearAuthError) clearAuthError();
+                  }}
+                >
+                  <i className="bi bi-shield-lock-fill" />
+                  <span>Login as Admin</span>
+                </button>
+              </div>
+            ) : null}
 
-            {authPortal === 'admin' && (
+            {!isRegister && authPortal === 'admin' && (
               <div className="admin-portal-banner d-flex align-items-center gap-2 small mb-3">
                 <i className="bi bi-shield-shaded text-primary fs-5 flex-shrink-0" />
                 <div>
                   <strong className="text-dark d-block">Enterprise Governance Gateway</strong>
                   <span className="text-secondary" style={{ fontSize: '0.78rem' }}>
-                    {isRegister
-                      ? 'Admin applications require review and verification by an existing administrator.'
-                      : 'Restricted administrative suite. Only authorized platform administrators may access this gateway.'}
+                    Restricted administrative suite. Only approved, active administrators may access this gateway.
                   </span>
                 </div>
               </div>
@@ -460,52 +497,88 @@ const AuthPage = ({ mode }) => {
               <Link
                 to="/login"
                 className={`auth-mode-pill ${!isRegister ? 'active' : ''}`}
+                onClick={() => {
+                  setError('');
+                  setUnverifiedLoginEmail('');
+                  if (clearAuthError) clearAuthError();
+                }}
               >
                 <i className="bi bi-box-arrow-in-right me-1" />
-                {authPortal === 'admin' ? 'Admin Sign In' : t('auth.signInBtn')}
+                {t('auth.signInBtn')}
               </Link>
               <Link
                 to="/register"
                 className={`auth-mode-pill ${isRegister ? 'active' : ''}`}
+                onClick={() => {
+                  setError('');
+                  setUnverifiedLoginEmail('');
+                  if (clearAuthError) clearAuthError();
+                }}
               >
                 <i className="bi bi-person-plus me-1" />
-                {authPortal === 'admin' ? 'Admin Request' : t('auth.createAccountBtn')}
+                {t('auth.createAccountBtn')}
               </Link>
             </div>
 
             <div className="auth-header-titles mb-3">
               <h1 className="h3 fw-bold mb-1">
-                {authPortal === 'admin'
-                  ? isRegister
-                    ? 'Request Administrator Access'
-                    : 'Administrator Sign In'
-                  : isRegister
+                {isRegister
                   ? t('auth.createAccount')
-                  : t('auth.welcomeBack')}
+                  : authPortal === 'admin'
+                  ? 'Login as Admin'
+                  : 'Login as Farmer/User'}
               </h1>
               <p className="text-secondary small mb-0">
-                {authPortal === 'admin'
-                  ? isRegister
-                    ? 'Submit an administrative credential request for verification by existing platform administrators.'
-                    : 'Enter your authorized administrator credentials to access the Governance suite.'
-                  : isRegister
-                  ? t('auth.startSubtext')
-                  : t('auth.loginSubtext')}
+                {isRegister
+                  ? 'Choose your account type and register for your AgriTech workspace.'
+                  : authPortal === 'admin'
+                  ? 'Enter your authorized administrator credentials to access platform governance.'
+                  : 'Enter your credentials to access your farm operations, crops, and telemetry.'}
               </p>
             </div>
 
+            {location.state?.message && !unverifiedLoginEmail && !error && !authError && (
+              <div className="alert alert-success d-flex align-items-center gap-2 mb-3" role="alert">
+                <i className="bi bi-check-circle-fill text-success flex-shrink-0" />
+                <div className="small">{location.state.message}</div>
+              </div>
+            )}
+
             {unverifiedLoginEmail ? (
-              <div className="alert alert-warning border-warning border-opacity-25 mb-3" role="alert">
+              <div className="alert alert-warning border-warning border-opacity-25 mb-3 text-start" role="alert">
                 <div className="d-flex align-items-center gap-2 mb-2">
                   <i className="bi bi-exclamation-triangle-fill text-warning flex-shrink-0" />
-                  <strong className="text-dark">Email Not Verified</strong>
+                  <strong className="text-dark">Email Verification Required</strong>
                 </div>
                 <p className="small mb-2 text-dark">
-                  Please verify your email address before logging in. Check your inbox for the verification link.
+                  Please verify your email address before logging in. We sent a verification link to <strong>{unverifiedLoginEmail}</strong>.
                 </p>
+                {verifySuccess && (
+                  <div className="alert alert-success py-1 px-2 small mb-2">{verifySuccess}</div>
+                )}
                 {resendSuccess && (
                   <div className="alert alert-success py-1 px-2 small mb-2">{resendSuccess}</div>
                 )}
+                <div className="mb-2">
+                  <div className="input-group input-group-sm">
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Paste verification token from email"
+                      value={manualToken}
+                      onChange={(e) => setManualToken(e.target.value)}
+                      disabled={verifyingToken}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={handleTokenSubmit}
+                      disabled={verifyingToken || !manualToken.trim()}
+                    >
+                      {verifyingToken ? '…' : 'Verify'}
+                    </button>
+                  </div>
+                </div>
                 <button
                   type="button"
                   className="btn btn-outline-dark btn-sm w-100"
@@ -533,7 +606,15 @@ const AuthPage = ({ mode }) => {
               <GoogleSignInButton
                 onCredentialReceived={handleGoogleCredential}
                 disabled={submitting}
-                text={isRegister ? 'Sign up with Google' : 'Continue with Google'}
+                text={
+                  isRegister
+                    ? selectedRole === 'admin'
+                      ? 'Register with Google (Admin)'
+                      : 'Register with Google (Farmer/User)'
+                    : authPortal === 'admin'
+                    ? 'Login with Google (Admin)'
+                    : 'Login with Google (Farmer/User)'
+                }
               />
             </div>
 
@@ -542,6 +623,85 @@ const AuthPage = ({ mode }) => {
             </div>
 
             <form onSubmit={submit}>
+              {/* Account Type Selection during Registration: exactly two choices */}
+              {isRegister && (
+                <div className="mb-3">
+                  <label className="form-label fw-semibold text-dark d-block mb-2">
+                    Account Type <span className="text-danger">*</span>
+                  </label>
+                  <div className="row g-2">
+                    <div className="col-12 col-sm-6">
+                      <div
+                        className={`card p-3 h-100 border text-start cursor-pointer role-select-card ${selectedRole === 'user' ? 'selected' : ''}`}
+                        onClick={() => {
+                          setSelectedRole('user');
+                          setAuthPortal('user');
+                        }}
+                      >
+                        <div className="d-flex align-items-center justify-content-between mb-1">
+                          <div className="d-flex align-items-center gap-2">
+                            <i className="bi bi-person-badge text-success fs-5" />
+                            <span className="fw-bold small text-dark">Farmer/User</span>
+                          </div>
+                          <input
+                            type="radio"
+                            name="selectedRole"
+                            value="user"
+                            checked={selectedRole === 'user'}
+                            onChange={() => {
+                              setSelectedRole('user');
+                              setAuthPortal('user');
+                            }}
+                            className="form-check-input mt-0"
+                          />
+                        </div>
+                        <p className="text-secondary small mb-0" style={{ fontSize: '0.78rem', lineHeight: '1.3' }}>
+                          Standard farm account. Access farm management, crop health, sensor telemetry, and weather.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="col-12 col-sm-6">
+                      <div
+                        className={`card p-3 h-100 border text-start cursor-pointer role-select-card ${selectedRole === 'admin' ? 'selected' : ''}`}
+                        onClick={() => {
+                          setSelectedRole('admin');
+                          setAuthPortal('admin');
+                        }}
+                      >
+                        <div className="d-flex align-items-center justify-content-between mb-1">
+                          <div className="d-flex align-items-center gap-2">
+                            <i className="bi bi-shield-lock text-primary fs-5" />
+                            <span className="fw-bold small text-dark">Admin</span>
+                          </div>
+                          <input
+                            type="radio"
+                            name="selectedRole"
+                            value="admin"
+                            checked={selectedRole === 'admin'}
+                            onChange={() => {
+                              setSelectedRole('admin');
+                              setAuthPortal('admin');
+                            }}
+                            className="form-check-input mt-0"
+                          />
+                        </div>
+                        <p className="text-secondary small mb-0" style={{ fontSize: '0.78rem', lineHeight: '1.3' }}>
+                          Administrative access. Requires email verification and approval by an authorized administrator.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {selectedRole === 'admin' && (
+                    <div className="alert alert-warning py-2 px-3 small mt-2 mb-0 d-flex align-items-start gap-2 border-0 bg-warning bg-opacity-10 text-dark">
+                      <i className="bi bi-shield-exclamation text-warning flex-shrink-0 mt-1" />
+                      <span>Admin registrations require email verification and approval by an authorized admin. Until approved, you will have standard farmer/user access.</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {isRegister && (
                 <div className="mb-3">
                   <label className="form-label" htmlFor="name">{t('auth.nameLabel')}</label>
@@ -575,7 +735,7 @@ const AuthPage = ({ mode }) => {
                     name="email"
                     type="email"
                     className="form-control border-start-0 ps-1"
-                    placeholder={authPortal === 'admin' ? 'admin@agritech.com' : 'farmer@agritech.com'}
+                    placeholder={authPortal === 'admin' || (isRegister && selectedRole === 'admin') ? 'admin@agritech.com' : 'farmer@agritech.com'}
                     value={form.email}
                     onChange={update}
                     autoComplete="email"
@@ -641,108 +801,29 @@ const AuthPage = ({ mode }) => {
                 )}
               </div>
 
-              {/* Role Selection during Registration */}
-              {isRegister && (
-                <div className="mb-4">
-                  <label className="form-label fw-semibold text-dark d-block mb-2">
-                    {t('auth.roleSelectionLabel')}
-                  </label>
-                  <div className="row g-2">
-                    <div className="col-12 col-sm-6">
-                      <div
-                        className={`card p-3 h-100 border text-start cursor-pointer role-select-card ${selectedRole === 'user' ? 'selected' : ''}`}
-                        onClick={() => {
-                          setSelectedRole('user');
-                          setAuthPortal('user');
-                        }}
-                      >
-                        <div className="d-flex align-items-center justify-content-between mb-1">
-                          <div className="d-flex align-items-center gap-2">
-                            <i className="bi bi-person-badge text-success fs-5" />
-                            <span className="fw-bold small text-dark">{t('auth.roleUserTitle')}</span>
-                          </div>
-                          <input
-                            type="radio"
-                            name="selectedRole"
-                            value="user"
-                            checked={selectedRole === 'user'}
-                            onChange={() => {
-                              setSelectedRole('user');
-                              setAuthPortal('user');
-                            }}
-                            className="form-check-input mt-0"
-                          />
-                        </div>
-                        <p className="text-secondary small mb-0" style={{ fontSize: '0.78rem', lineHeight: '1.3' }}>
-                          {t('auth.roleUserDesc')}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="col-12 col-sm-6">
-                      <div
-                        className={`card p-3 h-100 border text-start cursor-pointer role-select-card ${selectedRole === 'admin' ? 'selected' : ''}`}
-                        onClick={() => {
-                          setSelectedRole('admin');
-                          setAuthPortal('admin');
-                        }}
-                      >
-                        <div className="d-flex align-items-center justify-content-between mb-1">
-                          <div className="d-flex align-items-center gap-2">
-                            <i className="bi bi-shield-lock text-success fs-5" />
-                            <span className="fw-bold small text-dark">{t('auth.roleAdminTitle')}</span>
-                          </div>
-                          <input
-                            type="radio"
-                            name="selectedRole"
-                            value="admin"
-                            checked={selectedRole === 'admin'}
-                            onChange={() => {
-                              setSelectedRole('admin');
-                              setAuthPortal('admin');
-                            }}
-                            className="form-check-input mt-0"
-                          />
-                        </div>
-                        <p className="text-secondary small mb-0" style={{ fontSize: '0.78rem', lineHeight: '1.3' }}>
-                          {t('auth.roleAdminDesc')}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {selectedRole === 'admin' && (
-                    <div className="alert alert-warning py-2 px-3 small mt-2 mb-0 d-flex align-items-start gap-2 border-0 bg-warning bg-opacity-10 text-dark">
-                      <i className="bi bi-shield-exclamation text-warning flex-shrink-0 mt-1" />
-                      <span>{t('auth.roleAdminDesc')}</span>
-                    </div>
-                  )}
-                </div>
-              )}
-
               <button className="btn btn-primary w-100 btn-lg shadow-sm landing-btn-cta" type="submit" disabled={submitting}>
                 {submitting ? (
                   <><span className="spinner-border spinner-border-sm me-2" aria-hidden="true" />{t('auth.submitting')}</>
-                ) : authPortal === 'admin' ? (
-                  isRegister ? (
+                ) : isRegister ? (
+                  selectedRole === 'admin' ? (
                     <>
-                      <span>Submit Admin Request</span>
+                      <span>Register as Admin</span>
                       <i className="bi bi-shield-check ms-2" />
                     </>
                   ) : (
                     <>
-                      <span>Sign In as Administrator</span>
-                      <i className="bi bi-shield-lock ms-2" />
+                      <span>Register as Farmer/User</span>
+                      <i className="bi bi-person-check ms-2" />
                     </>
                   )
-                ) : isRegister ? (
+                ) : authPortal === 'admin' ? (
                   <>
-                    <span>{t('auth.createAccountBtn')}</span>
-                    <i className="bi bi-arrow-right ms-2" />
+                    <span>Login as Admin</span>
+                    <i className="bi bi-shield-lock ms-2" />
                   </>
                 ) : (
                   <>
-                    <span>{t('auth.signInBtn')}</span>
+                    <span>Login as Farmer/User</span>
                     <i className="bi bi-box-arrow-in-right ms-2" />
                   </>
                 )}

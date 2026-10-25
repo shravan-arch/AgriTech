@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/useAuth.js';
 import { useLanguage } from '../context/useLanguage.js';
 import { INDIAN_LANGUAGES } from '../lib/translations.js';
 
 const ProfilePage = () => {
-  const { user, setUser, updateProfile, resendVerification, verifyEmail } = useAuth();
+  const { user, setUser, updateProfile, resendVerification, verifyEmail, deleteAccount, listAdminUsers } = useAuth();
   const { t, language } = useLanguage();
+  const navigate = useNavigate();
 
   const [form, setForm] = useState({
     name: user?.name || '',
@@ -29,6 +30,58 @@ const ProfilePage = () => {
   const [verificationSuccess, setVerificationSuccess] = useState('');
   const [verificationError, setVerificationError] = useState('');
   const [cooldown, setCooldown] = useState(0);
+
+  // Account deletion state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteConfirmPhrase, setDeleteConfirmPhrase] = useState('');
+  const [deleteConfirmEmail, setDeleteConfirmEmail] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+  const [adminCount, setAdminCount] = useState(null);
+
+  const isGoogleOnly = Boolean(user?.googleId && !user?.hasPassword);
+
+  useEffect(() => {
+    let active = true;
+    if (isAdmin && listAdminUsers) {
+      listAdminUsers({ role: 'admin' })
+        .then((res) => {
+          if (active && res?.users) {
+            const activeAdmins = res.users.filter((u) => u.role === 'admin' && u.status !== 'suspended');
+            setAdminCount(activeAdmins.length);
+          }
+        })
+        .catch(() => {});
+    }
+    return () => {
+      active = false;
+    };
+  }, [isAdmin, listAdminUsers]);
+
+  const handleDeleteAccount = async (e) => {
+    e.preventDefault();
+    if (deleting) return;
+    setDeleting(true);
+    setDeleteError('');
+    try {
+      await deleteAccount({
+        password: deletePassword,
+        confirmation: deleteConfirmPhrase.trim().toUpperCase(),
+        confirmEmail: deleteConfirmEmail.trim(),
+      });
+      navigate('/login', {
+        replace: true,
+        state: {
+          message: 'Your account and all associated farm data have been permanently deleted.',
+        },
+      });
+    } catch (err) {
+      setDeleteError(err.message || 'Failed to delete account. Please verify your credentials.');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const [prevUser, setPrevUser] = useState(user);
   if (user && user !== prevUser) {
@@ -566,6 +619,171 @@ const ProfilePage = () => {
                   )}
                 </div>
               </form>
+            </div>
+          </div>
+
+          {/* Danger Zone: Permanent Account Deletion */}
+          <div className="card shadow-sm border-danger border-opacity-25 rounded-3 mt-4 overflow-hidden">
+            <div className="card-header bg-danger bg-opacity-10 border-danger border-opacity-25 py-3 px-4 d-flex align-items-center justify-content-between flex-wrap gap-2">
+              <div className="d-flex align-items-center gap-2 text-danger">
+                <i className="bi bi-exclamation-triangle-fill fs-5" />
+                <h3 className="h6 fw-bold mb-0 text-danger">Danger Zone: Permanent Account Deletion</h3>
+              </div>
+              <span className="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
+                Irreversible Action
+              </span>
+            </div>
+            <div className="card-body p-4">
+              <p className="text-secondary small mb-3">
+                Deleting your account is permanent and cannot be undone. When you confirm deletion, your account and <strong>all associated data</strong> will be permanently wiped immediately:
+              </p>
+              <ul className="text-muted small mb-4 ps-3">
+                <li>Your user profile, settings, and authentication credentials.</li>
+                <li>All registered farms, field boundary maps, and soil records.</li>
+                <li>Crop cycles, growth telemetry, and agricultural tasks.</li>
+                <li>All uploaded field photographs from local and cloud storage.</li>
+                <li>Active sessions, tokens, financial transactions, and support queries.</li>
+              </ul>
+
+              {isAdmin && adminCount !== null && adminCount <= 1 ? (
+                <div className="alert alert-warning border-0 rounded-3 d-flex align-items-start gap-3 p-3">
+                  <i className="bi bi-shield-lock-fill text-warning fs-4 flex-shrink-0 mt-1" />
+                  <div>
+                    <h4 className="h6 fw-bold text-dark mb-1">Sole Administrator Protection Active</h4>
+                    <p className="small text-secondary mb-0">
+                      You are currently the only active administrator on the platform. System governance prevents deleting the last active administrator to avoid platform lockout. Another administrator must be appointed before this account can be deleted.
+                    </p>
+                  </div>
+                </div>
+              ) : !showDeleteConfirm ? (
+                <div className="d-flex align-items-center justify-content-between flex-wrap gap-3 pt-2 border-top">
+                  <div>
+                    <div className="fw-semibold text-danger small">Delete this account permanently</div>
+                    <div className="text-muted" style={{ fontSize: '0.78rem' }}>
+                      Once deleted, you can register again in the future as a brand-new user.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-outline-danger btn-sm fw-semibold d-flex align-items-center gap-1"
+                    onClick={() => {
+                      setShowDeleteConfirm(true);
+                      setDeleteError('');
+                    }}
+                  >
+                    <i className="bi bi-trash3-fill" />
+                    Delete Account Permanently
+                  </button>
+                </div>
+              ) : (
+                <div className="p-3 bg-danger bg-opacity-10 border border-danger border-opacity-25 rounded-3">
+                  <h4 className="h6 fw-bold text-danger mb-2 d-flex align-items-center gap-2">
+                    <i className="bi bi-shield-exclamation" />
+                    Security Reauthentication &amp; Confirmation
+                  </h4>
+                  <p className="small text-dark mb-3">
+                    To prevent accidental or unauthorized deletion, please verify your identity and confirm this action.
+                  </p>
+
+                  {deleteError && (
+                    <div className="alert alert-danger py-2 px-3 small d-flex align-items-center gap-2 mb-3">
+                      <i className="bi bi-exclamation-circle-fill flex-shrink-0" />
+                      <div>{deleteError}</div>
+                    </div>
+                  )}
+
+                  <form onSubmit={handleDeleteAccount}>
+                    {!isGoogleOnly ? (
+                      <div className="mb-3">
+                        <label className="form-label small fw-semibold text-dark" htmlFor="delete-account-password">
+                          Current Account Password <span className="text-danger">*</span>
+                        </label>
+                        <input
+                          id="delete-account-password"
+                          type="password"
+                          className="form-control form-control-sm"
+                          placeholder="Enter your current password"
+                          value={deletePassword}
+                          onChange={(e) => setDeletePassword(e.target.value)}
+                          required
+                          disabled={deleting}
+                        />
+                      </div>
+                    ) : (
+                      <div className="mb-3">
+                        <label className="form-label small fw-semibold text-dark" htmlFor="delete-account-email">
+                          Confirm Google Account Email (<span className="text-primary">{user?.email}</span>) <span className="text-danger">*</span>
+                        </label>
+                        <input
+                          id="delete-account-email"
+                          type="email"
+                          className="form-control form-control-sm"
+                          placeholder={user?.email}
+                          value={deleteConfirmEmail}
+                          onChange={(e) => setDeleteConfirmEmail(e.target.value)}
+                          required
+                          disabled={deleting}
+                        />
+                      </div>
+                    )}
+
+                    <div className="mb-3">
+                      <label className="form-label small fw-semibold text-dark" htmlFor="delete-confirm-phrase">
+                        Type <span className="badge bg-danger text-white font-monospace">DELETE</span> to confirm permanent erasure: <span className="text-danger">*</span>
+                      </label>
+                      <input
+                        id="delete-confirm-phrase"
+                        type="text"
+                        className="form-control form-control-sm font-monospace"
+                        placeholder="DELETE"
+                        value={deleteConfirmPhrase}
+                        onChange={(e) => setDeleteConfirmPhrase(e.target.value)}
+                        required
+                        disabled={deleting}
+                      />
+                    </div>
+
+                    <div className="d-flex align-items-center justify-content-end gap-2 pt-2">
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => {
+                          setShowDeleteConfirm(false);
+                          setDeletePassword('');
+                          setDeleteConfirmPhrase('');
+                          setDeleteConfirmEmail('');
+                          setDeleteError('');
+                        }}
+                        disabled={deleting}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="btn btn-danger btn-sm fw-semibold d-flex align-items-center gap-1"
+                        disabled={
+                          deleting ||
+                          deleteConfirmPhrase.trim() !== 'DELETE' ||
+                          (!isGoogleOnly && !deletePassword) ||
+                          (isGoogleOnly && deleteConfirmEmail.trim().toLowerCase() !== user?.email?.toLowerCase())
+                        }
+                      >
+                        {deleting ? (
+                          <>
+                            <span className="spinner-border spinner-border-sm me-1" aria-hidden="true" />
+                            Deleting Everything Permanently…
+                          </>
+                        ) : (
+                          <>
+                            <i className="bi bi-trash3-fill me-1" />
+                            Permanently Delete My Account &amp; Data
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
             </div>
           </div>
         </div>
