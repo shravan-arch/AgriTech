@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/useAuth.js';
 import { useLanguage } from '../context/useLanguage.js';
 import { formatDate } from '../lib/formatters.js';
@@ -25,6 +25,7 @@ const resolveTab = (tab) => {
 const AdminPage = () => {
   const {
     user: currentUser,
+    deleteAccount,
     listAdminUsers,
     changeUserRole,
     changeUserStatus,
@@ -62,6 +63,7 @@ const AdminPage = () => {
 
   const { t } = useLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const initialTab = resolveTab(searchParams.get('tab'));
 
@@ -104,6 +106,15 @@ const AdminPage = () => {
   const [profileSaving, setProfileSaving] = useState(false);
   const [passwordUpdating, setPasswordUpdating] = useState(false);
   const [emailVerifying, setEmailVerifying] = useState(false);
+
+  // Admin Account Deletion State
+  const [activeAdminCount, setActiveAdminCount] = useState(null);
+  const [showAdminDeleteConfirm, setShowAdminDeleteConfirm] = useState(false);
+  const [adminDeletePassword, setAdminDeletePassword] = useState('');
+  const [adminDeletePhrase, setAdminDeletePhrase] = useState('');
+  const [adminDeleteConfirmEmail, setAdminDeleteConfirmEmail] = useState('');
+  const [adminDeleting, setAdminDeleting] = useState(false);
+  const [adminDeleteError, setAdminDeleteError] = useState('');
 
   // Sync state if URL changes externally
   useEffect(() => {
@@ -270,7 +281,14 @@ const AdminPage = () => {
         setSecurityAuditLogs(audRes.logs || []);
         setViolations(vRes.violations || []);
       } else if (activeTab === 'profile') {
-        const res = await getAdminProfile();
+        const [res, adminsRes] = await Promise.all([
+          getAdminProfile(),
+          listAdminUsers({ role: 'admin' }).catch(() => null),
+        ]);
+        if (adminsRes?.users) {
+          const activeAdmins = adminsRes.users.filter((u) => u.role === 'admin' && u.status !== 'suspended');
+          setActiveAdminCount(activeAdmins.length);
+        }
         if (res?.profile) {
           setAdminProfileForm({
             name: res.profile.name || '',
@@ -387,6 +405,30 @@ const AdminPage = () => {
       setActionError(err.message || 'Failed to send verification email.');
     } finally {
       setEmailVerifying(false);
+    }
+  };
+
+  const handleDeleteAdminAccount = async (e) => {
+    e.preventDefault();
+    if (adminDeleting) return;
+    setAdminDeleting(true);
+    setAdminDeleteError('');
+    try {
+      await deleteAccount({
+        password: adminDeletePassword,
+        confirmation: adminDeletePhrase.trim().toUpperCase(),
+        confirmEmail: adminDeleteConfirmEmail.trim(),
+      });
+      navigate('/login', {
+        replace: true,
+        state: {
+          message: 'Your administrator account and all associated platform records have been permanently deleted.',
+        },
+      });
+    } catch (err) {
+      setAdminDeleteError(err.message || 'Failed to delete administrator account.');
+    } finally {
+      setAdminDeleting(false);
     }
   };
 
@@ -2590,6 +2632,161 @@ const AdminPage = () => {
                       </div>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Danger Zone: Permanent Admin Account Deletion */}
+              <div className="card border-danger border-opacity-25 shadow-sm rounded-4 mt-4 overflow-hidden bg-white">
+                <div className="card-header bg-danger bg-opacity-10 border-danger border-opacity-25 py-3 px-4 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                  <div className="d-flex align-items-center gap-2 text-danger">
+                    <i className="bi bi-exclamation-triangle-fill fs-5" />
+                    <h4 className="h6 fw-bold mb-0 text-danger">Danger Zone: Permanent Administrator Account Deletion</h4>
+                  </div>
+                  <span className="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
+                    Irreversible Governance Action
+                  </span>
+                </div>
+                <div className="card-body p-4">
+                  <p className="text-secondary small mb-3">
+                    Deleting your administrator account is permanent and cannot be undone. All administrative credentials, personal profile details, active authorization sessions, and personal identifying data will be permanently wiped immediately.
+                  </p>
+
+                  {activeAdminCount !== null && activeAdminCount <= 1 ? (
+                    <div className="alert alert-warning border-0 rounded-3 d-flex align-items-start gap-3 p-3 mb-0">
+                      <i className="bi bi-shield-lock-fill text-warning fs-3 flex-shrink-0 mt-1" />
+                      <div>
+                        <h5 className="h6 fw-bold text-dark mb-1">Sole Administrator Protection Active</h5>
+                        <p className="small text-secondary mb-0">
+                          You are currently the only active administrator on AgriTech. To protect system governance and prevent permanent administrative lockout, you cannot delete your account until another administrator is appointed and active.
+                        </p>
+                      </div>
+                    </div>
+                  ) : !showAdminDeleteConfirm ? (
+                    <div className="d-flex align-items-center justify-content-between flex-wrap gap-3 pt-2 border-top">
+                      <div>
+                        <div className="fw-semibold text-danger small">Permanently delete this administrator account</div>
+                        <div className="text-muted" style={{ fontSize: '0.78rem' }}>
+                          Another active administrator exists to maintain system oversight. Once deleted, you can register again in the future as a new user.
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-outline-danger btn-sm fw-semibold d-flex align-items-center gap-1"
+                        onClick={() => {
+                          setShowAdminDeleteConfirm(true);
+                          setAdminDeleteError('');
+                        }}
+                      >
+                        <i className="bi bi-trash3-fill" />
+                        Delete Admin Account Permanently
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-danger bg-opacity-10 border border-danger border-opacity-25 rounded-3">
+                      <h5 className="h6 fw-bold text-danger mb-2 d-flex align-items-center gap-2">
+                        <i className="bi bi-shield-exclamation" />
+                        Administrator Identity Verification &amp; Confirmation
+                      </h5>
+                      <p className="small text-dark mb-3">
+                        To verify authorized access before permanently deleting administrative credentials, please enter your password and confirm this action.
+                      </p>
+
+                      {adminDeleteError && (
+                        <div className="alert alert-danger py-2 px-3 small d-flex align-items-center gap-2 mb-3">
+                          <i className="bi bi-exclamation-circle-fill flex-shrink-0" />
+                          <div>{adminDeleteError}</div>
+                        </div>
+                      )}
+
+                      <form onSubmit={handleDeleteAdminAccount}>
+                        {(!currentUser?.googleId || currentUser?.hasPassword) ? (
+                          <div className="mb-3">
+                            <label className="form-label small fw-semibold text-dark">
+                              Current Password <span className="text-danger">*</span>
+                            </label>
+                            <input
+                              type="password"
+                              className="form-control form-control-sm"
+                              placeholder="Enter your current administrator password"
+                              value={adminDeletePassword}
+                              onChange={(e) => setAdminDeletePassword(e.target.value)}
+                              required
+                              disabled={adminDeleting}
+                            />
+                          </div>
+                        ) : (
+                          <div className="mb-3">
+                            <label className="form-label small fw-semibold text-dark">
+                              Confirm Google Email Address (<span className="text-primary">{currentUser?.email}</span>) <span className="text-danger">*</span>
+                            </label>
+                            <input
+                              type="email"
+                              className="form-control form-control-sm"
+                              placeholder={currentUser?.email}
+                              value={adminDeleteConfirmEmail}
+                              onChange={(e) => setAdminDeleteConfirmEmail(e.target.value)}
+                              required
+                              disabled={adminDeleting}
+                            />
+                          </div>
+                        )}
+
+                        <div className="mb-3">
+                          <label className="form-label small fw-semibold text-dark">
+                            Type <span className="badge bg-danger text-white font-monospace">DELETE</span> to confirm: <span className="text-danger">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            className="form-control form-control-sm font-monospace"
+                            placeholder="DELETE"
+                            value={adminDeletePhrase}
+                            onChange={(e) => setAdminDeletePhrase(e.target.value)}
+                            required
+                            disabled={adminDeleting}
+                          />
+                        </div>
+
+                        <div className="d-flex align-items-center justify-content-end gap-2 pt-2">
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => {
+                              setShowAdminDeleteConfirm(false);
+                              setAdminDeletePassword('');
+                              setAdminDeletePhrase('');
+                              setAdminDeleteConfirmEmail('');
+                              setAdminDeleteError('');
+                            }}
+                            disabled={adminDeleting}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            className="btn btn-danger btn-sm fw-semibold d-flex align-items-center gap-1"
+                            disabled={
+                              adminDeleting ||
+                              adminDeletePhrase.trim() !== 'DELETE' ||
+                              ((!currentUser?.googleId || currentUser?.hasPassword) && !adminDeletePassword) ||
+                              (currentUser?.googleId && !currentUser?.hasPassword && adminDeleteConfirmEmail.trim().toLowerCase() !== currentUser?.email?.toLowerCase())
+                            }
+                          >
+                            {adminDeleting ? (
+                              <>
+                                <span className="spinner-border spinner-border-sm me-1" aria-hidden="true" />
+                                Deleting Administrator Account…
+                              </>
+                            ) : (
+                              <>
+                                <i className="bi bi-trash3-fill me-1" />
+                                Permanently Delete Admin Account
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

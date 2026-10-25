@@ -146,7 +146,33 @@ export const photoStorage = {
       return;
     }
 
+    if (storageProvider === 'vercel-blob' || storageProvider === 'vercel') {
+      try {
+        const { del } = await import('@vercel/blob');
+        await del(storageKey, { token: process.env.BLOB_READ_WRITE_TOKEN });
+      } catch {
+        // Recoverable cleanup for external blob storage
+      }
+      return;
+    }
+
     throw new Error(`Unsupported storage provider: ${storageProvider}`);
+  },
+
+  /**
+   * Remove entire photograph directory for a deleted owner.
+   */
+  async deleteUserPhotoDirectory(ownerId) {
+    if (!ownerId) return;
+    try {
+      const uploadDir = getUploadDir();
+      const userDir = path.resolve(uploadDir, String(ownerId));
+      if (userDir.startsWith(uploadDir) && userDir !== uploadDir) {
+        await fs.promises.rm(userDir, { recursive: true, force: true });
+      }
+    } catch {
+      // Ignored if directory does not exist
+    }
   },
 };
 

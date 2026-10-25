@@ -54,19 +54,19 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const login = useCallback(async (email, password) => {
+  const login = useCallback(async (email, password, portal) => {
     const data = await apiRequest('/auth/login', {
       method: 'POST',
-      body: { email, password },
+      body: { email, password, portal },
     });
     saveSession(data);
     return data;
   }, [saveSession]);
 
-  const googleLogin = useCallback(async (credential) => {
+  const googleLogin = useCallback(async (credential, portal) => {
     const data = await apiRequest('/auth/google', {
       method: 'POST',
-      body: { credential },
+      body: { credential, portal },
     });
     saveSession(data);
     return data;
@@ -134,6 +134,20 @@ export const AuthProvider = ({ children }) => {
     setAuthError('');
     setLoading(false);
   }, []);
+
+  const deleteAccount = useCallback(async (payload = {}) => {
+    const data = await apiRequest('/auth/account', {
+      method: 'DELETE',
+      token,
+      body: payload,
+    });
+    localStorage.removeItem('agritech_token');
+    setToken(null);
+    setUser(null);
+    setAuthError('');
+    setLoading(false);
+    return data;
+  }, [token]);
 
   const clearAuthError = useCallback(() => {
     setAuthError('');
@@ -471,6 +485,7 @@ export const AuthProvider = ({ children }) => {
     forgotPassword,
     resetPassword,
     logout,
+    deleteAccount,
     listAdminUsers,
     listPendingRequests,
     approveRoleRequest,
@@ -532,6 +547,7 @@ export const AuthProvider = ({ children }) => {
     forgotPassword,
     resetPassword,
     logout,
+    deleteAccount,
     listAdminUsers,
     listPendingRequests,
     approveRoleRequest,

@@ -19,6 +19,7 @@ export const createAuthRouter = (userStore = defaultUserStore, options = {}) => 
   router.get('/me', protect, controller.getMe);
   router.put('/profile', protect, controller.updateProfile);
   router.get('/user/:id', protect, controller.getUserById);
+  router.delete('/account', protect, controller.deleteAccount);
   return router;
 };
 

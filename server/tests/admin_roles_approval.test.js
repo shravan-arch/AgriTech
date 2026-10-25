@@ -203,8 +203,17 @@ test('Role Selection, Admin Approval, Role Management, and Access Control Suite'
     assert.equal(approveRes.body.user.role, 'admin');
     assert.equal(approveRes.body.user.roleRequest.status, 'approved');
 
-    // 5. Newly approved admin can now access admin endpoints
-    const newAdminToken = regRes.body.token;
+    // 5. Newly approved admin logs in with fresh credentials and accesses admin endpoints
+    const loginApproved = await request('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: 'future@agritech.farm',
+        password: 'FuturePassword123!',
+        portal: 'admin',
+      }),
+    });
+    assert.equal(loginApproved.status, 200);
+    const newAdminToken = loginApproved.body.token;
     const accessCheck = await request('/api/admin/users', {
       headers: { Authorization: `Bearer ${newAdminToken}` },
     });
@@ -333,8 +342,16 @@ test('Role Selection, Admin Approval, Role Management, and Access Control Suite'
       headers: { Authorization: `Bearer ${rootToken}` },
       body: JSON.stringify({ role: 'admin' }),
     });
-    // Now suspend rootadmin from future:
-    const futureToken = loginFuture.body.token;
+    // Now suspend rootadmin from future (getting fresh token after role change):
+    const refreshedFutureLogin = await request('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: 'future@agritech.farm',
+        password: 'FuturePassword123!',
+        portal: 'admin',
+      }),
+    });
+    const futureToken = refreshedFutureLogin.body.token;
     const rootId = loginRoot.body.user._id || loginRoot.body.user.id;
 
     // Future can suspend rootadmin because future is also active admin:
@@ -488,5 +505,113 @@ test('Role Selection, Admin Approval, Role Management, and Access Control Suite'
       body: JSON.stringify({ language: 'fr' }),
     });
     assert.equal(badLangRes.status, 400);
+  });
+
+  await t.test('11. Separate login options: server enforces selected portal role against user role and approval', async () => {
+    // 1. Root admin trying to log in via Farmer/User portal is rejected
+    const adminAsFarmer = await request('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: 'rootadmin@agritech.farm',
+        password: 'RootAdminPassword123!',
+        portal: 'user',
+      }),
+    });
+    assert.equal(adminAsFarmer.status, 403);
+    assert.equal(adminAsFarmer.body.code, 'ADMIN_PORTAL_REQUIRED');
+
+    // 2. Regular farmer trying to log in via Admin portal is rejected
+    const farmerAsAdmin = await request('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: 'farmer@example.com',
+        password: 'Password12345!',
+        portal: 'admin',
+      }),
+    });
+    assert.equal(farmerAsAdmin.status, 403);
+    assert.equal(farmerAsAdmin.body.code, 'NOT_AN_ADMIN');
+
+    // 3. Pending admin applicant trying to log in via Admin portal is rejected with pending approval
+    const pendingAsAdmin = await request('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: 'applicant@example.com',
+        password: 'Password12345!',
+        portal: 'admin',
+      }),
+    });
+    assert.equal(pendingAsAdmin.status, 403);
+    assert.equal(pendingAsAdmin.body.code, 'ADMIN_PENDING_APPROVAL');
+
+    // 4. Pending applicant CAN log in via Farmer/User portal
+    const pendingAsFarmer = await request('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: 'applicant@example.com',
+        password: 'Password12345!',
+        portal: 'user',
+      }),
+    });
+    assert.equal(pendingAsFarmer.status, 200);
+    assert.equal(pendingAsFarmer.body.user.role, 'farmer');
+  });
+
+  await t.test('12. Session revocation and data safety on role change to admin', async () => {
+    // Register farmer with farm details
+    const farmerReg = await request('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: 'Promotable Farmer',
+        email: 'promotable@example.com',
+        password: 'Password12345!',
+        selectedRole: 'user',
+        farmName: 'Sunset Valley',
+        farmSizeHectares: 25,
+      }),
+    });
+    const farmerToken = farmerReg.body.token;
+    const farmerId = farmerReg.body.user._id || farmerReg.body.user.id;
+
+    // Login root admin to promote farmer
+    const rootLogin = await request('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: 'rootadmin@agritech.farm',
+        password: 'RootAdminPassword123!',
+        portal: 'admin',
+      }),
+    });
+    const rootToken = rootLogin.body.token;
+
+    // Promote farmer to admin
+    const promoteRes = await request(`/api/admin/users/${farmerId}/role`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${rootToken}` },
+      body: JSON.stringify({ role: 'admin', reason: 'Promoted to admin team' }),
+    });
+    assert.equal(promoteRes.status, 200);
+    assert.equal(promoteRes.body.user.role, 'admin');
+
+    // Old farmer token must now be REVOKED with 401
+    const oldTokenCheck = await request('/api/auth/me', {
+      headers: { Authorization: `Bearer ${farmerToken}` },
+    });
+    assert.equal(oldTokenCheck.status, 401);
+    assert.equal(oldTokenCheck.body.code, 'TOKEN_REVOKED');
+
+    // Promoted account can now log in via Admin portal
+    const newAdminLogin = await request('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: 'promotable@example.com',
+        password: 'Password12345!',
+        portal: 'admin',
+      }),
+    });
+    assert.equal(newAdminLogin.status, 200);
+    assert.equal(newAdminLogin.body.user.role, 'admin');
+    // Personal farmer profile data transition
+    assert.equal(newAdminLogin.body.user.farmName, '');
   });
 });
