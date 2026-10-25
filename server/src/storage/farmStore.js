@@ -255,7 +255,13 @@ export const farmStore = {
         const photos = await FieldPhoto.find({ ownerId, fieldId });
         await Promise.all(
           photos.map((p) =>
-            photoStorage.deletePhoto({ storageKey: p.storageKey, storageProvider: p.storageProvider }).catch(() => {})
+            photoStorage
+              .deletePhoto({
+                storageKey: p.storageKey,
+                storageProvider: p.storageProvider,
+                storageType: p.storageType,
+              })
+              .catch(() => {})
           )
         );
         await Promise.all([
@@ -280,7 +286,13 @@ export const farmStore = {
     );
     await Promise.all(
       photosToDelete.map((p) =>
-        photoStorage.deletePhoto({ storageKey: p.storageKey, storageProvider: p.storageProvider }).catch(() => {})
+        photoStorage
+          .deletePhoto({
+            storageKey: p.storageKey,
+            storageProvider: p.storageProvider,
+            storageType: p.storageType,
+          })
+          .catch(() => {})
       )
     );
     writeLocalCollection('fields', fields.filter((item) => item._id !== fieldId));
@@ -1215,13 +1227,16 @@ export const farmStore = {
       const query = { _id: photoId, ownerId: String(ownerId) };
       if (options.farmId) query.farmId = options.farmId;
       if (options.fieldId) query.fieldId = options.fieldId;
-      const photo = await FieldPhoto.findOneAndDelete(query);
-      if (photo) {
-        await photoStorage.deletePhoto({
-          storageKey: photo.storageKey,
-          storageProvider: photo.storageProvider,
-        }).catch(() => {});
-      }
+      const photo = await FieldPhoto.findOne(query);
+      if (!photo) return null;
+
+      await photoStorage.deletePhoto({
+        storageKey: photo.storageKey,
+        storageProvider: photo.storageProvider,
+        storageType: photo.storageType,
+      });
+
+      await FieldPhoto.deleteOne({ _id: photo._id });
       return photo;
     }
     if (mode !== 'local-json-development') throw unavailableError();
@@ -1234,10 +1249,13 @@ export const farmStore = {
       return true;
     });
     if (!photo) return null;
+
     await photoStorage.deletePhoto({
       storageKey: photo.storageKey,
       storageProvider: photo.storageProvider,
-    }).catch(() => {});
+      storageType: photo.storageType,
+    });
+
     writeLocalCollection('field_photos', photos.filter((p) => p._id !== photoId));
     return photo;
   },

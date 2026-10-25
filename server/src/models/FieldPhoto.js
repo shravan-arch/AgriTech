@@ -41,6 +41,33 @@ const fieldPhotoSchema = new mongoose.Schema(
       required: [true, 'Storage key is required'],
       trim: true,
     },
+    storageType: {
+      type: String,
+      default: 'authenticated',
+      trim: true,
+    },
+    cloudinaryAssetId: {
+      type: String,
+      trim: true,
+    },
+    cloudinaryPublicId: {
+      type: String,
+      trim: true,
+    },
+    cloudinaryVersion: {
+      type: String,
+      trim: true,
+    },
+    cloudinaryFormat: {
+      type: String,
+      trim: true,
+    },
+    width: {
+      type: Number,
+    },
+    height: {
+      type: Number,
+    },
     originalFilename: {
       type: String,
       trim: true,

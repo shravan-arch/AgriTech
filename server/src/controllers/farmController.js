@@ -1260,6 +1260,13 @@ export const createFarmController = (farmStore, activePhotoStorage = photoStorag
           cropCycleId: cropCycleId || undefined,
           storageProvider: saved.storageProvider,
           storageKey: saved.storageKey,
+          storageType: saved.storageType || 'authenticated',
+          cloudinaryAssetId: saved.assetId || undefined,
+          cloudinaryPublicId: saved.publicId || saved.storageKey,
+          cloudinaryVersion: saved.version || undefined,
+          cloudinaryFormat: saved.format || undefined,
+          width: saved.width || undefined,
+          height: saved.height || undefined,
           originalFilename: req.file.originalname
             ? String(req.file.originalname).slice(0, 255)
             : 'photo.jpg',
@@ -1274,6 +1281,7 @@ export const createFarmController = (farmStore, activePhotoStorage = photoStorag
             .deletePhoto({
               storageKey: saved.storageKey,
               storageProvider: saved.storageProvider,
+              storageType: saved.storageType,
             })
             .catch(() => {});
           return res.status(404).json({
@@ -1288,6 +1296,7 @@ export const createFarmController = (farmStore, activePhotoStorage = photoStorag
           .deletePhoto({
             storageKey: saved.storageKey,
             storageProvider: saved.storageProvider,
+            storageType: saved.storageType,
           })
           .catch(() => {});
         throw dbError;
@@ -1310,7 +1319,18 @@ export const createFarmController = (farmStore, activePhotoStorage = photoStorag
       if (!photo) {
         return res.status(404).json({ error: 'Not Found', message: 'Photograph not found.' });
       }
-      return res.json({ success: true, photo });
+
+      const photoObj = photo.toObject ? photo.toObject() : { ...photo };
+      if (photo.storageProvider === 'cloudinary' && typeof activePhotoStorage.getSignedUrl === 'function') {
+        photoObj.signedDeliveryUrl = activePhotoStorage.getSignedUrl({
+          storageKey: photo.storageKey,
+          storageProvider: photo.storageProvider,
+          storageType: photo.storageType,
+          mimeType: photo.mimeType,
+        });
+      }
+
+      return res.json({ success: true, photo: photoObj });
     } catch (error) {
       return next(error);
     }
@@ -1334,6 +1354,8 @@ export const createFarmController = (farmStore, activePhotoStorage = photoStorag
         const buffer = await activePhotoStorage.getPhoto({
           storageKey: photo.storageKey,
           storageProvider: photo.storageProvider,
+          storageType: photo.storageType,
+          mimeType: photo.mimeType,
         });
         if (!buffer) {
           return res.status(404).json({
