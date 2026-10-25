@@ -28,7 +28,7 @@ const AUTH_SLIDES = [
 
 const AuthPage = ({ mode }) => {
   const isRegister = mode === 'register';
-  const { user, isAuthenticated, loading, authError, clearAuthError, login, googleLogin, register, resendVerification, logout } = useAuth();
+  const { user, isAuthenticated, authError, clearAuthError, login, googleLogin, register, resendVerification, logout } = useAuth();
   const { t, language } = useLanguage();
   const navigate = useNavigate();
 
@@ -67,16 +67,6 @@ const AuthPage = ({ mode }) => {
 
   if (isAuthenticated && !adminApprovalNotice) {
     return <Navigate to={user?.role === 'admin' ? '/admin' : '/dashboard'} replace />;
-  }
-  if (loading) {
-    return (
-      <section className="auth-split-wrapper">
-        <div className="loading-panel m-auto" role="status" aria-live="polite">
-          <span className="spinner-border text-success" aria-hidden="true" />
-          <span>{t('common.loading')}</span>
-        </div>
-      </section>
-    );
   }
 
   const update = (event) => {
@@ -374,6 +364,8 @@ const AuthPage = ({ mode }) => {
                 src={slide.image}
                 alt="AgriTech Farm"
                 className="auth-visual-img"
+                loading={idx === 0 ? 'eager' : 'lazy'}
+                decoding="async"
               />
               <div className="auth-visual-scrim" />
               <div className="auth-visual-caption">

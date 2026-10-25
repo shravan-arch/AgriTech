@@ -1,6 +1,52 @@
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+
+let isGisInitialized = false;
+let activeCredentialCallback = null;
+
+const initGis = (clientId) => {
+  if (isGisInitialized || !clientId || typeof window === 'undefined' || !window.google?.accounts?.id) {
+    return;
+  }
+  window.google.accounts.id.initialize({
+    client_id: clientId,
+    callback: (response) => {
+      if (response?.credential && activeCredentialCallback) {
+        activeCredentialCallback(response.credential);
+      }
+    },
+  });
+  isGisInitialized = true;
+};
+
+const loadGisScript = (onLoaded, onError) => {
+  if (typeof window === 'undefined') return;
+  if (window.google?.accounts?.id) {
+    onLoaded();
+    return;
+  }
+
+  const existingScript = document.getElementById('google-gsi-client');
+  if (existingScript) {
+    if (window.google?.accounts?.id) {
+      onLoaded();
+    } else {
+      existingScript.addEventListener('load', onLoaded, { once: true });
+      if (onError) existingScript.addEventListener('error', onError, { once: true });
+    }
+    return;
+  }
+
+  const script = document.createElement('script');
+  script.id = 'google-gsi-client';
+  script.src = 'https://accounts.google.com/gsi/client';
+  script.async = true;
+  script.defer = true;
+  script.onload = onLoaded;
+  if (onError) script.onerror = onError;
+  document.head.appendChild(script);
+};
 
 /**
  * Google Sign-In Button component.
@@ -11,67 +57,49 @@ export const GoogleSignInButton = ({ onCredentialReceived, disabled = false, tex
   const [scriptLoaded, setScriptLoaded] = useState(
     () => typeof window !== 'undefined' && Boolean(window.google?.accounts?.id)
   );
+  const [buttonRendered, setButtonRendered] = useState(false);
   const [infoMessage, setInfoMessage] = useState('');
   const configMissing = !GOOGLE_CLIENT_ID;
 
+  // Keep active callback reference up-to-date
   useEffect(() => {
-    if (!GOOGLE_CLIENT_ID || window.google?.accounts?.id) {
-      return;
-    }
-
-    const existingScript = document.getElementById('google-gsi-client');
-    if (existingScript) {
-      existingScript.addEventListener('load', () => setScriptLoaded(true));
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.id = 'google-gsi-client';
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = () => setScriptLoaded(true);
-    script.onerror = () => {
-      setInfoMessage('Unable to connect to Google Identity Services. Check your internet connection.');
-    };
-    document.head.appendChild(script);
-  }, []);
-
-  const onCredentialReceivedRef = useRef(onCredentialReceived);
-  useEffect(() => {
-    onCredentialReceivedRef.current = onCredentialReceived;
+    activeCredentialCallback = onCredentialReceived;
   }, [onCredentialReceived]);
+
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID) return;
+    loadGisScript(
+      () => setScriptLoaded(true),
+      () => setInfoMessage('Unable to connect to Google Identity Services. Check your internet connection.')
+    );
+  }, []);
 
   useEffect(() => {
     if (!scriptLoaded || !GOOGLE_CLIENT_ID || !window.google?.accounts?.id || !containerRef.current) {
       return;
     }
 
-    try {
-      window.google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: (response) => {
-          if (response?.credential && onCredentialReceivedRef.current) {
-            onCredentialReceivedRef.current(response.credential);
-          }
-        },
-      });
+    initGis(GOOGLE_CLIENT_ID);
 
-      // Clear any previous render
-      containerRef.current.innerHTML = '';
-
-      // Render official Google button
-      window.google.accounts.id.renderButton(containerRef.current, {
-        type: 'standard',
-        theme: 'outline',
-        size: 'large',
-        text: 'continue_with',
-        shape: 'rectangular',
-        logo_alignment: 'left',
-        width: containerRef.current.offsetWidth || 380,
-      });
-    } catch {
-      // In case of GIS initialization error
+    // Only render the official Google button if not already rendered inside container
+    if (containerRef.current.children.length === 0) {
+      const targetWidth = Math.min(Math.max(containerRef.current.offsetWidth || 380, 250), 400);
+      try {
+        window.google.accounts.id.renderButton(containerRef.current, {
+          type: 'standard',
+          theme: 'outline',
+          size: 'large',
+          text: 'continue_with',
+          shape: 'rectangular',
+          logo_alignment: 'left',
+          width: targetWidth,
+        });
+        setButtonRendered(true);
+      } catch {
+        // Fallback gracefully if GIS render fails
+      }
+    } else {
+      setButtonRendered(true);
     }
   }, [scriptLoaded]);
 
@@ -84,6 +112,7 @@ export const GoogleSignInButton = ({ onCredentialReceived, disabled = false, tex
     }
 
     if (window.google?.accounts?.id) {
+      initGis(GOOGLE_CLIENT_ID);
       window.google.accounts.id.prompt((notification) => {
         if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
           setInfoMessage('Google One Tap prompt was skipped. Please use the button directly.');
@@ -95,22 +124,33 @@ export const GoogleSignInButton = ({ onCredentialReceived, disabled = false, tex
   };
 
   return (
-    <div className="google-auth-wrapper">
+    <div className="google-auth-wrapper position-relative" style={{ minHeight: '44px' }}>
       {/* Container for rendered Google Identity Services button */}
       <div
         ref={containerRef}
-        className={`google-gis-container ${!scriptLoaded || configMissing ? 'd-none' : ''}`}
-        style={{ minHeight: '44px' }}
+        className="google-gis-container d-flex justify-content-center"
+        style={{
+          minHeight: '44px',
+          width: '100%',
+          visibility: buttonRendered && !configMissing ? 'visible' : 'hidden',
+        }}
       />
 
       {/* Styled fallback button displayed when GIS script is loading, offline, or awaiting config */}
-      {(!scriptLoaded || configMissing) && (
+      {(!buttonRendered || configMissing) && (
         <button
           type="button"
           className="btn btn-outline-secondary google-btn w-100"
           onClick={handleFallbackClick}
           disabled={disabled}
           aria-label={text}
+          style={{
+            minHeight: '44px',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            zIndex: 1,
+          }}
         >
           <svg className="google-icon me-2" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
             <path
@@ -144,4 +184,6 @@ export const GoogleSignInButton = ({ onCredentialReceived, disabled = false, tex
   );
 };
 
-export default GoogleSignInButton;
+export default memo(GoogleSignInButton, (prevProps, nextProps) => {
+  return prevProps.disabled === nextProps.disabled && prevProps.text === nextProps.text;
+});

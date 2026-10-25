@@ -52,7 +52,16 @@ function App() {
   const searchParams = new URLSearchParams(location.search);
   const currentAdminTab = searchParams.get('tab') || 'overview';
 
-  if (loading) {
+  const isPublicRoute = [
+    '/',
+    '/login',
+    '/register',
+    '/forgot-password',
+    '/reset-password',
+    '/verify-email',
+  ].some((path) => location.pathname === path || location.pathname.startsWith('/reset-password/') || location.pathname.startsWith('/verify-email/'));
+
+  if (loading && !isPublicRoute) {
     return (
       <div className="min-vh-100 d-flex align-items-center justify-content-center bg-light">
         <div className="loading-panel m-auto text-center" role="status" aria-live="polite">

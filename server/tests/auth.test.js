@@ -1791,4 +1791,33 @@ describe('Persistence failure and fallback regression tests', () => {
       fs.rmSync(tempDir, { recursive: true, force: true });
     }
   });
+
+  test('getSafeConnectionDetails properly parses connection URIs and redacts sensitive credentials', async () => {
+    const { getSafeConnectionDetails, getDBStatus } = await import('../src/config/db.js');
+    const originalUri = process.env.MONGODB_URI;
+
+    try {
+      // 1. Placeholder template rejection
+      process.env.MONGODB_URI = 'mongodb+srv://<username>:<password>@cluster0.mongodb.net/agritech?retryWrites=true&w=majority';
+      const placeholderDetails = getSafeConnectionDetails();
+      assert.equal(placeholderDetails.configured, false);
+      assert.equal(placeholderDetails.host, null);
+
+      // 2. Valid URI parsing without exposing credentials
+      process.env.MONGODB_URI = 'mongodb+srv://app_user:SuperSecretPassword123@my-cluster.mongodb.net/agritech_db?retryWrites=true&w=majority';
+      const validDetails = getSafeConnectionDetails();
+      assert.equal(validDetails.configured, true);
+      assert.equal(validDetails.host, 'my-cluster.mongodb.net');
+      assert.equal(validDetails.database, 'agritech_db');
+      assert.equal(JSON.stringify(validDetails).includes('SuperSecretPassword123'), false);
+
+      // 3. getDBStatus returns diagnostics object
+      const status = getDBStatus();
+      assert.ok(status.diagnostics);
+      assert.equal(typeof status.diagnostics.attempted, 'boolean');
+      assert.equal(typeof status.diagnostics.success, 'boolean');
+    } finally {
+      process.env.MONGODB_URI = originalUri;
+    }
+  });
 });

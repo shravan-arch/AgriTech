@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import AuthContext from './AuthContextValue.js';
 import { apiRequest } from '../lib/api.js';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(() => localStorage.getItem('agritech_token'));
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => Boolean(localStorage.getItem('agritech_token')));
   const [authError, setAuthError] = useState('');
 
   useEffect(() => {
@@ -13,7 +13,13 @@ export const AuthProvider = ({ children }) => {
 
     const validateSession = async () => {
       if (!token) {
-        if (active) setLoading(false);
+        if (active) setLoading((prev) => (prev ? false : prev));
+        return;
+      }
+
+      // If user is already set in memory (e.g. from login/registration), skip duplicate validation
+      if (user) {
+        if (active) setLoading((prev) => (prev ? false : prev));
         return;
       }
 
@@ -30,7 +36,7 @@ export const AuthProvider = ({ children }) => {
           setUser(null);
         }
       } finally {
-        if (active) setLoading(false);
+        if (active) setLoading((prev) => (prev ? false : prev));
       }
     };
 
@@ -40,32 +46,33 @@ export const AuthProvider = ({ children }) => {
     };
   }, [token]);
 
-  const saveSession = (data) => {
+  const saveSession = useCallback((data) => {
     localStorage.setItem('agritech_token', data.token);
     setToken(data.token);
     setUser(data.user);
     setAuthError('');
-  };
+    setLoading(false);
+  }, []);
 
-  const login = async (email, password) => {
+  const login = useCallback(async (email, password) => {
     const data = await apiRequest('/auth/login', {
       method: 'POST',
       body: { email, password },
     });
     saveSession(data);
     return data;
-  };
+  }, [saveSession]);
 
-  const googleLogin = async (credential) => {
+  const googleLogin = useCallback(async (credential) => {
     const data = await apiRequest('/auth/google', {
       method: 'POST',
       body: { credential },
     });
     saveSession(data);
     return data;
-  };
+  }, [saveSession]);
 
-  const register = async (userData) => {
+  const register = useCallback(async (userData) => {
     const data = await apiRequest('/auth/register', {
       method: 'POST',
       body: userData,
@@ -74,7 +81,7 @@ export const AuthProvider = ({ children }) => {
       saveSession(data);
     }
     return data;
-  };
+  }, [saveSession]);
 
   const checkVerifyEmail = useCallback(async (verificationToken) => {
     return apiRequest(`/auth/verify-email?token=${encodeURIComponent(verificationToken)}`);
@@ -94,21 +101,21 @@ export const AuthProvider = ({ children }) => {
     });
   }, []);
 
-  const forgotPassword = async (email) => {
+  const forgotPassword = useCallback(async (email) => {
     return apiRequest('/auth/forgot-password', {
       method: 'POST',
       body: { email },
     });
-  };
+  }, []);
 
-  const resetPassword = async (resetToken, newPassword) => {
+  const resetPassword = useCallback(async (resetToken, newPassword) => {
     return apiRequest('/auth/reset-password', {
       method: 'POST',
       body: { token: resetToken, password: newPassword },
     });
-  };
+  }, []);
 
-  const updateProfile = async (profileData) => {
+  const updateProfile = useCallback(async (profileData) => {
     const data = await apiRequest('/auth/profile', {
       method: 'PUT',
       token,
@@ -118,14 +125,15 @@ export const AuthProvider = ({ children }) => {
       setUser(data.user);
     }
     return data;
-  };
+  }, [token]);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     localStorage.removeItem('agritech_token');
     setToken(null);
     setUser(null);
     setAuthError('');
-  };
+    setLoading(false);
+  }, []);
 
   const clearAuthError = useCallback(() => {
     setAuthError('');
@@ -445,71 +453,134 @@ export const AuthProvider = ({ children }) => {
     });
   }, [token]);
 
+  const contextValue = useMemo(() => ({
+    user,
+    token,
+    setUser,
+    isAuthenticated: Boolean(user && token),
+    loading,
+    authError,
+    clearAuthError,
+    login,
+    googleLogin,
+    register,
+    checkVerifyEmail,
+    verifyEmail,
+    resendVerification,
+    updateProfile,
+    forgotPassword,
+    resetPassword,
+    logout,
+    listAdminUsers,
+    listPendingRequests,
+    approveRoleRequest,
+    rejectRoleRequest,
+    changeUserRole,
+    changeUserStatus,
+    listAuditLogs,
+    listAdminFarms,
+    getUserDetailsAdmin,
+    updateUserProfileAdmin,
+    verifyUserEmailAdmin,
+    resetUserPasswordAdmin,
+    getSystemHealth,
+    getPlatformSettings,
+    updatePlatformSettings,
+    createAnnouncement,
+    updateFarmExceptional,
+    listSupportTicketsAdmin,
+    replySupportTicketAdmin,
+    listCropContentAdmin,
+    createCropContentAdmin,
+    updateCropContentAdmin,
+    deleteCropContentAdmin,
+    listResourcesAdmin,
+    createResourceAdmin,
+    updateResourceAdmin,
+    orderResourceRestockAdmin,
+    listServiceBookingsAdmin,
+    createServiceBookingAdmin,
+    updateServiceBookingAdmin,
+    runSystemCheckAdmin,
+    toggleMaintenanceModeAdmin,
+    clearCacheAdmin,
+    getSecurityOverviewAdmin,
+    updateSecurityPoliciesAdmin,
+    blockIPAdmin,
+    getPlatformAnalyticsAdmin,
+    generateStrategicReportAdmin,
+    listPolicyViolationsAdmin,
+    recordPolicyViolationAdmin,
+    resolvePolicyViolationAdmin,
+    getAdminProfile,
+    updateAdminProfile,
+    changeAdminPassword,
+    resendAdminEmailVerification,
+  }), [
+    user,
+    token,
+    loading,
+    authError,
+    clearAuthError,
+    login,
+    googleLogin,
+    register,
+    checkVerifyEmail,
+    verifyEmail,
+    resendVerification,
+    updateProfile,
+    forgotPassword,
+    resetPassword,
+    logout,
+    listAdminUsers,
+    listPendingRequests,
+    approveRoleRequest,
+    rejectRoleRequest,
+    changeUserRole,
+    changeUserStatus,
+    listAuditLogs,
+    listAdminFarms,
+    getUserDetailsAdmin,
+    updateUserProfileAdmin,
+    verifyUserEmailAdmin,
+    resetUserPasswordAdmin,
+    getSystemHealth,
+    getPlatformSettings,
+    updatePlatformSettings,
+    createAnnouncement,
+    updateFarmExceptional,
+    listSupportTicketsAdmin,
+    replySupportTicketAdmin,
+    listCropContentAdmin,
+    createCropContentAdmin,
+    updateCropContentAdmin,
+    deleteCropContentAdmin,
+    listResourcesAdmin,
+    createResourceAdmin,
+    updateResourceAdmin,
+    orderResourceRestockAdmin,
+    listServiceBookingsAdmin,
+    createServiceBookingAdmin,
+    updateServiceBookingAdmin,
+    runSystemCheckAdmin,
+    toggleMaintenanceModeAdmin,
+    clearCacheAdmin,
+    getSecurityOverviewAdmin,
+    updateSecurityPoliciesAdmin,
+    blockIPAdmin,
+    getPlatformAnalyticsAdmin,
+    generateStrategicReportAdmin,
+    listPolicyViolationsAdmin,
+    recordPolicyViolationAdmin,
+    resolvePolicyViolationAdmin,
+    getAdminProfile,
+    updateAdminProfile,
+    changeAdminPassword,
+    resendAdminEmailVerification,
+  ]);
+
   return (
-    <AuthContext.Provider value={{
-      user,
-      token,
-      setUser,
-      isAuthenticated: Boolean(user && token),
-      loading,
-      authError,
-      clearAuthError,
-      login,
-      googleLogin,
-      register,
-      checkVerifyEmail,
-      verifyEmail,
-      resendVerification,
-      updateProfile,
-      forgotPassword,
-      resetPassword,
-      logout,
-      listAdminUsers,
-      listPendingRequests,
-      approveRoleRequest,
-      rejectRoleRequest,
-      changeUserRole,
-      changeUserStatus,
-      listAuditLogs,
-      listAdminFarms,
-      getUserDetailsAdmin,
-      updateUserProfileAdmin,
-      verifyUserEmailAdmin,
-      resetUserPasswordAdmin,
-      getSystemHealth,
-      getPlatformSettings,
-      updatePlatformSettings,
-      createAnnouncement,
-      updateFarmExceptional,
-      listSupportTicketsAdmin,
-      replySupportTicketAdmin,
-      listCropContentAdmin,
-      createCropContentAdmin,
-      updateCropContentAdmin,
-      deleteCropContentAdmin,
-      listResourcesAdmin,
-      createResourceAdmin,
-      updateResourceAdmin,
-      orderResourceRestockAdmin,
-      listServiceBookingsAdmin,
-      createServiceBookingAdmin,
-      updateServiceBookingAdmin,
-      runSystemCheckAdmin,
-      toggleMaintenanceModeAdmin,
-      clearCacheAdmin,
-      getSecurityOverviewAdmin,
-      updateSecurityPoliciesAdmin,
-      blockIPAdmin,
-      getPlatformAnalyticsAdmin,
-      generateStrategicReportAdmin,
-      listPolicyViolationsAdmin,
-      recordPolicyViolationAdmin,
-      resolvePolicyViolationAdmin,
-      getAdminProfile,
-      updateAdminProfile,
-      changeAdminPassword,
-      resendAdminEmailVerification,
-    }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
