@@ -23,6 +23,10 @@ export const validateProductionEnv = (env = process.env) => {
     throw new Error('Local JSON storage is only available in development.');
   }
 
+  if (!env.CLIENT_URL?.trim() && (env.VERCEL_PROJECT_PRODUCTION_URL || env.VERCEL_URL)) {
+    env.CLIENT_URL = `https://${env.VERCEL_PROJECT_PRODUCTION_URL || env.VERCEL_URL}`;
+  }
+
   const missing = ['MONGODB_URI', 'JWT_SECRET', 'CLIENT_URL']
     .filter((key) => !env[key]?.trim());
 
@@ -39,8 +43,9 @@ export const validateProductionEnv = (env = process.env) => {
     if (!['mongodb:', 'mongodb+srv:'].includes(databaseUrl.protocol)) {
       throw new Error();
     }
-    for (const origin of env.CLIENT_URL.split(',').map((value) => value.trim())) {
-      const clientUrl = new URL(origin);
+    for (const origin of env.CLIENT_URL.split(',').map((value) => value.trim()).filter(Boolean)) {
+      const normalizedOrigin = /^https?:\/\//i.test(origin) ? origin : `https://${origin}`;
+      const clientUrl = new URL(normalizedOrigin);
       if (clientUrl.protocol !== 'https:' && clientUrl.hostname !== 'localhost') {
         throw new Error();
       }

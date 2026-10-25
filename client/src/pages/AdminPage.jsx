@@ -436,7 +436,8 @@ const AdminPage = () => {
       } else if (type === 'reset-password') {
         const res = await resetUserPasswordAdmin(targetId, userActionReason.trim());
         setActionSuccess(res.message || 'One-time secure reset link generated.');
-        setIssuedResetLink(res.resetLink || `http://localhost:5173/reset-password/${res.resetToken}`);
+        const origin = typeof window !== 'undefined' ? window.location.origin : '';
+        setIssuedResetLink(res.resetLink || `${origin}/reset-password/${res.resetToken}`);
       }
       fetchTabData();
     } catch (err) {
