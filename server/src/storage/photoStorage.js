@@ -2,6 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import { randomBytes } from 'crypto';
 import { fileURLToPath } from 'url';
+import { v2 as cloudinary } from 'cloudinary';
+import { initCloudinary, getActiveStorageProvider } from './cloudinaryConfig.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -89,8 +91,56 @@ export const photoStorage = {
       throw new Error('Invalid image file: magic bytes do not match JPEG, PNG, or WebP.');
     }
 
-    const provider = process.env.PHOTO_STORAGE_PROVIDER || 'local';
+    if (buffer.length > 10 * 1024 * 1024) {
+      throw new Error('File size exceeds maximum allowed limit of 10MB.');
+    }
 
+    const provider = getActiveStorageProvider();
+
+    // 1. Cloudinary Storage Provider
+    if (provider === 'cloudinary') {
+      initCloudinary();
+      const deliveryType = process.env.CLOUDINARY_DELIVERY_TYPE || 'authenticated';
+      const folder = `agritech/photos/${ownerId}`;
+      const publicIdSuffix = randomBytes(16).toString('hex');
+      const fullPublicId = `${folder}/${publicIdSuffix}`;
+
+      const uploadResult = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            public_id: publicIdSuffix,
+            folder,
+            resource_type: 'image',
+            type: deliveryType,
+            overwrite: false,
+            unique_filename: false,
+          },
+          (error, result) => {
+            if (error) {
+              return reject(new Error(`Cloudinary upload failed: ${error.message || error}`));
+            }
+            resolve(result);
+          }
+        );
+        stream.end(buffer);
+      });
+
+      return {
+        storageKey: uploadResult.public_id || fullPublicId,
+        storageProvider: 'cloudinary',
+        storageType: deliveryType,
+        mimeType: verifiedMime,
+        assetId: uploadResult.asset_id,
+        publicId: uploadResult.public_id || fullPublicId,
+        version: uploadResult.version ? String(uploadResult.version) : undefined,
+        format: uploadResult.format,
+        width: uploadResult.width,
+        height: uploadResult.height,
+        bytes: uploadResult.bytes || buffer.length,
+      };
+    }
+
+    // 2. Local Disk Storage Provider (Development / Fallback)
     if (provider === 'local') {
       const ext = getExtensionForMime(verifiedMime);
       const filename = `${randomBytes(16).toString('hex')}${ext}`;
@@ -103,21 +153,20 @@ export const photoStorage = {
       return {
         storageKey: relativeKey.replace(/\\/g, '/'),
         storageProvider: 'local',
+        storageType: 'local',
         mimeType: verifiedMime,
       };
     }
 
-    // Cloud storage hook (e.g. S3 or Cloudinary)
-    // If provider is set to cloud but credentials are not configured:
     throw new Error(
-      `Cloud storage provider '${provider}' is not configured with necessary credentials. Use 'local' for development.`
+      `Unsupported or unconfigured photo storage provider '${provider}'. Configure CLOUDINARY_URL or set PHOTO_STORAGE_PROVIDER=local.`
     );
   },
 
   /**
    * Read photograph bytes.
    */
-  async getPhoto({ storageKey, storageProvider = 'local' }) {
+  async getPhoto({ storageKey, storageProvider = 'local', storageType = 'authenticated', mimeType }) {
     if (storageProvider === 'local') {
       const absolutePath = resolveSafeLocalPath(storageKey);
       try {
@@ -129,13 +178,54 @@ export const photoStorage = {
       }
     }
 
+    if (storageProvider === 'cloudinary') {
+      initCloudinary();
+      const format =
+        mimeType === 'image/png'
+          ? 'png'
+          : mimeType === 'image/webp'
+            ? 'webp'
+            : 'jpg';
+      const type = storageType || process.env.CLOUDINARY_DELIVERY_TYPE || 'authenticated';
+
+      // 1. Primary retrieval strategy: time-limited signed private download URL
+      const downloadUrl = cloudinary.utils.private_download_url(storageKey, format, {
+        resource_type: 'image',
+        type,
+        expires_at: Math.floor(Date.now() / 1000) + 3600,
+      });
+
+      let res = await fetch(downloadUrl);
+      if (res.ok) {
+        const arrayBuffer = await res.arrayBuffer();
+        return Buffer.from(arrayBuffer);
+      }
+
+      if (res.status === 404) {
+        // Fallback: try signed standard URL
+        const signedUrl = cloudinary.utils.url(storageKey, {
+          sign_url: true,
+          type,
+          secure: true,
+        });
+        const fallbackRes = await fetch(signedUrl);
+        if (fallbackRes.ok) {
+          const ab = await fallbackRes.arrayBuffer();
+          return Buffer.from(ab);
+        }
+        if (fallbackRes.status === 404) return null;
+      }
+
+      throw new Error(`Cloudinary photo retrieval failed with HTTP ${res.status}`);
+    }
+
     throw new Error(`Unsupported storage provider: ${storageProvider}`);
   },
 
   /**
    * Delete photograph bytes.
    */
-  async deletePhoto({ storageKey, storageProvider = 'local' }) {
+  async deletePhoto({ storageKey, storageProvider = 'local', storageType = 'authenticated' }) {
     if (storageProvider === 'local') {
       const absolutePath = resolveSafeLocalPath(storageKey);
       try {
@@ -143,7 +233,36 @@ export const photoStorage = {
       } catch (err) {
         if (err.code !== 'ENOENT') throw err;
       }
-      return;
+      return { success: true, result: 'ok' };
+    }
+
+    if (storageProvider === 'cloudinary') {
+      initCloudinary();
+      const type = storageType || process.env.CLOUDINARY_DELIVERY_TYPE || 'authenticated';
+
+      const result = await cloudinary.uploader.destroy(storageKey, {
+        resource_type: 'image',
+        type,
+        invalidate: true,
+      });
+
+      if (result && (result.result === 'ok' || result.result === 'not found')) {
+        return { success: true, result: result.result };
+      }
+
+      // If delivery type differed, try fallback with type 'upload'
+      if (type !== 'upload') {
+        const fallback = await cloudinary.uploader.destroy(storageKey, {
+          resource_type: 'image',
+          type: 'upload',
+          invalidate: true,
+        });
+        if (fallback && (fallback.result === 'ok' || fallback.result === 'not found')) {
+          return { success: true, result: fallback.result };
+        }
+      }
+
+      throw new Error(`Cloudinary deletion failed: ${result?.result || 'Asset deletion error'}`);
     }
 
     if (storageProvider === 'vercel-blob' || storageProvider === 'vercel') {
@@ -157,6 +276,27 @@ export const photoStorage = {
     }
 
     throw new Error(`Unsupported storage provider: ${storageProvider}`);
+  },
+
+  /**
+   * Generates a time-limited signed delivery URL for authorized direct client viewing.
+   */
+  getSignedUrl({ storageKey, storageProvider = 'local', storageType = 'authenticated', mimeType, expiresIn = 3600 }) {
+    if (storageProvider !== 'cloudinary') return null;
+    initCloudinary();
+    const format =
+      mimeType === 'image/png'
+        ? 'png'
+        : mimeType === 'image/webp'
+          ? 'webp'
+          : 'jpg';
+    const type = storageType || process.env.CLOUDINARY_DELIVERY_TYPE || 'authenticated';
+
+    return cloudinary.utils.private_download_url(storageKey, format, {
+      resource_type: 'image',
+      type,
+      expires_at: Math.floor(Date.now() / 1000) + expiresIn,
+    });
   },
 
   /**
@@ -177,3 +317,4 @@ export const photoStorage = {
 };
 
 export default photoStorage;
+

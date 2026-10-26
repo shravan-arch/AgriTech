@@ -51,7 +51,11 @@ export const createFarmRouter = (
   router.route('/photos/:photoId/file')
     .get(controller.getPhotoFile);
 
+  // Fields root endpoints
+  router.route('/fields')
+    .get(controller.listAllFields);
   router.route('/fields/:fieldId')
+    .get(controller.getField)
     .patch(controller.updateField)
     .delete(controller.deleteField);
   router.route('/:farmId')
@@ -61,6 +65,10 @@ export const createFarmRouter = (
   router.route('/:farmId/fields')
     .get(controller.listFields)
     .post(controller.createField);
+  router.route('/:farmId/fields/:fieldId')
+    .get(controller.getField)
+    .patch(controller.updateField)
+    .delete(controller.deleteField);
   router.route('/:farmId/fields/:fieldId/crop-cycles')
     .get(controller.listFieldCropCycles)
     .post(controller.createCropCycle);

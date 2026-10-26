@@ -108,6 +108,7 @@ export const translations = {
       "workspace": "Workspace",
       "overview": "Overview",
       "farms": "Farms & Fields",
+      "fieldMapping": "Field Mapping",
       "operations": "Operations & Tasks",
       "monitoring": "Monitoring & Weather",
       "inventory": "Inventory & Supplies",
