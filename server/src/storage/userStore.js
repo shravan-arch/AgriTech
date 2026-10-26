@@ -6,6 +6,20 @@ import PlatformSetting from '../models/PlatformSetting.js';
 import Notification from '../models/Notification.js';
 import Farm from '../models/Farm.js';
 import Field from '../models/Field.js';
+import CropCycle from '../models/CropCycle.js';
+import FarmActivity from '../models/FarmActivity.js';
+import Task from '../models/Task.js';
+import FieldPhoto from '../models/FieldPhoto.js';
+import FinanceRecord from '../models/FinanceRecord.js';
+import InventoryItem from '../models/InventoryItem.js';
+import InventoryMovement from '../models/InventoryMovement.js';
+import Sensor from '../models/Sensor.js';
+import SensorReading from '../models/SensorReading.js';
+import WeatherSnapshot from '../models/WeatherSnapshot.js';
+import SupportTicket from '../models/SupportTicket.js';
+import ServiceBooking from '../models/ServiceBooking.js';
+import PolicyViolation from '../models/PolicyViolation.js';
+import photoStorage from './photoStorage.js';
 import { getDBStatus } from '../config/db.js';
 import { newLocalId, readLocalCollection, writeLocalCollection } from './localJsonStore.js';
 import { ownedUserFilter } from './ownershipQueries.js';
@@ -73,14 +87,18 @@ export const userStore = {
     return createLocalUser(users[index]);
   },
 
-  async findById(id) {
+  async findById(id, { includePassword = false } = {}) {
     const mode = getStorageMode();
-    if (mode === 'mongodb') return User.findById(id).select('-password');
+    if (mode === 'mongodb') {
+      const query = User.findById(id);
+      if (!includePassword) query.select('-password');
+      return query;
+    }
     if (mode !== 'local-json-development') throw unavailableError();
 
     const record = readLocalCollection('users')
       .find((user) => user.id === id || user._id === id);
-    return record ? createLocalUser(record) : null;
+    return record ? createLocalUser(record, includePassword) : null;
   },
 
   async findOwnedById(id, requesterId, isAdmin = false) {
@@ -440,6 +458,23 @@ export const userStore = {
       }
 
       user.role = newRole;
+      user.roleChangedAt = new Date();
+      user.tokenVersion = (user.tokenVersion || 0) + 1;
+
+      if (newRole === 'admin') {
+        user.farmName = '';
+        user.farmSizeHectares = undefined;
+        user.primaryCrops = [];
+        try {
+          await Farm.updateMany(
+            { ownerId: String(targetUserId) },
+            { $set: { previousOwnerId: String(targetUserId), ownerId: 'unassigned' } }
+          );
+        } catch {
+          // Non-blocking farm dissociation
+        }
+      }
+
       if (user.roleRequest && user.roleRequest.status === 'pending' && newRole === 'admin') {
         user.roleRequest.status = 'approved';
         user.roleRequest.reviewedAt = new Date();
@@ -481,6 +516,29 @@ export const userStore = {
     }
 
     users[index].role = newRole;
+    users[index].roleChangedAt = new Date().toISOString();
+    users[index].tokenVersion = (users[index].tokenVersion || 0) + 1;
+
+    if (newRole === 'admin') {
+      users[index].farmName = '';
+      users[index].farmSizeHectares = undefined;
+      users[index].primaryCrops = [];
+      try {
+        const farms = readLocalCollection('farms');
+        let farmsModified = false;
+        farms.forEach((f) => {
+          if (f.ownerId === String(targetUserId)) {
+            f.previousOwnerId = f.ownerId;
+            f.ownerId = 'unassigned';
+            farmsModified = true;
+          }
+        });
+        if (farmsModified) writeLocalCollection('farms', farms);
+      } catch {
+        // Non-blocking farm dissociation
+      }
+    }
+
     if (users[index].roleRequest?.status === 'pending' && newRole === 'admin') {
       users[index].roleRequest.status = 'approved';
       users[index].roleRequest.reviewedAt = new Date().toISOString();
@@ -518,6 +576,14 @@ export const userStore = {
     });
   },
 
+  async approveRoleRequest(options) {
+    return this.reviewRoleRequest({ ...options, decision: 'approved' });
+  },
+
+  async rejectRoleRequest(options) {
+    return this.reviewRoleRequest({ ...options, decision: 'rejected' });
+  },
+
   async reviewRoleRequest({ targetUserId, decision, actor, reason = '', ipAddress = '' }) {
     const mode = getStorageMode();
     if (mode === 'mongodb') {
@@ -536,6 +602,22 @@ export const userStore = {
         newRole = user.roleRequest.requestedRole || 'admin';
         user.role = newRole;
         user.roleRequest.status = 'approved';
+        user.roleChangedAt = new Date();
+        user.tokenVersion = (user.tokenVersion || 0) + 1;
+
+        if (newRole === 'admin') {
+          user.farmName = '';
+          user.farmSizeHectares = undefined;
+          user.primaryCrops = [];
+          try {
+            await Farm.updateMany(
+              { ownerId: String(targetUserId) },
+              { $set: { previousOwnerId: String(targetUserId), ownerId: 'unassigned' } }
+            );
+          } catch {
+            // Non-blocking farm dissociation
+          }
+        }
       } else {
         user.roleRequest.status = 'rejected';
       }
@@ -580,6 +662,28 @@ export const userStore = {
       newRole = users[index].roleRequest.requestedRole || 'admin';
       users[index].role = newRole;
       users[index].roleRequest.status = 'approved';
+      users[index].roleChangedAt = new Date().toISOString();
+      users[index].tokenVersion = (users[index].tokenVersion || 0) + 1;
+
+      if (newRole === 'admin') {
+        users[index].farmName = '';
+        users[index].farmSizeHectares = undefined;
+        users[index].primaryCrops = [];
+        try {
+          const farms = readLocalCollection('farms');
+          let farmsModified = false;
+          farms.forEach((f) => {
+            if (f.ownerId === String(targetUserId)) {
+              f.previousOwnerId = f.ownerId;
+              f.ownerId = 'unassigned';
+              farmsModified = true;
+            }
+          });
+          if (farmsModified) writeLocalCollection('farms', farms);
+        } catch {
+          // Non-blocking farm dissociation
+        }
+      }
     } else {
       users[index].roleRequest.status = 'rejected';
     }
@@ -1493,6 +1597,193 @@ export const userStore = {
       ipAddress,
     });
     return { success: true };
+  },
+
+  async deleteAccount({ userId, actor, reason = 'User requested permanent account deletion', ipAddress = '' }) {
+    const mode = getStorageMode();
+    if (mode === 'mongodb') {
+      const user = await User.findById(userId);
+      if (!user) return null;
+
+      // Prevent deletion of the last active administrator
+      if (user.role === 'admin' && user.status !== 'suspended') {
+        const activeAdmins = await this.countActiveAdmins();
+        if (activeAdmins <= 1) {
+          const err = new Error('Cannot delete the last active administrator account. Another active administrator must exist or be appointed first.');
+          err.code = 'LAST_ADMIN_PROTECTION';
+          throw err;
+        }
+      }
+
+      // 1. External files: Find all photos owned by user and delete physical files
+      const photos = await FieldPhoto.find({ ownerId: user._id });
+      await Promise.all(
+        photos.map((p) =>
+          photoStorage.deletePhoto({ storageKey: p.storageKey, storageProvider: p.storageProvider }).catch(() => {})
+        )
+      );
+      await photoStorage.deleteUserPhotoDirectory(user._id).catch(() => {});
+
+      // 2. Cascade delete all user-owned records across collections
+      await Promise.all([
+        FieldPhoto.deleteMany({ ownerId: user._id }),
+        FarmActivity.deleteMany({ ownerId: user._id }),
+        Task.deleteMany({ ownerId: user._id }),
+        CropCycle.deleteMany({ ownerId: user._id }),
+        Field.deleteMany({ ownerId: user._id }),
+        Farm.deleteMany({ ownerId: user._id }),
+        FinanceRecord.deleteMany({ ownerId: user._id }),
+        InventoryMovement.deleteMany({ ownerId: user._id }),
+        InventoryItem.deleteMany({ ownerId: user._id }),
+        SensorReading.deleteMany({ ownerId: user._id }),
+        Sensor.deleteMany({ ownerId: user._id }),
+        Notification.deleteMany({ $or: [{ ownerId: user._id }, { userId: user._id }] }),
+        WeatherSnapshot.deleteMany({ ownerId: user._id }),
+        SupportTicket.deleteMany({ userId: user._id }),
+        ServiceBooking.deleteMany({ farmerId: user._id }),
+        PolicyViolation.deleteMany({ userId: user._id }),
+      ]);
+
+      // Unset previousOwnerId from farms
+      await Farm.updateMany({ previousOwnerId: String(user._id) }, { $unset: { previousOwnerId: 1 } }).catch(() => {});
+
+      // 3. Redact personal identifiable information from AuditLog
+      await Promise.all([
+        AuditLog.updateMany(
+          { targetUserId: user._id },
+          { $set: { targetUserEmail: '[Deleted User]', targetUserName: '[Deleted User]' } }
+        ),
+        AuditLog.updateMany(
+          { actorId: user._id },
+          { $set: { actorEmail: '[Deleted User]', actorName: '[Deleted User]' } }
+        ),
+      ]).catch(() => {});
+
+      await this.createAuditLog({
+        action: 'ACCOUNT_DELETED',
+        actorId: actor?._id || actor?.id || user._id,
+        actorEmail: '[Deleted User]',
+        actorName: '[Deleted User]',
+        targetUserId: user._id,
+        targetUserEmail: '[Deleted User]',
+        targetUserName: '[Deleted User]',
+        previousRole: user.role,
+        reason,
+        ipAddress,
+      }).catch(() => {});
+
+      // 4. Delete the User record
+      await User.findByIdAndDelete(user._id);
+
+      return { success: true, deletedUserId: String(user._id) };
+    }
+
+    if (mode !== 'local-json-development') throw unavailableError();
+
+    const users = readLocalCollection('users');
+    const index = users.findIndex((u) => u.id === userId || u._id === userId);
+    if (index === -1) return null;
+
+    const user = users[index];
+    const targetIdStr = String(user.id || user._id);
+
+    if (user.role === 'admin' && (user.status || 'active') !== 'suspended') {
+      const activeAdmins = await this.countActiveAdmins();
+      if (activeAdmins <= 1) {
+        const err = new Error('Cannot delete the last active administrator account. Another active administrator must exist or be appointed first.');
+        err.code = 'LAST_ADMIN_PROTECTION';
+        throw err;
+      }
+    }
+
+    // 1. External files
+    const allPhotos = readLocalCollection('field_photos');
+    const userPhotos = allPhotos.filter((p) => String(p.ownerId) === targetIdStr);
+    await Promise.all(
+      userPhotos.map((p) =>
+        photoStorage.deletePhoto({ storageKey: p.storageKey, storageProvider: p.storageProvider }).catch(() => {})
+      )
+    );
+    await photoStorage.deleteUserPhotoDirectory(targetIdStr).catch(() => {});
+
+    // 2. Cascade delete records from local collections
+    const collectionsToClean = [
+      { name: 'field_photos', key: 'ownerId' },
+      { name: 'farm_activities', key: 'ownerId' },
+      { name: 'tasks', key: 'ownerId' },
+      { name: 'crop_cycles', key: 'ownerId' },
+      { name: 'fields', key: 'ownerId' },
+      { name: 'farms', key: 'ownerId' },
+      { name: 'finance_records', key: 'ownerId' },
+      { name: 'inventory_movements', key: 'ownerId' },
+      { name: 'inventory_items', key: 'ownerId' },
+      { name: 'sensor_readings', key: 'ownerId' },
+      { name: 'sensors', key: 'ownerId' },
+      { name: 'weather_snapshots', key: 'ownerId' },
+      { name: 'support_tickets', key: 'userId' },
+      { name: 'service_bookings', key: 'farmerId' },
+      { name: 'policy_violations', key: 'userId' },
+    ];
+
+    for (const { name, key } of collectionsToClean) {
+      const records = readLocalCollection(name);
+      const remaining = records.filter((r) => String(r[key]) !== targetIdStr);
+      if (remaining.length !== records.length) {
+        writeLocalCollection(name, remaining);
+      }
+    }
+
+    const notifs = readLocalCollection('notifications');
+    const remNotifs = notifs.filter((n) => String(n.ownerId) !== targetIdStr && String(n.userId) !== targetIdStr);
+    if (remNotifs.length !== notifs.length) {
+      writeLocalCollection('notifications', remNotifs);
+    }
+
+    const allFarms = readLocalCollection('farms');
+    let farmsModified = false;
+    allFarms.forEach((f) => {
+      if (String(f.previousOwnerId) === targetIdStr) {
+        delete f.previousOwnerId;
+        farmsModified = true;
+      }
+    });
+    if (farmsModified) writeLocalCollection('farms', allFarms);
+
+    // 3. Redact audit logs
+    const auditLogs = readLocalCollection('audit_logs');
+    let logsModified = false;
+    auditLogs.forEach((l) => {
+      if (String(l.targetUserId) === targetIdStr) {
+        l.targetUserEmail = '[Deleted User]';
+        l.targetUserName = '[Deleted User]';
+        logsModified = true;
+      }
+      if (String(l.actorId) === targetIdStr) {
+        l.actorEmail = '[Deleted User]';
+        l.actorName = '[Deleted User]';
+        logsModified = true;
+      }
+    });
+    if (logsModified) writeLocalCollection('audit_logs', auditLogs);
+
+    await this.createAuditLog({
+      action: 'ACCOUNT_DELETED',
+      actorId: actor?.id || actor?._id || targetIdStr,
+      actorEmail: '[Deleted User]',
+      actorName: '[Deleted User]',
+      targetUserId: targetIdStr,
+      targetUserEmail: '[Deleted User]',
+      targetUserName: '[Deleted User]',
+      previousRole: user.role,
+      reason,
+      ipAddress,
+    }).catch(() => {});
+
+    // 4. Delete user record
+    users.splice(index, 1);
+    writeLocalCollection('users', users);
+
+    return { success: true, deletedUserId: targetIdStr };
   },
 };
 

@@ -269,13 +269,9 @@ export const createAdminController = (
     changeUserRole: async (req, res, next) => {
       try {
         const { id } = req.params;
-        const { role, reason } = req.body;
+        const { role, reason } = req.body || {};
         const actor = req.user;
         const ipAddress = getClientIp(req);
-
-        if (!['farmer', 'admin'].includes(role)) {
-          return res.status(400).json({ error: "Invalid role specified. Must be 'farmer' or 'admin'." });
-        }
 
         const isSelf = (actor._id || actor.id)?.toString() === id.toString();
         if (isSelf) {
@@ -283,6 +279,10 @@ export const createAdminController = (
             error: 'Administrators cannot modify their own role.',
             code: 'SELF_ROLE_CHANGE_FORBIDDEN',
           });
+        }
+
+        if (!['farmer', 'admin'].includes(role)) {
+          return res.status(400).json({ error: "Invalid role specified. Must be 'farmer' or 'admin'." });
         }
 
         const updatedUser = await userStore.changeUserRole({

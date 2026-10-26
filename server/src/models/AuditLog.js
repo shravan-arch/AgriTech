@@ -19,6 +19,7 @@ const auditLogSchema = new mongoose.Schema(
         'AUTH_FAILURE',
         'PLATFORM_SETTINGS_UPDATE',
         'SYSTEM_ANNOUNCEMENT',
+        'ACCOUNT_DELETED',
       ],
     },
     actorId: {

@@ -252,7 +252,7 @@ describe('Email Verification Flow for AgriTech Registration', () => {
     assert.equal(res.status, 201);
     assert.equal(data.success, true);
     assert.equal(data.requiresEmailVerification, true);
-    assert.equal(typeof data.token, 'string', 'Returns session token so user can access profile and verify');
+    assert.equal(data.token, undefined, 'Must not grant session token before email verification');
     assert.equal(data.user.emailVerified, false);
     assert.equal(data.user.role, 'farmer');
 
@@ -278,7 +278,7 @@ describe('Email Verification Flow for AgriTech Registration', () => {
     assert.ok(expiry > now + 23 * 3600 * 1000 && expiry <= now + 25 * 3600 * 1000);
   });
 
-  test('2. Allows unverified password account to log in and access profile page', async () => {
+  test('2. Unverified password account is prevented from logging in before verification', async () => {
     const res = await fetch(`${baseUrl}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -289,45 +289,8 @@ describe('Email Verification Flow for AgriTech Registration', () => {
     });
 
     const data = await res.json();
-    assert.equal(res.status, 200);
-    assert.equal(data.success, true);
-    assert.equal(data.user.emailVerified, false);
-    assert.equal(typeof data.token, 'string');
-  });
-
-  test('2b. Allows user to update their profile with name, phone, address, and farmName', async () => {
-    const loginRes = await fetch(`${baseUrl}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: 'anita.verma@example.com',
-        password: 'SecurePassword123!',
-      }),
-    });
-    const loginData = await loginRes.json();
-    const token = loginData.token;
-
-    const profileRes = await fetch(`${baseUrl}/api/auth/profile`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        name: 'Anita Verma Updated',
-        phone: '+91 98765 43210',
-        address: 'Plot 44, Agro Park, Karnal',
-        farmName: 'Verma Green Organics',
-      }),
-    });
-
-    const profileData = await profileRes.json();
-    assert.equal(profileRes.status, 200);
-    assert.equal(profileData.success, true);
-    assert.equal(profileData.user.name, 'Anita Verma Updated');
-    assert.equal(profileData.user.phone, '+91 98765 43210');
-    assert.equal(profileData.user.address, 'Plot 44, Agro Park, Karnal');
-    assert.equal(profileData.user.farmName, 'Verma Green Organics');
+    assert.equal(res.status, 403);
+    assert.equal(data.code, 'EMAIL_NOT_VERIFIED');
   });
 
   test('3. Scanner pre-fetch safety: GET /api/auth/verify-email does NOT verify or mutate user state', async () => {
@@ -402,6 +365,41 @@ describe('Email Verification Flow for AgriTech Registration', () => {
     assert.equal(data.success, true);
     assert.equal(typeof data.token, 'string');
     assert.equal(data.user.emailVerified, true);
+  });
+
+  test('7b. Verified user can access and update their profile with name, phone, address, and farmName', async () => {
+    const loginRes = await fetch(`${baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: 'anita.verma@example.com',
+        password: 'SecurePassword123!',
+      }),
+    });
+    const loginData = await loginRes.json();
+    const token = loginData.token;
+
+    const profileRes = await fetch(`${baseUrl}/api/auth/profile`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        name: 'Anita Verma Updated',
+        phone: '+91 98765 43210',
+        address: 'Plot 44, Agro Park, Karnal',
+        farmName: 'Verma Green Organics',
+      }),
+    });
+
+    const profileData = await profileRes.json();
+    assert.equal(profileRes.status, 200);
+    assert.equal(profileData.success, true);
+    assert.equal(profileData.user.name, 'Anita Verma Updated');
+    assert.equal(profileData.user.phone, '+91 98765 43210');
+    assert.equal(profileData.user.address, 'Plot 44, Agro Park, Karnal');
+    assert.equal(profileData.user.farmName, 'Verma Green Organics');
   });
 
   test('8. Duplicate registration for already-verified account returns 409 Conflict', async () => {

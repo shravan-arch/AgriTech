@@ -56,6 +56,13 @@ const userSchema = new mongoose.Schema(
     passwordChangedAt: {
       type: Date,
     },
+    roleChangedAt: {
+      type: Date,
+    },
+    tokenVersion: {
+      type: Number,
+      default: 0,
+    },
     role: {
       type: String,
       enum: ['farmer', 'user', 'worker', 'agronomist', 'advisor', 'manager', 'admin'],

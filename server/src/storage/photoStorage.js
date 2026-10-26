@@ -265,29 +265,18 @@ export const photoStorage = {
       throw new Error(`Cloudinary deletion failed: ${result?.result || 'Asset deletion error'}`);
     }
 
+    if (storageProvider === 'vercel-blob' || storageProvider === 'vercel') {
+      try {
+        const { del } = await import('@vercel/blob');
+        await del(storageKey, { token: process.env.BLOB_READ_WRITE_TOKEN });
+      } catch {
+        // Recoverable cleanup for external blob storage
+      }
+      return;
+    }
+
     throw new Error(`Unsupported storage provider: ${storageProvider}`);
   },
 
-  /**
-   * Generates a time-limited signed delivery URL for authorized direct client viewing.
-   */
-  getSignedUrl({ storageKey, storageProvider = 'local', storageType = 'authenticated', mimeType, expiresIn = 3600 }) {
-    if (storageProvider !== 'cloudinary') return null;
-    initCloudinary();
-    const format =
-      mimeType === 'image/png'
-        ? 'png'
-        : mimeType === 'image/webp'
-          ? 'webp'
-          : 'jpg';
-    const type = storageType || process.env.CLOUDINARY_DELIVERY_TYPE || 'authenticated';
-
-    return cloudinary.utils.private_download_url(storageKey, format, {
-      resource_type: 'image',
-      type,
-      expires_at: Math.floor(Date.now() / 1000) + expiresIn,
-    });
-  },
-};
-
 export default photoStorage;
+

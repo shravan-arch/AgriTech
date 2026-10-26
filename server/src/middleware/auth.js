@@ -43,6 +43,33 @@ export const createProtect = (userStore = defaultUserStore) => async (req, res, 
       }
     }
 
+    if (user.tokenVersion !== undefined && decoded.tokenVersion !== undefined && decoded.tokenVersion !== user.tokenVersion) {
+      return res.status(401).json({
+        error: 'Unauthorized',
+        code: 'TOKEN_REVOKED',
+        message: 'Session has been invalidated due to account security or role changes. Please log in again.',
+      });
+    }
+
+    if (user.roleChangedAt && decoded.iat) {
+      const roleChangedTimestamp = Math.floor(new Date(user.roleChangedAt).getTime() / 1000);
+      if (decoded.iat < roleChangedTimestamp) {
+        return res.status(401).json({
+          error: 'Unauthorized',
+          code: 'TOKEN_REVOKED',
+          message: 'Session has been invalidated due to an account role change. Please log in again.',
+        });
+      }
+    }
+
+    if (user.emailVerified === false && process.env.REQUIRE_EMAIL_VERIFICATION === 'true') {
+      return res.status(403).json({
+        error: 'Forbidden',
+        code: 'EMAIL_NOT_VERIFIED',
+        message: 'Email address must be verified before accessing platform resources.',
+      });
+    }
+
     req.user = user;
     return next();
   } catch (error) {
