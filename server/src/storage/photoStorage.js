@@ -278,5 +278,43 @@ export const photoStorage = {
     throw new Error(`Unsupported storage provider: ${storageProvider}`);
   },
 
+  /**
+   * Generates a time-limited signed delivery URL for authorized direct client viewing.
+   */
+  getSignedUrl({ storageKey, storageProvider = 'local', storageType = 'authenticated', mimeType, expiresIn = 3600 }) {
+    if (storageProvider !== 'cloudinary') return null;
+    initCloudinary();
+    const format =
+      mimeType === 'image/png'
+        ? 'png'
+        : mimeType === 'image/webp'
+          ? 'webp'
+          : 'jpg';
+    const type = storageType || process.env.CLOUDINARY_DELIVERY_TYPE || 'authenticated';
+
+    return cloudinary.utils.private_download_url(storageKey, format, {
+      resource_type: 'image',
+      type,
+      expires_at: Math.floor(Date.now() / 1000) + expiresIn,
+    });
+  },
+
+  /**
+   * Remove entire photograph directory for a deleted owner.
+   */
+  async deleteUserPhotoDirectory(ownerId) {
+    if (!ownerId) return;
+    try {
+      const uploadDir = getUploadDir();
+      const userDir = path.resolve(uploadDir, String(ownerId));
+      if (userDir.startsWith(uploadDir) && userDir !== uploadDir) {
+        await fs.promises.rm(userDir, { recursive: true, force: true });
+      }
+    } catch {
+      // Ignored if directory does not exist
+    }
+  },
+};
+
 export default photoStorage;
 
