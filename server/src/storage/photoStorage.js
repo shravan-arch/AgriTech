@@ -3,7 +3,7 @@ import path from 'path';
 import { randomBytes } from 'crypto';
 import { fileURLToPath } from 'url';
 import { v2 as cloudinary } from 'cloudinary';
-import { initCloudinary, getActiveStorageProvider } from './cloudinaryConfig.js';
+import { initCloudinary, getActiveStorageProvider, isCloudinaryConfigured } from './cloudinaryConfig.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -237,6 +237,9 @@ export const photoStorage = {
     }
 
     if (storageProvider === 'cloudinary') {
+      if (!isCloudinaryConfigured()) {
+        return { success: true, result: 'not_configured' };
+      }
       initCloudinary();
       const type = storageType || process.env.CLOUDINARY_DELIVERY_TYPE || 'authenticated';
 

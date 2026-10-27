@@ -38,7 +38,16 @@ export const writeLocalCollection = (collection, records) => {
       encoding: 'utf8',
       mode: 0o600,
     });
-    fs.renameSync(temporaryPath, filePath);
+    try {
+      fs.renameSync(temporaryPath, filePath);
+    } catch (renameError) {
+      if (process.platform === 'win32') {
+        fs.copyFileSync(temporaryPath, filePath);
+        fs.unlinkSync(temporaryPath);
+      } else {
+        throw renameError;
+      }
+    }
   } catch {
     try {
       if (fs.existsSync(temporaryPath)) fs.unlinkSync(temporaryPath);
