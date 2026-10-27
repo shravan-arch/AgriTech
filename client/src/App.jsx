@@ -19,6 +19,7 @@ import ProtectedRoute from './components/ProtectedRoute.jsx';
 import AdminPage from './pages/AdminPage.jsx';
 import LanguageToggle from './components/LanguageToggle.jsx';
 import { useAuth } from './context/useAuth.js';
+import { useLanguage } from './context/useLanguage.js';
 import LandingPage from './pages/LandingPage.jsx';
 import FeaturesPage from './pages/FeaturesPage.jsx';
 import SEO from './components/SEO.jsx';
