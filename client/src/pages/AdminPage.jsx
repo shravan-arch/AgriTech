@@ -942,24 +942,24 @@ const AdminPage = () => {
                   <span className="text-muted small">8 Operational Domains</span>
                 </div>
                 <div className="card-body p-3">
-                  <div className="row g-2">
+                  <div className="admin-quick-nav-grid">
                     {ADMIN_TABS.filter((t) => t.id !== 'overview').map((tab) => (
-                      <div className="col-12 col-sm-6 col-md-4 col-xl-3" key={tab.id}>
-                        <button
-                          type="button"
-                          className="btn btn-outline-light text-start w-100 p-2.5 rounded-3 border d-flex align-items-center gap-2 text-dark bg-white hover-bg-light transition"
-                          onClick={() => handleTabChange(tab.id)}
-                        >
-                          <div className="p-2 rounded-2 bg-success bg-opacity-10 text-success flex-shrink-0">
-                            <i className={`bi ${tab.icon}`} />
-                          </div>
-                          <div className="min-w-0 flex-grow-1">
-                            <div className="fw-semibold text-truncate small">{tab.label}</div>
-                            <div className="text-muted text-truncate" style={{ fontSize: '0.7rem' }}>{tab.desc}</div>
-                          </div>
-                          <i className="bi bi-chevron-right text-muted small ms-auto" />
-                        </button>
-                      </div>
+                      <button
+                        key={tab.id}
+                        type="button"
+                        className="admin-quick-nav-tile"
+                        onClick={() => handleTabChange(tab.id)}
+                        aria-label={`Navigate to ${tab.label}: ${tab.desc}`}
+                      >
+                        <div className="admin-quick-nav-icon">
+                          <i className={`bi ${tab.icon}`} aria-hidden="true" />
+                        </div>
+                        <div className="admin-quick-nav-text">
+                          <div className="admin-quick-nav-title">{tab.label}</div>
+                          <div className="admin-quick-nav-desc">{tab.desc}</div>
+                        </div>
+                        <i className="bi bi-chevron-right admin-quick-nav-chevron" aria-hidden="true" />
+                      </button>
                     ))}
                   </div>
                 </div>
