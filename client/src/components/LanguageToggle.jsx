@@ -51,7 +51,7 @@ const LanguageToggle = ({ className = '', id = 'global-language-selector' }) => 
         <span className="lang-globe-icon d-inline-flex align-items-center justify-content-center text-success">
           <i className="bi bi-globe2" aria-hidden="true" />
         </span>
-        <span className="lang-current-label fw-semibold text-dark">
+        <span className="lang-current-label fw-semibold text-dark d-none d-sm-inline">
           {currentLang.name}
         </span>
         <span className="badge rounded-pill bg-success-subtle text-success border border-success-subtle text-uppercase px-1-5 py-0-5" style={{ fontSize: '0.68rem', letterSpacing: '0.04em' }}>

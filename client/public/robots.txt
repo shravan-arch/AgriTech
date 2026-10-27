@@ -1,0 +1,31 @@
+# robots.txt for AgriTech
+# Production Domain: https://agritech-bay.vercel.app
+
+User-agent: *
+Allow: /
+Allow: /features
+Allow: /features/
+Allow: /login
+Allow: /register
+
+# Disallow authenticated farmer and admin workspace routes to protect private farm records
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /farms
+Disallow: /mapping
+Disallow: /operations
+Disallow: /monitoring
+Disallow: /inventory
+Disallow: /resources
+Disallow: /purchases
+Disallow: /analytics
+Disallow: /profile
+
+# Disallow transient authentication flow pages and tokens
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /verify-email
+Disallow: /api/
+
+# Sitemap location
+Sitemap: https://agritech-bay.vercel.app/sitemap.xml

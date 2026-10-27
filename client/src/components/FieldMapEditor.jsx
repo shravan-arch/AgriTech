@@ -648,13 +648,13 @@ export const FieldMapEditor = ({
 
         {/* Top-Left Status Badge: Legal disclaimer / User-Defined Label */}
         <div
-          className="position-absolute start-0 top-0 m-3 d-flex flex-column gap-1"
-          style={{ zIndex: 1000, maxWidth: '340px' }}
+          className="position-absolute start-0 top-0 m-2 m-sm-3 d-flex flex-column gap-1"
+          style={{ zIndex: 1000, maxWidth: 'calc(100% - 64px)' }}
         >
           <div className="badge bg-dark bg-opacity-75 text-white border border-light border-opacity-25 px-2 py-1-5 text-start shadow-sm d-flex align-items-center gap-2">
             <span className="live-pulse-dot" style={{ backgroundColor: '#10b981' }} />
             <div>
-              <span className="fw-bold d-block" style={{ fontSize: '0.78rem' }}>
+              <span className="fw-bold d-block text-truncate" style={{ fontSize: '0.78rem' }}>
                 {activeFieldName || 'Field Boundary Polygon'}
               </span>
               <span className="text-warning small" style={{ fontSize: '0.72rem' }}>
@@ -667,11 +667,11 @@ export const FieldMapEditor = ({
         {/* Drawing Hint Badge */}
         {currentMode === 'polygon' && (
           <div
-            className="position-absolute bottom-0 start-50 translate-middle-x mb-4 px-3 py-1-5 bg-dark text-white rounded-pill shadow-lg small border border-success d-flex align-items-center gap-2"
-            style={{ zIndex: 1000, fontSize: '0.82rem' }}
+            className="position-absolute bottom-0 start-50 translate-middle-x mb-3 mb-sm-4 px-3 py-1-5 bg-dark text-white rounded-pill shadow-lg small border border-success d-flex align-items-center gap-2"
+            style={{ zIndex: 1000, fontSize: '0.8rem', maxWidth: 'calc(100% - 1.5rem)', textAlign: 'center' }}
           >
-            <span className="spinner-grow spinner-grow-sm text-success" role="status" aria-hidden="true" />
-            <span>Click around your field on satellite imagery. Click starting vertex to close polygon.</span>
+            <span className="spinner-grow spinner-grow-sm text-success flex-shrink-0" role="status" aria-hidden="true" />
+            <span className="text-truncate-2">Click around field on imagery. Click start vertex to close.</span>
           </div>
         )}
       </div>
