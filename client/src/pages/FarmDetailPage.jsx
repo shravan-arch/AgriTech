@@ -259,6 +259,7 @@ const FarmDetailPage = () => {
       setCropCycles((current) => current.filter((c) => c.fieldId !== field._id));
       setActivities((current) => current.filter((a) => a.fieldId !== field._id));
       setTasks((current) => current.filter((t) => t.fieldId !== field._id));
+      setPhotos((current) => current.filter((p) => String(p.fieldId) !== String(field._id)));
       setNotice('Field removed successfully.');
     } catch (requestError) {
       setError(requestError.message);
@@ -649,6 +650,7 @@ const FarmDetailPage = () => {
   };
 
   const handleDeletePhoto = async (photoId) => {
+    if (!photoId) return;
     if (!window.confirm('Delete this field photograph? This cannot be undone.')) {
       return;
     }
@@ -663,8 +665,22 @@ const FarmDetailPage = () => {
         token,
       });
 
-      setPhotos((current) => current.filter((p) => p._id !== photoId));
-      if (previewPhoto?._id === photoId) {
+      setPhotos((current) =>
+        current.filter(
+          (p) =>
+            p._id !== photoId &&
+            p.id !== photoId &&
+            String(p._id) !== String(photoId) &&
+            String(p.id) !== String(photoId)
+        )
+      );
+      if (
+        previewPhoto &&
+        (previewPhoto._id === photoId ||
+          previewPhoto.id === photoId ||
+          String(previewPhoto._id) === String(photoId) ||
+          String(previewPhoto.id) === String(photoId))
+      ) {
         setPreviewPhoto(null);
       }
       setNotice('Field photograph deleted.');
@@ -1964,10 +1980,10 @@ const FarmDetailPage = () => {
                                               type="button"
                                               className="btn btn-link text-decoration-none p-0 small text-danger"
                                               title="Delete photograph"
-                                              onClick={() => handleDeletePhoto(photo._id)}
-                                              disabled={deletingPhotoId === photo._id}
+                                              onClick={() => handleDeletePhoto(photo._id || photo.id)}
+                                              disabled={deletingPhotoId === (photo._id || photo.id)}
                                             >
-                                              {deletingPhotoId === photo._id ? 'Deleting…' : <i className="bi bi-trash3" />}
+                                              {deletingPhotoId === (photo._id || photo.id) ? 'Deleting…' : <i className="bi bi-trash3" />}
                                             </button>
                                           </div>
                                         </div>
@@ -2030,10 +2046,10 @@ const FarmDetailPage = () => {
                                               <button
                                                 type="button"
                                                 className="btn btn-link text-decoration-none p-0 small text-danger"
-                                                onClick={() => handleDeletePhoto(photo._id)}
-                                                disabled={deletingPhotoId === photo._id}
+                                                onClick={() => handleDeletePhoto(photo._id || photo.id)}
+                                                disabled={deletingPhotoId === (photo._id || photo.id)}
                                               >
-                                                {deletingPhotoId === photo._id ? 'Deleting…' : 'Delete'}
+                                                {deletingPhotoId === (photo._id || photo.id) ? 'Deleting…' : 'Delete'}
                                               </button>
                                             </div>
                                           </div>
@@ -2174,11 +2190,11 @@ const FarmDetailPage = () => {
                 <button
                   type="button"
                   className="btn btn-outline-danger btn-sm"
-                  onClick={() => handleDeletePhoto(previewPhoto._id)}
-                  disabled={deletingPhotoId === previewPhoto._id}
+                  onClick={() => handleDeletePhoto(previewPhoto._id || previewPhoto.id)}
+                  disabled={deletingPhotoId === (previewPhoto._id || previewPhoto.id)}
                 >
                   <i className="bi bi-trash3 me-1" />
-                  {deletingPhotoId === previewPhoto._id ? 'Deleting…' : 'Delete photograph'}
+                  {deletingPhotoId === (previewPhoto._id || previewPhoto.id) ? 'Deleting…' : 'Delete photograph'}
                 </button>
               </div>
               {previewPhoto.cropCycleId && (

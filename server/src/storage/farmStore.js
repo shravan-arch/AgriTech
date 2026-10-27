@@ -1230,11 +1230,15 @@ export const farmStore = {
       const photo = await FieldPhoto.findOne(query);
       if (!photo) return null;
 
-      await photoStorage.deletePhoto({
-        storageKey: photo.storageKey,
-        storageProvider: photo.storageProvider,
-        storageType: photo.storageType,
-      });
+      try {
+        await photoStorage.deletePhoto({
+          storageKey: photo.storageKey,
+          storageProvider: photo.storageProvider,
+          storageType: photo.storageType,
+        });
+      } catch (storageError) {
+        console.warn(`[PhotoStorage] Storage cleanup warning for photo ${photoId}:`, storageError?.message || storageError);
+      }
 
       await FieldPhoto.deleteOne({ _id: photo._id });
       return photo;
@@ -1243,20 +1247,34 @@ export const farmStore = {
 
     const photos = readLocalCollection('field_photos');
     const photo = photos.find((p) => {
-      if (p._id !== photoId || p.ownerId !== String(ownerId)) return false;
-      if (options.farmId && p.farmId !== String(options.farmId)) return false;
-      if (options.fieldId && p.fieldId !== String(options.fieldId)) return false;
+      const matchId = p._id === photoId || p.id === photoId || String(p._id) === String(photoId) || String(p.id) === String(photoId);
+      if (!matchId || String(p.ownerId) !== String(ownerId)) return false;
+      if (options.farmId && String(p.farmId) !== String(options.farmId)) return false;
+      if (options.fieldId && String(p.fieldId) !== String(options.fieldId)) return false;
       return true;
     });
     if (!photo) return null;
 
-    await photoStorage.deletePhoto({
-      storageKey: photo.storageKey,
-      storageProvider: photo.storageProvider,
-      storageType: photo.storageType,
-    });
+    try {
+      await photoStorage.deletePhoto({
+        storageKey: photo.storageKey,
+        storageProvider: photo.storageProvider,
+        storageType: photo.storageType,
+      });
+    } catch (storageError) {
+      console.warn(`[PhotoStorage] Storage cleanup warning for photo ${photoId}:`, storageError?.message || storageError);
+    }
 
-    writeLocalCollection('field_photos', photos.filter((p) => p._id !== photoId));
+    writeLocalCollection(
+      'field_photos',
+      photos.filter(
+        (p) =>
+          p._id !== photoId &&
+          p.id !== photoId &&
+          String(p._id) !== String(photoId) &&
+          String(p.id) !== String(photoId)
+      )
+    );
     return photo;
   },
 
