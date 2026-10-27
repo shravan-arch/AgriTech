@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import AuthPage from './pages/AuthPage.jsx';
 import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
@@ -13,12 +13,15 @@ import OperationsPage from './pages/OperationsPage.jsx';
 import MonitoringPage from './pages/MonitoringPage.jsx';
 import InventoryPage from './pages/InventoryPage.jsx';
 import AnalyticsPage from './pages/AnalyticsPage.jsx';
+import BuyResourcesPage from './pages/BuyResourcesPage.jsx';
+import PurchaseHistoryPage from './pages/PurchaseHistoryPage.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import AdminPage from './pages/AdminPage.jsx';
 import LanguageToggle from './components/LanguageToggle.jsx';
 import { useAuth } from './context/useAuth.js';
-import { useLanguage } from './context/useLanguage.js';
 import LandingPage from './pages/LandingPage.jsx';
+import FeaturesPage from './pages/FeaturesPage.jsx';
+import SEO from './components/SEO.jsx';
 
 const ADMIN_PAGES = [
   { id: 'overview', label: 'Overview', shortDesc: 'Platform KPIs & Activity', icon: 'bi-grid-1x2' },
@@ -40,6 +43,30 @@ function App() {
 
   const closeMenu = () => setMenuOpen(false);
 
+  // Close mobile drawer on route or query parameter change
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname, location.search]);
+
+  // Close mobile drawer on Escape key and prevent background body scrolling while open
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setMenuOpen(false);
+      }
+    };
+    if (menuOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [menuOpen]);
+
   const initials = user?.name
     ?.split(/\s+/)
     .map((part) => part[0])
@@ -55,12 +82,13 @@ function App() {
 
   const isPublicRoute = [
     '/',
+    '/features',
     '/login',
     '/register',
     '/forgot-password',
     '/reset-password',
     '/verify-email',
-  ].some((path) => location.pathname === path || location.pathname.startsWith('/reset-password/') || location.pathname.startsWith('/verify-email/'));
+  ].some((path) => location.pathname === path || location.pathname.startsWith('/features/') || location.pathname.startsWith('/reset-password/') || location.pathname.startsWith('/verify-email/'));
 
   if (loading && !isPublicRoute) {
     return (
@@ -79,6 +107,7 @@ function App() {
   if (isAuthenticated && isAdmin) {
     return (
       <div className="admin-workspace-shell">
+        <SEO title="AgriTech Admin Console" robots="noindex, nofollow" />
         {/* Mobile scrim overlay */}
         <button
           className={`admin-sidebar-scrim ${menuOpen ? 'is-visible' : ''}`}
@@ -219,6 +248,8 @@ function App() {
 
           <main className="admin-workspace-content">
             <Routes>
+              <Route path="/features" element={<FeaturesPage />} />
+              <Route path="/features/:featureSlug" element={<FeaturesPage />} />
               <Route path="/admin" element={<AdminPage />} />
               <Route path="/verify-email" element={<VerifyEmailPage />} />
               <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
@@ -237,6 +268,7 @@ function App() {
   if (isAuthenticated && !isAdmin) {
     return (
       <div className="workspace-shell">
+        <SEO title="AgriTech Farm Workspace" robots="noindex, nofollow" />
         <button
           className={`sidebar-scrim ${menuOpen ? 'is-visible' : ''}`}
           type="button"
@@ -274,6 +306,14 @@ function App() {
             <NavLink className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`} to="/inventory" onClick={closeMenu}>
               <i className="bi bi-boxes" aria-hidden="true" />
               <span>{t('nav.inventory')}</span>
+            </NavLink>
+            <NavLink className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`} to="/resources" onClick={closeMenu}>
+              <i className="bi bi-shop" aria-hidden="true" />
+              <span>{t('nav.buyResources') || 'Buy Resources'}</span>
+            </NavLink>
+            <NavLink className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`} to="/purchases" onClick={closeMenu}>
+              <i className="bi bi-receipt-cutoff" aria-hidden="true" />
+              <span>{t('nav.purchases') || 'Purchase History'}</span>
             </NavLink>
             <NavLink className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`} to="/analytics" onClick={closeMenu}>
               <i className="bi bi-graph-up" aria-hidden="true" />
@@ -359,6 +399,8 @@ function App() {
             )}
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/features" element={<FeaturesPage />} />
+              <Route path="/features/:featureSlug" element={<FeaturesPage />} />
               <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
               <Route path="/farms" element={<ProtectedRoute><FarmsPage /></ProtectedRoute>} />
@@ -368,6 +410,8 @@ function App() {
               <Route path="/operations" element={<ProtectedRoute><OperationsPage /></ProtectedRoute>} />
               <Route path="/monitoring" element={<ProtectedRoute><MonitoringPage /></ProtectedRoute>} />
               <Route path="/inventory" element={<ProtectedRoute><InventoryPage /></ProtectedRoute>} />
+              <Route path="/resources" element={<ProtectedRoute><BuyResourcesPage /></ProtectedRoute>} />
+              <Route path="/purchases" element={<ProtectedRoute><PurchaseHistoryPage /></ProtectedRoute>} />
               <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
               {/* Farmers cannot access /admin - redirect to dashboard */}
               <Route path="/admin" element={<Navigate to="/dashboard" replace />} />
@@ -388,6 +432,8 @@ function App() {
     <div className="public-app">
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/features" element={<FeaturesPage />} />
+        <Route path="/features/:featureSlug" element={<FeaturesPage />} />
         <Route path="/dashboard" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<AuthPage mode="login" />} />
         <Route path="/register" element={<AuthPage mode="register" />} />
@@ -401,6 +447,8 @@ function App() {
         <Route path="/operations" element={<Navigate to="/login" replace />} />
         <Route path="/monitoring" element={<Navigate to="/login" replace />} />
         <Route path="/inventory" element={<Navigate to="/login" replace />} />
+        <Route path="/resources" element={<Navigate to="/login" replace />} />
+        <Route path="/purchases" element={<Navigate to="/login" replace />} />
         <Route path="/analytics" element={<Navigate to="/login" replace />} />
         <Route path="/admin" element={<Navigate to="/login" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />

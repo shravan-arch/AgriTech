@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/useAuth.js';
 import { useLanguage } from '../context/useLanguage.js';
+import SEO from '../components/SEO.jsx';
 
 const VerifyEmailPage = () => {
   const { token: paramToken } = useParams();
@@ -101,6 +102,10 @@ const VerifyEmailPage = () => {
 
   return (
     <section className="auth-layout">
+      <SEO
+        title="Verify Email - AgriTech"
+        robots="noindex, nofollow"
+      />
       <div className="auth-panel text-center">
         <Link className="brand-mark auth-brand mx-auto mb-3" to="/" aria-label="AgriTech home">
           <span className="brand-icon"><i className="bi bi-flower1" aria-hidden="true" /></span>

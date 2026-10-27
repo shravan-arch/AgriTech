@@ -606,7 +606,7 @@ const FarmsPage = () => {
             </div>
           </div>
 
-          <div className="col-7 col-md-4 col-lg-5">
+          <div className="col-12 col-sm-7 col-md-4 col-lg-5">
             <div className="d-flex align-items-center gap-1 overflow-x-auto py-1 filter-pills-bar">
               <button
                 type="button"
@@ -632,7 +632,7 @@ const FarmsPage = () => {
             </div>
           </div>
 
-          <div className="col-5 col-md-3 col-lg-3 text-end d-flex align-items-center justify-content-end gap-2">
+          <div className="col-12 col-sm-5 col-md-3 col-lg-3 text-start text-sm-end d-flex align-items-center justify-content-between justify-content-sm-end gap-2">
             <select
               className="form-select form-select-sm w-auto"
               value={sortBy}

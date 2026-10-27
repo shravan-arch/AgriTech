@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../context/useLanguage.js';
 import LanguageToggle from '../components/LanguageToggle.jsx';
+import SEO from '../components/SEO.jsx';
 
 const SLIDES = [
   {
@@ -38,6 +39,7 @@ const SLIDES = [
 
 const FEATURES = [
   {
+    slug: 'field-mapping',
     icon: 'bi-geo-alt-fill',
     titleKey: 'landing.feature1Title',
     descKey: 'landing.feature1Desc',
@@ -46,6 +48,7 @@ const FEATURES = [
     metricBadge: 'GPS Boundaries',
   },
   {
+    slug: 'weather-monitoring',
     icon: 'bi-cpu-fill',
     titleKey: 'landing.feature2Title',
     descKey: 'landing.feature2Desc',
@@ -54,6 +57,7 @@ const FEATURES = [
     metricBadge: 'Real-time Feeds',
   },
   {
+    slug: 'crop-operations',
     icon: 'bi-calendar2-check-fill',
     titleKey: 'landing.feature3Title',
     descKey: 'landing.feature3Desc',
@@ -62,6 +66,7 @@ const FEATURES = [
     metricBadge: 'Growth Stages',
   },
   {
+    slug: 'resource-inventory',
     icon: 'bi-boxes',
     titleKey: 'landing.feature4Title',
     descKey: 'landing.feature4Desc',
@@ -70,6 +75,7 @@ const FEATURES = [
     metricBadge: 'Low-Stock Alerts',
   },
   {
+    slug: 'farm-management',
     icon: 'bi-cash-coin',
     titleKey: 'landing.feature5Title',
     descKey: 'landing.feature5Desc',
@@ -78,6 +84,7 @@ const FEATURES = [
     metricBadge: 'MSP Benchmarks',
   },
   {
+    slug: 'farm-management',
     icon: 'bi-shield-check',
     titleKey: 'landing.feature6Title',
     descKey: 'landing.feature6Desc',
@@ -127,6 +134,13 @@ export default function LandingPage() {
 
   return (
     <div className="landing-page-wrap">
+      <SEO
+        title="AgriTech - Smart Farm Management & Precision Agriculture Software"
+        description="AgriTech is an all-in-one farm management platform offering GPS field boundary mapping, real-time IoT soil & weather telemetry, crop lifecycle scheduling, and farm supply inventory in a private workspace."
+        canonicalUrl="https://agritech-bay.vercel.app/"
+        robots="index, follow"
+      />
+
       {/* Animated Top Navigation Bar */}
       <header className="landing-navbar">
         <div className="landing-container d-flex align-items-center justify-content-between">
@@ -148,6 +162,7 @@ export default function LandingPage() {
 
           <nav className="landing-nav-links d-none d-md-flex align-items-center gap-4" aria-label="Page Sections">
             <a href="#features" className="landing-nav-link">{t('landing.explorePlatform')}</a>
+            <Link to="/features" className="landing-nav-link">Features Guide</Link>
             <a href="#intelligence" className="landing-nav-link">Intelligence</a>
             <a href="#metrics" className="landing-nav-link">Impact</a>
             <span className="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1 rounded-pill small">
@@ -181,12 +196,11 @@ export default function LandingPage() {
               </div>
 
               <h1 className="landing-hero-heading">
-                Cultivate with <span className="hero-gradient-text">Precision</span>.
-                <br />
-                Harvest with <span className="hero-accent-text">Confidence</span>.
+                Smart Farm Management &amp; <span className="hero-gradient-text">Precision Agriculture</span> Software
               </h1>
 
               <p className="landing-hero-lead">
+                <strong className="d-block text-dark mb-1">Cultivate with Precision. Harvest with Confidence.</strong>
                 {t('landing.heroSubtitle')}
               </p>
 
@@ -248,7 +262,7 @@ export default function LandingPage() {
                       >
                         <img
                           src={slide.image}
-                          alt={t(slide.titleKey)}
+                          alt={`${t(slide.titleKey)} - AgriTech Precision Agriculture`}
                           className="slideshow-img"
                           loading={index === 0 ? 'eager' : 'lazy'}
                         />
@@ -390,6 +404,13 @@ export default function LandingPage() {
                   </div>
                   <h3 className="feature-card-title">{t(feature.titleKey)}</h3>
                   <p className="feature-card-desc">{t(feature.descKey)}</p>
+                  <Link
+                    to={`/features/${feature.slug}`}
+                    className="text-decoration-none small fw-semibold text-success d-inline-flex align-items-center mt-2"
+                  >
+                    <span>Explore capability</span>
+                    <i className="bi bi-chevron-right ms-1 small" />
+                  </Link>
                   <div className="feature-card-hover-indicator" style={{ backgroundColor: feature.color }} />
                 </div>
               </div>
@@ -630,18 +651,50 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="landing-footer">
-        <div className="landing-container d-flex flex-column flex-md-row align-items-center justify-content-between gap-3 py-4 border-top">
-          <div className="d-flex align-items-center gap-2">
-            <span className="fw-bold text-dark">AgriTech</span>
-            <span className="text-secondary small">| Precision Agriculture Management</span>
+        <div className="landing-container py-5 border-top">
+          <div className="row g-4 mb-4">
+            <div className="col-12 col-md-4">
+              <div className="d-flex align-items-center gap-2 mb-2">
+                <span className="fw-bold text-dark fs-5">AgriTech</span>
+              </div>
+              <p className="text-secondary small mb-3">
+                Smart farm management and precision agriculture software. Empowering growers with spatial field mapping, IoT telemetry, crop lifecycle scheduling, and agricultural supplies inventory.
+              </p>
+              <div className="d-flex align-items-center gap-2 text-secondary small">
+                <span className="live-pulse-dot" style={{ width: '8px', height: '8px' }} />
+                <span>All Systems Operational • v2.5</span>
+              </div>
+            </div>
+
+            <div className="col-6 col-md-4">
+              <div className="fw-bold text-dark mb-3 small text-uppercase">Platform Capabilities</div>
+              <ul className="list-unstyled d-flex flex-column gap-2 small">
+                <li><Link to="/features/farm-management" className="text-decoration-none text-muted">Multi-Farm &amp; Parcel Management</Link></li>
+                <li><Link to="/features/field-mapping" className="text-decoration-none text-muted">GPS Field Mapping &amp; Area</Link></li>
+                <li><Link to="/features/crop-operations" className="text-decoration-none text-muted">Crop Cycles &amp; Field Operations</Link></li>
+                <li><Link to="/features/weather-monitoring" className="text-decoration-none text-muted">Weather Forecasts &amp; IoT Sensors</Link></li>
+                <li><Link to="/features/resource-inventory" className="text-decoration-none text-muted">Agricultural Supplies &amp; Inputs</Link></li>
+              </ul>
+            </div>
+
+            <div className="col-6 col-md-4">
+              <div className="fw-bold text-dark mb-3 small text-uppercase">Farm Portal</div>
+              <ul className="list-unstyled d-flex flex-column gap-2 small">
+                <li><Link to="/features" className="text-decoration-none text-muted">Features Guide</Link></li>
+                <li><Link to="/login" className="text-decoration-none text-muted">Farmer Sign In</Link></li>
+                <li><Link to="/register" className="text-decoration-none text-muted">Create Free Workspace</Link></li>
+                <li><Link to="/" className="text-decoration-none text-muted">AgriTech Home</Link></li>
+              </ul>
+            </div>
           </div>
-          <div className="d-flex align-items-center gap-3 text-secondary small">
-            <span>Owner-Isolated Storage</span>
-            <span>•</span>
-            <span className="d-flex align-items-center gap-1">
-              <span className="live-pulse-dot" style={{ width: '8px', height: '8px' }} />
-              All Systems Operational
-            </span>
+
+          <div className="d-flex flex-column flex-md-row align-items-center justify-content-between gap-3 pt-4 border-top text-secondary small">
+            <div>&copy; {new Date().getFullYear()} AgriTech. Precision Agriculture &amp; Farm Operations.</div>
+            <div className="d-flex align-items-center gap-3">
+              <span>Owner-Isolated Farm Vault</span>
+              <span>•</span>
+              <span>English &amp; Indian Regional Languages</span>
+            </div>
           </div>
         </div>
       </footer>

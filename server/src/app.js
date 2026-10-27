@@ -13,13 +13,20 @@ import { createWeatherRouter } from './routes/weather.js';
 import { createAnalyticsRouter } from './routes/analytics.js';
 import { createAdminRouter } from './routes/admin.js';
 import { createAdminController } from './controllers/adminController.js';
+import { createPurchaseRouter } from './routes/purchases.js';
 import { userStore as defaultUserStore } from './storage/userStore.js';
 import { farmStore as defaultFarmStore } from './storage/farmStore.js';
+import { purchaseStore as defaultPurchaseStore } from './storage/purchaseStore.js';
+import { invoiceStorage as defaultInvoiceStorage } from './storage/invoiceStorage.js';
+import { supplierRegistry as defaultSupplierRegistry } from './services/suppliers/supplierRegistry.js';
 import { connectDB } from './config/db.js';
 
 export const createApp = ({
   userStore = defaultUserStore,
   farmStore = defaultFarmStore,
+  purchaseStore = defaultPurchaseStore,
+  invoiceStorage = defaultInvoiceStorage,
+  supplierRegistry = defaultSupplierRegistry,
   photoStorage,
   weatherService,
   simulatorService,
@@ -86,6 +93,7 @@ export const createApp = ({
   app.use('/api/notifications', createNotificationRouter(farmStore, userStore));
   app.use('/api/weather', createWeatherRouter(farmStore, userStore, weatherService));
   app.use('/api/analytics', createAnalyticsRouter(farmStore, userStore));
+  app.use('/api/purchases', createPurchaseRouter(purchaseStore, userStore, invoiceStorage, supplierRegistry));
   app.use('/api/admin', createAdminRouter(createAdminController(userStore)));
 
   app.use((req, res) => res.status(404).json({

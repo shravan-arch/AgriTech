@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/useAuth.js';
 import { useLanguage } from '../context/useLanguage.js';
+import SEO from '../components/SEO.jsx';
 
 export const ResetPasswordPage = () => {
   const { isAuthenticated, resetPassword } = useAuth();
@@ -51,6 +52,10 @@ export const ResetPasswordPage = () => {
 
   return (
     <section className="auth-layout">
+      <SEO
+        title="Reset Password - AgriTech"
+        robots="noindex, nofollow"
+      />
       <div className="auth-panel">
         <Link className="brand-mark auth-brand" to="/" aria-label="AgriTech home">
           <span className="brand-icon"><i className="bi bi-flower1" aria-hidden="true" /></span>

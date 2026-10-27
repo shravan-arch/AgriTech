@@ -4,6 +4,7 @@ import { useAuth } from '../context/useAuth.js';
 import { useLanguage } from '../context/useLanguage.js';
 import GoogleSignInButton from '../components/GoogleSignInButton.jsx';
 import LanguageToggle from '../components/LanguageToggle.jsx';
+import SEO from '../components/SEO.jsx';
 
 const AUTH_SLIDES = [
   {
@@ -253,6 +254,10 @@ const AuthPage = ({ mode }) => {
   if (verificationPendingEmail) {
     return (
       <section className="auth-split-wrapper">
+        <SEO
+          title="Verify Your Email - AgriTech"
+          robots="noindex, nofollow"
+        />
         <div className="auth-single-card text-center shadow-lg">
           <div className="d-flex justify-content-between align-items-center mb-4">
             <Link className="landing-brand mb-0" to="/" aria-label="AgriTech home">
@@ -387,6 +392,12 @@ const AuthPage = ({ mode }) => {
 
   return (
     <div className="auth-split-wrapper">
+      <SEO
+        title={isRegister ? 'Register Farm Account - AgriTech Precision Agriculture' : 'Farmer Sign In - AgriTech Farm Management'}
+        description={isRegister ? 'Create your free AgriTech agricultural account. Begin mapping farm fields, tracking crop growth cycles, and monitoring soil telemetry.' : 'Sign in to your private AgriTech farm management workspace to access GPS field mapping, IoT telemetry, and crop schedules.'}
+        canonicalUrl={isRegister ? 'https://agritech-bay.vercel.app/register' : 'https://agritech-bay.vercel.app/login'}
+        robots="index, follow"
+      />
       <div className="row g-0 w-100 min-vh-100">
         {/* Left Visual Column with Animated Farm Slideshow */}
         <div className="col-12 col-lg-5 col-xl-6 d-none d-lg-block position-relative auth-visual-side">

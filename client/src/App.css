@@ -1115,3 +1115,100 @@
 .card:hover {
   border-color: #cbdad0;
 }
+
+/* --------------------------------------------------------------------------
+   12. Responsive Refinements Across Viewports
+   -------------------------------------------------------------------------- */
+@media (max-width: 991.98px) {
+  .landing-nav-links {
+    display: none !important;
+  }
+  .auth-visual-side {
+    display: none !important;
+  }
+  .auth-card-panel {
+    width: min(100%, 500px);
+    margin: 0 auto;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .landing-container {
+    width: calc(100% - 1.25rem);
+  }
+  .landing-navbar {
+    padding: 0.65rem 0;
+  }
+  .landing-brand {
+    font-size: 1.15rem;
+  }
+  .landing-btn-login {
+    padding: 0.35rem 0.65rem !important;
+    font-size: 0.8rem;
+  }
+  .landing-btn-cta {
+    padding: 0.35rem 0.75rem !important;
+    font-size: 0.8rem;
+  }
+  .landing-hero-section {
+    padding: 2.2rem 0 3.2rem;
+  }
+  .landing-hero-heading {
+    font-size: clamp(1.9rem, 7.5vw, 2.7rem);
+    line-height: 1.15;
+  }
+  .landing-hero-lead {
+    font-size: 0.95rem;
+    line-height: 1.55;
+  }
+  .landing-hero-ctas .btn {
+    width: 100%;
+  }
+  .hero-slideshow-card {
+    aspect-ratio: 4 / 3;
+    border-radius: 18px;
+  }
+  .slideshow-caption {
+    left: 1rem;
+    right: 1rem;
+    bottom: 1rem;
+  }
+  .badge-bottom-right,
+  .badge-top-right {
+    display: none !important;
+  }
+  .auth-portal-selector {
+    padding: 0.25rem;
+  }
+  .auth-portal-tab {
+    font-size: 0.76rem;
+    padding: 0.45rem 0.35rem;
+  }
+  .auth-mode-pill {
+    font-size: 0.82rem;
+    padding: 0.45rem 0.5rem;
+  }
+  .auth-card-panel {
+    padding: 0.5rem 0.15rem;
+  }
+}
+
+@media (max-width: 375px) {
+  .landing-brand .brand-text {
+    font-size: 1.1rem;
+  }
+  .landing-nav-actions {
+    gap: 0.35rem !important;
+  }
+  .landing-btn-login {
+    padding: 0.3rem 0.5rem !important;
+    font-size: 0.75rem;
+  }
+  .landing-btn-cta {
+    padding: 0.3rem 0.55rem !important;
+    font-size: 0.75rem;
+  }
+  .landing-hero-heading {
+    font-size: 1.85rem;
+  }
+}

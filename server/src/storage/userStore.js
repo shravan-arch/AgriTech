@@ -19,6 +19,7 @@ import WeatherSnapshot from '../models/WeatherSnapshot.js';
 import SupportTicket from '../models/SupportTicket.js';
 import ServiceBooking from '../models/ServiceBooking.js';
 import PolicyViolation from '../models/PolicyViolation.js';
+import PurchaseRecord from '../models/PurchaseRecord.js';
 import photoStorage from './photoStorage.js';
 import { getDBStatus } from '../config/db.js';
 import { newLocalId, readLocalCollection, writeLocalCollection } from './localJsonStore.js';
@@ -1642,6 +1643,7 @@ export const userStore = {
         SupportTicket.deleteMany({ userId: user._id }),
         ServiceBooking.deleteMany({ farmerId: user._id }),
         PolicyViolation.deleteMany({ userId: user._id }),
+        PurchaseRecord.deleteMany({ ownerId: user._id }),
       ]);
 
       // Unset previousOwnerId from farms
@@ -1723,6 +1725,7 @@ export const userStore = {
       { name: 'support_tickets', key: 'userId' },
       { name: 'service_bookings', key: 'farmerId' },
       { name: 'policy_violations', key: 'userId' },
+      { name: 'purchases', key: 'ownerId' },
     ];
 
     for (const { name, key } of collectionsToClean) {
