@@ -73,37 +73,7 @@ const userSchema = new mongoose.Schema(
       enum: ['active', 'suspended'],
       default: 'active'
     },
-    roleRequest: {
-      requestedRole: {
-        type: String,
-        enum: ['admin', 'user', 'farmer', null],
-        default: null
-      },
-      status: {
-        type: String,
-        enum: ['none', 'pending', 'approved', 'rejected'],
-        default: 'none'
-      },
-      requestedAt: {
-        type: Date,
-        default: null
-      },
-      reviewedAt: {
-        type: Date,
-        default: null
-      },
-      reviewedBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        default: null
-      },
-      reviewNotes: {
-        type: String,
-        trim: true,
-        maxlength: [250, 'Review notes cannot exceed 250 characters'],
-        default: ''
-      }
-    },
+
     language: {
       type: String,
       enum: ['en', 'hi', 'pa', 'mr', 'gu', 'te', 'kn', 'ta', 'bn'],

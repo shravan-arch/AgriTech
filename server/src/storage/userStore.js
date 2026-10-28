@@ -361,7 +361,6 @@ export const userStore = {
       ...(userData.googleId ? { googleId: userData.googleId } : {}),
       role: userData.role || 'farmer',
       status: userData.status || 'active',
-      roleRequest: userData.roleRequest || { status: 'none' },
       language: userData.language || 'en',
       emailVerified: userData.emailVerified === true,
       ...(userData.emailVerificationToken ? { emailVerificationToken: userData.emailVerificationToken } : {}),
@@ -397,7 +396,7 @@ export const userStore = {
     return users.filter((u) => u.role === 'admin' && (u.status || 'active') !== 'suspended').length;
   },
 
-  async listUsers({ role, status, pendingOnly = false, search = '', limit = 50, page = 1 } = {}) {
+  async listUsers({ role, status, search = '', limit = 50, page = 1 } = {}) {
     const mode = getStorageMode();
     const skip = Math.max(0, (page - 1) * limit);
 
@@ -405,7 +404,6 @@ export const userStore = {
       const query = {};
       if (role) query.role = role;
       if (status) query.status = status;
-      if (pendingOnly) query['roleRequest.status'] = 'pending';
       if (search) {
         const regex = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
         query.$or = [{ name: regex }, { email: regex }, { farmName: regex }];
@@ -428,7 +426,6 @@ export const userStore = {
     let users = readLocalCollection('users');
     if (role) users = users.filter((u) => u.role === role);
     if (status) users = users.filter((u) => (u.status || 'active') === status);
-    if (pendingOnly) users = users.filter((u) => u.roleRequest?.status === 'pending');
     if (search) {
       const lower = search.toLowerCase();
       users = users.filter((u) =>
@@ -442,274 +439,11 @@ export const userStore = {
     return { users: paginated, total, page, pages: Math.ceil(total / limit) || 1 };
   },
 
-  async updateUserRole({ targetUserId, newRole, actor, reason = '', ipAddress = '' }) {
-    const mode = getStorageMode();
-    if (mode === 'mongodb') {
-      const user = await User.findById(targetUserId);
-      if (!user) return null;
-
-      const previousRole = user.role;
-      if (previousRole === 'admin' && newRole !== 'admin') {
-        const activeAdmins = await this.countActiveAdmins();
-        if (activeAdmins <= 1 && user.status !== 'suspended') {
-          const err = new Error('Cannot demote the last active administrator.');
-          err.code = 'LAST_ADMIN_PROTECTION';
-          throw err;
-        }
-      }
-
-      user.role = newRole;
-      user.roleChangedAt = new Date();
-      user.tokenVersion = (user.tokenVersion || 0) + 1;
-
-      if (newRole === 'admin') {
-        user.farmName = '';
-        user.farmSizeHectares = undefined;
-        user.primaryCrops = [];
-        try {
-          await Farm.updateMany(
-            { ownerId: String(targetUserId) },
-            { $set: { previousOwnerId: String(targetUserId), ownerId: 'unassigned' } }
-          );
-        } catch {
-          // Non-blocking farm dissociation
-        }
-      }
-
-      if (user.roleRequest && user.roleRequest.status === 'pending' && newRole === 'admin') {
-        user.roleRequest.status = 'approved';
-        user.roleRequest.reviewedAt = new Date();
-        user.roleRequest.reviewedBy = actor._id || actor.id;
-        user.roleRequest.reviewNotes = reason || 'Approved by admin';
-      }
-      await user.save();
-
-      await this.createAuditLog({
-        action: 'ROLE_CHANGE',
-        actorId: actor._id || actor.id,
-        actorEmail: actor.email,
-        actorName: actor.name,
-        targetUserId: user._id,
-        targetUserEmail: user.email,
-        targetUserName: user.name,
-        previousRole,
-        newRole,
-        reason,
-        ipAddress,
-      });
-
-      return user;
-    }
-    if (mode !== 'local-json-development') throw unavailableError();
-
-    const users = readLocalCollection('users');
-    const index = users.findIndex((u) => u.id === targetUserId || u._id === targetUserId);
-    if (index === -1) return null;
-
-    const previousRole = users[index].role || 'farmer';
-    if (previousRole === 'admin' && newRole !== 'admin') {
-      const activeAdmins = await this.countActiveAdmins();
-      if (activeAdmins <= 1 && users[index].status !== 'suspended') {
-        const err = new Error('Cannot demote the last active administrator.');
-        err.code = 'LAST_ADMIN_PROTECTION';
-        throw err;
-      }
-    }
-
-    users[index].role = newRole;
-    users[index].roleChangedAt = new Date().toISOString();
-    users[index].tokenVersion = (users[index].tokenVersion || 0) + 1;
-
-    if (newRole === 'admin') {
-      users[index].farmName = '';
-      users[index].farmSizeHectares = undefined;
-      users[index].primaryCrops = [];
-      try {
-        const farms = readLocalCollection('farms');
-        let farmsModified = false;
-        farms.forEach((f) => {
-          if (f.ownerId === String(targetUserId)) {
-            f.previousOwnerId = f.ownerId;
-            f.ownerId = 'unassigned';
-            farmsModified = true;
-          }
-        });
-        if (farmsModified) writeLocalCollection('farms', farms);
-      } catch {
-        // Non-blocking farm dissociation
-      }
-    }
-
-    if (users[index].roleRequest?.status === 'pending' && newRole === 'admin') {
-      users[index].roleRequest.status = 'approved';
-      users[index].roleRequest.reviewedAt = new Date().toISOString();
-      users[index].roleRequest.reviewedBy = actor.id || actor._id;
-      users[index].roleRequest.reviewNotes = reason || 'Approved by admin';
-    }
-    users[index].updatedAt = new Date().toISOString();
-    writeLocalCollection('users', users);
-
-    await this.createAuditLog({
-      action: 'ROLE_CHANGE',
-      actorId: actor.id || actor._id,
-      actorEmail: actor.email,
-      actorName: actor.name,
-      targetUserId,
-      targetUserEmail: users[index].email,
-      targetUserName: users[index].name,
-      previousRole,
-      newRole,
-      reason,
-      ipAddress,
-    });
-
-    return createLocalUser(users[index]);
-  },
-
-  async changeUserRole(options) {
-    return this.updateUserRole(options);
-  },
-
   async changeUserStatus(options) {
     return this.updateUserStatus({
       ...options,
       status: options.newStatus || options.status,
     });
-  },
-
-  async approveRoleRequest(options) {
-    return this.reviewRoleRequest({ ...options, decision: 'approved' });
-  },
-
-  async rejectRoleRequest(options) {
-    return this.reviewRoleRequest({ ...options, decision: 'rejected' });
-  },
-
-  async reviewRoleRequest({ targetUserId, decision, actor, reason = '', ipAddress = '' }) {
-    const mode = getStorageMode();
-    if (mode === 'mongodb') {
-      const user = await User.findById(targetUserId);
-      if (!user) return null;
-      if (!user.roleRequest || user.roleRequest.status !== 'pending') {
-        const err = new Error('User does not have a pending role request.');
-        err.code = 'NO_PENDING_REQUEST';
-        throw err;
-      }
-
-      const previousRole = user.role;
-      let newRole = user.role;
-
-      if (decision === 'approved') {
-        newRole = user.roleRequest.requestedRole || 'admin';
-        user.role = newRole;
-        user.roleRequest.status = 'approved';
-        user.roleChangedAt = new Date();
-        user.tokenVersion = (user.tokenVersion || 0) + 1;
-
-        if (newRole === 'admin') {
-          user.farmName = '';
-          user.farmSizeHectares = undefined;
-          user.primaryCrops = [];
-          try {
-            await Farm.updateMany(
-              { ownerId: String(targetUserId) },
-              { $set: { previousOwnerId: String(targetUserId), ownerId: 'unassigned' } }
-            );
-          } catch {
-            // Non-blocking farm dissociation
-          }
-        }
-      } else {
-        user.roleRequest.status = 'rejected';
-      }
-
-      user.roleRequest.reviewedAt = new Date();
-      user.roleRequest.reviewedBy = actor._id || actor.id;
-      user.roleRequest.reviewNotes = reason;
-      await user.save();
-
-      await this.createAuditLog({
-        action: decision === 'approved' ? 'ROLE_REQUEST_APPROVED' : 'ROLE_REQUEST_REJECTED',
-        actorId: actor._id || actor.id,
-        actorEmail: actor.email,
-        actorName: actor.name,
-        targetUserId: user._id,
-        targetUserEmail: user.email,
-        targetUserName: user.name,
-        previousRole,
-        newRole,
-        reason,
-        ipAddress,
-      });
-
-      return user;
-    }
-    if (mode !== 'local-json-development') throw unavailableError();
-
-    const users = readLocalCollection('users');
-    const index = users.findIndex((u) => u.id === targetUserId || u._id === targetUserId);
-    if (index === -1) return null;
-
-    if (!users[index].roleRequest || users[index].roleRequest.status !== 'pending') {
-      const err = new Error('User does not have a pending role request.');
-      err.code = 'NO_PENDING_REQUEST';
-      throw err;
-    }
-
-    const previousRole = users[index].role || 'farmer';
-    let newRole = previousRole;
-
-    if (decision === 'approved') {
-      newRole = users[index].roleRequest.requestedRole || 'admin';
-      users[index].role = newRole;
-      users[index].roleRequest.status = 'approved';
-      users[index].roleChangedAt = new Date().toISOString();
-      users[index].tokenVersion = (users[index].tokenVersion || 0) + 1;
-
-      if (newRole === 'admin') {
-        users[index].farmName = '';
-        users[index].farmSizeHectares = undefined;
-        users[index].primaryCrops = [];
-        try {
-          const farms = readLocalCollection('farms');
-          let farmsModified = false;
-          farms.forEach((f) => {
-            if (f.ownerId === String(targetUserId)) {
-              f.previousOwnerId = f.ownerId;
-              f.ownerId = 'unassigned';
-              farmsModified = true;
-            }
-          });
-          if (farmsModified) writeLocalCollection('farms', farms);
-        } catch {
-          // Non-blocking farm dissociation
-        }
-      }
-    } else {
-      users[index].roleRequest.status = 'rejected';
-    }
-
-    users[index].roleRequest.reviewedAt = new Date().toISOString();
-    users[index].roleRequest.reviewedBy = actor.id || actor._id;
-    users[index].roleRequest.reviewNotes = reason;
-    users[index].updatedAt = new Date().toISOString();
-    writeLocalCollection('users', users);
-
-    await this.createAuditLog({
-      action: decision === 'approved' ? 'ROLE_REQUEST_APPROVED' : 'ROLE_REQUEST_REJECTED',
-      actorId: actor.id || actor._id,
-      actorEmail: actor.email,
-      actorName: actor.name,
-      targetUserId,
-      targetUserEmail: users[index].email,
-      targetUserName: users[index].name,
-      previousRole,
-      newRole,
-      reason,
-      ipAddress,
-    });
-
-    return createLocalUser(users[index]);
   },
 
   async updateUserStatus({ targetUserId, status: newStatus, actor, reason = '', ipAddress = '' }) {
@@ -846,7 +580,6 @@ export const userStore = {
         const previousRole = user.role;
         user.role = 'admin';
         user.emailVerified = true;
-        if (user.roleRequest) user.roleRequest.status = 'approved';
         await user.save();
 
         await this.createAuditLog({
@@ -907,7 +640,6 @@ export const userStore = {
       const previousRole = users[index].role || 'farmer';
       users[index].role = 'admin';
       users[index].emailVerified = true;
-      if (users[index].roleRequest) users[index].roleRequest.status = 'approved';
       users[index].updatedAt = new Date().toISOString();
       writeLocalCollection('users', users);
 

@@ -98,7 +98,8 @@ test('Admin Role, Permissions, and Access Control Security Suite', async (t) => 
 
     assert.equal(regRes.status, 201);
     assert.equal(regRes.body.user.role, 'farmer');
-    assert.equal(regRes.body.requiresAdminApproval, true);
+    assert.equal(regRes.body.requiresAdminApproval, undefined);
+    assert.equal(regRes.body.user.roleRequest, undefined);
     farmerToken = regRes.body.token;
     farmerId = regRes.body.user._id || regRes.body.user.id;
   });
@@ -115,33 +116,35 @@ test('Admin Role, Permissions, and Access Control Security Suite', async (t) => 
     assert.equal(blockedSettings.status, 403);
   });
 
-  await t.test('4. Admin can promote a user to second admin and self-demotion is prevented', async () => {
+  await t.test('4. Role promotion endpoint is removed and returns 404', async () => {
     const promoteRes = await request(`/api/admin/users/${farmerId}/role`, {
       method: 'PUT',
       headers: { Authorization: `Bearer ${rootAdminToken}` },
       body: JSON.stringify({ role: 'admin', reason: 'Promoted to co-administrator' }),
     });
-    assert.equal(promoteRes.status, 200);
-    assert.equal(promoteRes.body.user.role, 'admin');
+    assert.equal(promoteRes.status, 404);
+
+    // Create a fixture second admin directly in store for multi-admin governance tests
+    const secondAdminUser = await userStore.create({
+      name: 'Co-Administrator',
+      email: 'coadmin@agritech.org',
+      password: 'Password12345!',
+      role: 'admin',
+      status: 'active',
+      emailVerified: true,
+    });
+    secondAdminId = secondAdminUser._id || secondAdminUser.id;
 
     const loginSecond = await request('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({
-        email: 'sneaky@example.org',
+        email: 'coadmin@agritech.org',
         password: 'Password12345!',
+        portal: 'admin',
       }),
     });
     assert.equal(loginSecond.status, 200);
     secondAdminToken = loginSecond.body.token;
-    secondAdminId = farmerId;
-
-    // Second admin cannot demote themselves
-    const selfDemoteRes = await request(`/api/admin/users/${secondAdminId}/role`, {
-      method: 'PUT',
-      headers: { Authorization: `Bearer ${secondAdminToken}` },
-      body: JSON.stringify({ role: 'farmer' }),
-    });
-    assert.equal(selfDemoteRes.status, 403);
   });
 
   await t.test('5. Strict Restriction: Administrators cannot create personal agricultural resources', async () => {
@@ -309,34 +312,23 @@ test('Admin Role, Permissions, and Access Control Security Suite', async (t) => 
   });
 
   await t.test('10. Last Active Admin Protection', async () => {
-    // Demote second admin back to farmer
-    const demoteSecond = await request(`/api/admin/users/${secondAdminId}/role`, {
+    // Suspend second admin
+    const suspendSecond = await request(`/api/admin/users/${secondAdminId}/status`, {
       method: 'PUT',
       headers: { Authorization: `Bearer ${rootAdminToken}` },
-      body: JSON.stringify({ role: 'farmer', reason: 'Assignment completed' }),
+      body: JSON.stringify({ status: 'suspended', reason: 'Assignment completed' }),
     });
-    assert.equal(demoteSecond.status, 200);
+    assert.equal(suspendSecond.status, 200);
 
-    // Now root admin is the ONLY active admin. Attempting to demote or suspend root admin must be blocked
-    const demoteLast = await request(`/api/admin/users/${rootAdminId}/role`, {
+    // Now root admin is the ONLY active admin. Attempting to suspend root admin must be blocked
+    const suspendLast = await request(`/api/admin/users/${rootAdminId}/status`, {
       method: 'PUT',
       headers: { Authorization: `Bearer ${rootAdminToken}` },
-      body: JSON.stringify({ role: 'farmer' }),
+      body: JSON.stringify({ status: 'suspended' }),
     });
-    assert.equal(demoteLast.status, 403); // self-protection
+    assert.equal(suspendLast.status, 403); // self-protection
 
-    // Test store-level last admin protection
-    await assert.rejects(
-      async () => {
-        await userStore.updateUserRole({
-          targetUserId: rootAdminId,
-          newRole: 'farmer',
-          actor: { id: 'external', email: 'external@test.org', name: 'External' },
-        });
-      },
-      (err) => err.code === 'LAST_ADMIN_PROTECTION'
-    );
-
+    // Test store-level last admin protection on status suspension
     await assert.rejects(
       async () => {
         await userStore.updateUserStatus({

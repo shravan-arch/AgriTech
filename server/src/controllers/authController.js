@@ -54,10 +54,7 @@ const validateRegistration = (body) => {
         body.primaryCrops.some((crop) => typeof crop !== 'string' || !crop.trim() || crop.length > 60))) {
     return 'Primary crops must be a list of at most 20 non-empty names.';
   }
-  const selectedRole = body.selectedRole || body.role || body.requestedRole;
-  if (selectedRole !== undefined && !['user', 'farmer', 'admin'].includes(selectedRole)) {
-    return 'Role must be either User or Admin.';
-  }
+
   const SUPPORTED_LANGUAGES = ['en', 'hi', 'pa', 'mr', 'gu', 'te', 'kn', 'ta', 'bn'];
   if (body.language !== undefined && !SUPPORTED_LANGUAGES.includes(body.language)) {
     return 'Language must be one of: ' + SUPPORTED_LANGUAGES.join(', ') + '.';
@@ -313,17 +310,6 @@ export const createAuthController = (
           });
         }
 
-        const requestedRoleCandidate = req.body.selectedRole || req.body.role || req.body.requestedRole;
-        const requestedAdmin = requestedRoleCandidate === 'admin';
-        const roleRequest = requestedAdmin
-          ? {
-              requestedRole: 'admin',
-              status: 'pending',
-              requestedAt: new Date(),
-            }
-          : {
-              status: 'none',
-            };
         const userLanguage = req.body.language === 'hi' ? 'hi' : 'en';
 
         if (shouldRequireEmailVerification) {
@@ -337,7 +323,6 @@ export const createAuthController = (
             password: req.body.password,
             role: 'farmer',
             status: 'active',
-            roleRequest,
             language: userLanguage,
             emailVerified: false,
             emailVerificationToken: hashedToken,
@@ -365,10 +350,7 @@ export const createAuthController = (
           return res.status(201).json({
             success: true,
             requiresEmailVerification: true,
-            requiresAdminApproval: requestedAdmin,
-            message: requestedAdmin
-              ? 'User registered successfully. Your request for an Admin account has been submitted and is pending administrator approval. Please check your email to verify your address.'
-              : 'User registered successfully. Please check your email and verify your address before logging in.',
+            message: 'User registered successfully. Please check your email and verify your address before logging in.',
             user: getSafeUser(user),
           });
         }
@@ -379,7 +361,6 @@ export const createAuthController = (
           password: req.body.password,
           role: 'farmer',
           status: 'active',
-          roleRequest,
           language: userLanguage,
           ...(req.body.farmName ? { farmName: req.body.farmName.trim() } : {}),
           ...(req.body.farmSizeHectares !== undefined
@@ -391,10 +372,7 @@ export const createAuthController = (
         const token = generateToken({ id: user._id || user.id, tokenVersion: user.tokenVersion || 0 });
         return res.status(201).json({
           success: true,
-          requiresAdminApproval: requestedAdmin,
-          message: requestedAdmin
-            ? 'User registered successfully. Your request for an Admin account has been submitted and is pending administrator approval.'
-            : 'User registered successfully',
+          message: 'User registered successfully',
           token,
           user: getSafeUser(user),
         });
@@ -465,13 +443,6 @@ export const createAuthController = (
 
         const requestedPortal = portal ? String(portal).toLowerCase().trim() : null;
         if (requestedPortal === 'admin') {
-          if (user.roleRequest?.status === 'pending') {
-            return res.status(403).json({
-              error: 'Forbidden',
-              code: 'ADMIN_PENDING_APPROVAL',
-              message: 'Your administrator account application is pending review by an authorized administrator.',
-            });
-          }
           if (user.role !== 'admin') {
             return res.status(403).json({
               error: 'Forbidden',
@@ -551,13 +522,6 @@ export const createAuthController = (
         const requestedPortal = portal ? String(portal).toLowerCase().trim() : null;
         if (requestedPortal === 'admin') {
           if (user.role !== 'admin') {
-            if (user.roleRequest?.status === 'pending') {
-              return res.status(403).json({
-                error: 'Forbidden',
-                code: 'ADMIN_PENDING_APPROVAL',
-                message: 'Your administrator account application is pending review by an authorized administrator.',
-              });
-            }
             return res.status(403).json({
               error: 'Forbidden',
               code: 'NOT_AN_ADMIN',

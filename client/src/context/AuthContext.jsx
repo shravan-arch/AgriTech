@@ -158,33 +158,7 @@ export const AuthProvider = ({ children }) => {
     return apiRequest(`/admin/users${query ? `?${query}` : ''}`, { token });
   }, [token]);
 
-  const listPendingRequests = useCallback(async () => {
-    return apiRequest('/admin/pending-requests', { token });
-  }, [token]);
 
-  const approveRoleRequest = useCallback(async (userId, reason) => {
-    return apiRequest(`/admin/requests/${userId}/approve`, {
-      method: 'POST',
-      token,
-      body: { reason },
-    });
-  }, [token]);
-
-  const rejectRoleRequest = useCallback(async (userId, reason) => {
-    return apiRequest(`/admin/requests/${userId}/reject`, {
-      method: 'POST',
-      token,
-      body: { reason },
-    });
-  }, [token]);
-
-  const changeUserRole = useCallback(async (userId, newRole, reason) => {
-    return apiRequest(`/admin/users/${userId}/role`, {
-      method: 'PUT',
-      token,
-      body: { role: newRole, reason },
-    });
-  }, [token]);
 
   const changeUserStatus = useCallback(async (userId, newStatus, reason) => {
     return apiRequest(`/admin/users/${userId}/status`, {
@@ -487,10 +461,6 @@ export const AuthProvider = ({ children }) => {
     logout,
     deleteAccount,
     listAdminUsers,
-    listPendingRequests,
-    approveRoleRequest,
-    rejectRoleRequest,
-    changeUserRole,
     changeUserStatus,
     listAuditLogs,
     listAdminFarms,
@@ -549,10 +519,6 @@ export const AuthProvider = ({ children }) => {
     logout,
     deleteAccount,
     listAdminUsers,
-    listPendingRequests,
-    approveRoleRequest,
-    rejectRoleRequest,
-    changeUserRole,
     changeUserStatus,
     listAuditLogs,
     listAdminFarms,

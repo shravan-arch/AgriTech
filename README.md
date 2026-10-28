@@ -100,7 +100,7 @@ AgriTech features two purpose-built environments sharing a unified authenticatio
 2. **Enterprise Governance Gateway (Admin Console)**:
    - Dedicated governance suite with isolated navigation and high-density administration panels.
    - 8 comprehensive administrative domains for platform operators, agronomists, and regulators.
-   - Enforces last-active-admin safeguards and role elevation verification.
+   - Enforces last-active-admin safeguards and administrator access controls.
 
 ---
 
@@ -139,7 +139,7 @@ AgriTech features two purpose-built environments sharing a unified authenticatio
 Platform administrators have access to an isolated governance console covering:
 
 1. **Platform Overview**: Real-time KPI summaries, active farmer counts, total hectares under management, and system-wide activity feeds.
-2. **User Management & Support**: User lifecycle administration, account status toggles (`active`, `suspended`), role adjustments, and farmer support inquiry ticketing.
+2. **User Management & Support**: User lifecycle administration, account status toggles (`active`, `suspended`), user support assistance (password resets and email verification), and farmer inquiry ticketing.
 3. **Content & Advisory Hub**: Creation and publication of regional crop guidelines, pest advisories, and best management practices.
 4. **Resource Management**: Global supplier directories, platform-wide input inventory coordination, and automated replenishment orders.
 5. **Service Management**: Agricultural service offerings (e.g., Drone Spraying, Soil Testing, Harvester Rental) and booking schedule dispatch.
@@ -158,9 +158,9 @@ Platform administrators have access to an isolated governance console covering:
   - Automated verification link delivery via `nodemailer`.
   - Rate-limited resend mechanisms with dynamic cooldown countdowns.
   - Cryptographically secure password reset tokens with time-to-live (TTL) expiration.
-- **Role Elevation Verification**:
-  - Farmer registrations assign the `farmer` role by default.
-  - Administrator access requests trigger an approval workflow and remain pending until authorized by existing platform administrators.
+- **Strict Account & Role Model**:
+  - Public registration creates `farmer` accounts exclusively.
+  - Server-side authorization strictly protects governance endpoints and rejects client-supplied role elevation.
 
 ### 4. Multilingual Localization Engine
 
@@ -451,7 +451,8 @@ All requests and responses use JSON formatting (`Content-Type: application/json`
 | :--- | :--- | :---: | :--- |
 | `GET` | `/api/admin/system-health` | Admin | Comprehensive system health & diagnostics. |
 | `GET` | `/api/admin/users` | Admin | List all platform users with filtering and pagination. |
-| `PUT` | `/api/admin/users/:id/role` | Admin | Update user role (protected by last-active-admin guard). |
+| `POST` | `/api/admin/users/:id/verify-email` | Admin | Manually verify a user's email address. |
+| `POST` | `/api/admin/users/:id/reset-password` | Admin | Generate a secure password reset link for user assistance. |
 | `PUT` | `/api/admin/users/:id/status` | Admin | Toggle user account status (`active`, `suspended`). |
 | `GET` | `/api/admin/support-tickets` | Admin | Retrieve farmer support queries and inquiries. |
 | `PUT` | `/api/admin/support-tickets/:id`| Admin | Reply to and resolve support inquiry. |
@@ -533,7 +534,7 @@ npm --prefix client run build
 ## Security & Isolation Guarantees
 
 - **Multi-Tenant Data Isolation**: Database queries and mutations strictly incorporate the authenticated user's ID (`owner: req.user._id`). Users cannot view, modify, or delete farms, fields, crop cycles, or operational logs belonging to other farmers.
-- **Last Active Administrator Protection**: The system prevents demoting or suspending the sole active administrator account, eliminating accidental lockout scenarios.
+- **Last Active Administrator Protection**: The system prevents suspending the sole active administrator account, eliminating accidental lockout scenarios.
 - **Credential Sanitization**: Startup logs and error diagnostics redact database credentials (`mongodb+srv://***:***@...`) to prevent credential leakage in application log streams.
 - **Production Safety Guards**: The IoT telemetry simulator and debug development storage modes are strictly disabled in production environments (`NODE_ENV === 'production'`).
 - **HTTP Security Headers**: Express automatically disables `X-Powered-By` and configures `nosniff`, `DENY` frame options, and strict cross-origin referrer policies.

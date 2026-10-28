@@ -36,15 +36,13 @@ const AuthPage = ({ mode }) => {
 
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [authPortal, setAuthPortal] = useState('user'); // 'user' or 'admin'
-  const [selectedRole, setSelectedRole] = useState('user'); // 'user' or 'admin'
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [activeSlide, setActiveSlide] = useState(0);
 
-  // Email verification and admin approval pending states
+  // Email verification pending states
   const [verificationPendingEmail, setVerificationPendingEmail] = useState('');
-  const [adminApprovalNotice, setAdminApprovalNotice] = useState(false);
   const [unverifiedLoginEmail, setUnverifiedLoginEmail] = useState('');
   const [resending, setResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState('');
@@ -72,7 +70,7 @@ const AuthPage = ({ mode }) => {
     return () => clearInterval(timer);
   }, [cooldown]);
 
-  if (isAuthenticated && !adminApprovalNotice) {
+  if (isAuthenticated) {
     return <Navigate to={user?.role === 'admin' ? '/admin' : '/dashboard'} replace />;
   }
 
@@ -109,24 +107,20 @@ const AuthPage = ({ mode }) => {
     setSubmitting(true);
     try {
       if (isRegister) {
-        const roleToRegister = selectedRole;
         const result = await register({
           name: form.name.trim(),
           email: form.email.trim(),
           password: form.password,
-          selectedRole: roleToRegister,
           language,
         });
 
         if (result?.requiresEmailVerification || !result?.token) {
           setVerificationPendingEmail(form.email.trim());
-          setAdminApprovalNotice(Boolean(result?.requiresAdminApproval));
           setCooldown(60);
           return;
         }
 
-        const registeredRole = result?.user?.role;
-        navigate(registeredRole === 'admin' ? '/admin' : '/dashboard', { replace: true });
+        navigate('/dashboard', { replace: true });
       } else {
         const result = await login(form.email.trim(), form.password, authPortal);
         const loggedUser = result?.user;
@@ -156,8 +150,6 @@ const AuthPage = ({ mode }) => {
       }
       if (requestError.data?.code === 'ACCOUNT_SUSPENDED') {
         setError(t('auth.accountSuspended'));
-      } else if (requestError.data?.code === 'ADMIN_PENDING_APPROVAL') {
-        setError('Your administrator account application is pending review by an authorized administrator.');
       } else if (requestError.data?.code === 'ADMIN_PORTAL_REQUIRED') {
         setError('Administrator accounts must log in using the Login as Admin option.');
       } else if (requestError.data?.code === 'NOT_AN_ADMIN') {
@@ -236,8 +228,6 @@ const AuthPage = ({ mode }) => {
     } catch (googleError) {
       if (googleError.data?.code === 'ACCOUNT_SUSPENDED') {
         setError(t('auth.accountSuspended'));
-      } else if (googleError.data?.code === 'ADMIN_PENDING_APPROVAL') {
-        setError('Your administrator account application is pending review by an authorized administrator.');
       } else if (googleError.data?.code === 'ADMIN_PORTAL_REQUIRED') {
         setError('Administrator accounts must sign in using the Login as Admin option.');
       } else if (googleError.data?.code === 'NOT_AN_ADMIN') {
@@ -285,17 +275,7 @@ const AuthPage = ({ mode }) => {
             Please verify your email before logging in.
           </p>
 
-          {adminApprovalNotice && (
-            <div className="alert alert-warning border-warning border-opacity-25 small mb-3 text-start" role="alert">
-              <div className="d-flex align-items-center gap-2 mb-1">
-                <i className="bi bi-shield-lock-fill text-warning flex-shrink-0" />
-                <strong className="text-dark">Admin Approval Required</strong>
-              </div>
-              <p className="mb-0 text-secondary" style={{ fontSize: '0.8rem' }}>
-                Your request for an Administrator account will be reviewed by an authorized administrator once your email address is verified.
-              </p>
-            </div>
-          )}
+
 
           {verifySuccess && (
             <div className="alert alert-success d-flex align-items-center gap-2 small mb-3" role="alert">
@@ -465,7 +445,6 @@ const AuthPage = ({ mode }) => {
                   className={`auth-portal-tab ${authPortal === 'user' ? 'active' : ''}`}
                   onClick={() => {
                     setAuthPortal('user');
-                    setSelectedRole('user');
                     setError('');
                     setUnverifiedLoginEmail('');
                     if (clearAuthError) clearAuthError();
@@ -479,7 +458,6 @@ const AuthPage = ({ mode }) => {
                   className={`auth-portal-tab admin-portal ${authPortal === 'admin' ? 'active' : ''}`}
                   onClick={() => {
                     setAuthPortal('admin');
-                    setSelectedRole('admin');
                     setError('');
                     setUnverifiedLoginEmail('');
                     if (clearAuthError) clearAuthError();
@@ -541,7 +519,7 @@ const AuthPage = ({ mode }) => {
               </h1>
               <p className="text-secondary small mb-0">
                 {isRegister
-                  ? 'Choose your account type and register for your AgriTech workspace.'
+                  ? 'Register your details to create your AgriTech farm workspace.'
                   : authPortal === 'admin'
                   ? 'Enter your authorized administrator credentials to access platform governance.'
                   : 'Enter your credentials to access your farm operations, crops, and telemetry.'}
@@ -619,9 +597,7 @@ const AuthPage = ({ mode }) => {
                 disabled={submitting}
                 text={
                   isRegister
-                    ? selectedRole === 'admin'
-                      ? 'Register with Google (Admin)'
-                      : 'Register with Google (Farmer/User)'
+                    ? 'Register with Google'
                     : authPortal === 'admin'
                     ? 'Login with Google (Admin)'
                     : 'Login with Google (Farmer/User)'
@@ -634,85 +610,6 @@ const AuthPage = ({ mode }) => {
             </div>
 
             <form onSubmit={submit}>
-              {/* Account Type Selection during Registration: exactly two choices */}
-              {isRegister && (
-                <div className="mb-3">
-                  <label className="form-label fw-semibold text-dark d-block mb-2">
-                    Account Type <span className="text-danger">*</span>
-                  </label>
-                  <div className="row g-2">
-                    <div className="col-12 col-sm-6">
-                      <div
-                        className={`card p-3 h-100 border text-start cursor-pointer role-select-card ${selectedRole === 'user' ? 'selected' : ''}`}
-                        onClick={() => {
-                          setSelectedRole('user');
-                          setAuthPortal('user');
-                        }}
-                      >
-                        <div className="d-flex align-items-center justify-content-between mb-1">
-                          <div className="d-flex align-items-center gap-2">
-                            <i className="bi bi-person-badge text-success fs-5" />
-                            <span className="fw-bold small text-dark">Farmer/User</span>
-                          </div>
-                          <input
-                            type="radio"
-                            name="selectedRole"
-                            value="user"
-                            checked={selectedRole === 'user'}
-                            onChange={() => {
-                              setSelectedRole('user');
-                              setAuthPortal('user');
-                            }}
-                            className="form-check-input mt-0"
-                          />
-                        </div>
-                        <p className="text-secondary small mb-0" style={{ fontSize: '0.78rem', lineHeight: '1.3' }}>
-                          Standard farm account. Access farm management, crop health, sensor telemetry, and weather.
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="col-12 col-sm-6">
-                      <div
-                        className={`card p-3 h-100 border text-start cursor-pointer role-select-card ${selectedRole === 'admin' ? 'selected' : ''}`}
-                        onClick={() => {
-                          setSelectedRole('admin');
-                          setAuthPortal('admin');
-                        }}
-                      >
-                        <div className="d-flex align-items-center justify-content-between mb-1">
-                          <div className="d-flex align-items-center gap-2">
-                            <i className="bi bi-shield-lock text-primary fs-5" />
-                            <span className="fw-bold small text-dark">Admin</span>
-                          </div>
-                          <input
-                            type="radio"
-                            name="selectedRole"
-                            value="admin"
-                            checked={selectedRole === 'admin'}
-                            onChange={() => {
-                              setSelectedRole('admin');
-                              setAuthPortal('admin');
-                            }}
-                            className="form-check-input mt-0"
-                          />
-                        </div>
-                        <p className="text-secondary small mb-0" style={{ fontSize: '0.78rem', lineHeight: '1.3' }}>
-                          Administrative access. Requires email verification and approval by an authorized administrator.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {selectedRole === 'admin' && (
-                    <div className="alert alert-warning py-2 px-3 small mt-2 mb-0 d-flex align-items-start gap-2 border-0 bg-warning bg-opacity-10 text-dark">
-                      <i className="bi bi-shield-exclamation text-warning flex-shrink-0 mt-1" />
-                      <span>Admin registrations require email verification and approval by an authorized admin. Until approved, you will have standard farmer/user access.</span>
-                    </div>
-                  )}
-                </div>
-              )}
-
               {isRegister && (
                 <div className="mb-3">
                   <label className="form-label" htmlFor="name">{t('auth.nameLabel')}</label>
@@ -746,7 +643,7 @@ const AuthPage = ({ mode }) => {
                     name="email"
                     type="email"
                     className="form-control border-start-0 ps-1"
-                    placeholder={authPortal === 'admin' || (isRegister && selectedRole === 'admin') ? 'admin@agritech.com' : 'farmer@agritech.com'}
+                    placeholder={!isRegister && authPortal === 'admin' ? 'admin@agritech.com' : 'farmer@agritech.com'}
                     value={form.email}
                     onChange={update}
                     autoComplete="email"
@@ -816,17 +713,10 @@ const AuthPage = ({ mode }) => {
                 {submitting ? (
                   <><span className="spinner-border spinner-border-sm me-2" aria-hidden="true" />{t('auth.submitting')}</>
                 ) : isRegister ? (
-                  selectedRole === 'admin' ? (
-                    <>
-                      <span>Register as Admin</span>
-                      <i className="bi bi-shield-check ms-2" />
-                    </>
-                  ) : (
-                    <>
-                      <span>Register as Farmer/User</span>
-                      <i className="bi bi-person-check ms-2" />
-                    </>
-                  )
+                  <>
+                    <span>{t('auth.createAccountBtn')}</span>
+                    <i className="bi bi-person-check ms-2" />
+                  </>
                 ) : authPortal === 'admin' ? (
                   <>
                     <span>Login as Admin</span>
