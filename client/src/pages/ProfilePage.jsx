@@ -243,32 +243,7 @@ const ProfilePage = () => {
                 )}
               </div>
 
-              {/* Role Request Status Notification */}
-              {user?.roleRequest?.status === 'pending' && (
-                <div className="alert alert-warning text-start py-2 px-3 small rounded-3 mb-3 border-0 bg-warning bg-opacity-10 text-dark">
-                  <div className="fw-bold d-flex align-items-center gap-1 mb-1">
-                    <i className="bi bi-clock-history text-warning" />
-                    <span>{t('profile.adminPendingTitle')}</span>
-                  </div>
-                  <p className="mb-0" style={{ fontSize: '0.78rem' }}>
-                    {t('profile.adminPendingDesc', {
-                      date: user.roleRequest.requestedAt ? new Date(user.roleRequest.requestedAt).toLocaleDateString() : 'Recently',
-                    })}
-                  </p>
-                </div>
-              )}
 
-              {user?.roleRequest?.status === 'rejected' && (
-                <div className="alert alert-secondary text-start py-2 px-3 small rounded-3 mb-3 border-0 bg-light text-muted">
-                  <div className="fw-bold d-flex align-items-center gap-1 mb-1">
-                    <i className="bi bi-info-circle text-secondary" />
-                    <span>{t('profile.adminRejectedTitle')}</span>
-                  </div>
-                  <p className="mb-0" style={{ fontSize: '0.78rem' }}>
-                    {t('profile.adminRejectedDesc')}
-                  </p>
-                </div>
-              )}
 
               <hr className="my-3 opacity-25" />
 

@@ -20,14 +20,8 @@ export const createAdminRouter = (controller = createAdminController()) => {
   router.get('/users', controller.listUsers);
   router.get('/users/:id', controller.getUserDetails);
   router.put('/users/:id/profile', controller.updateUserProfile);
-  router.get('/pending-requests', controller.listPendingRequests);
   router.post('/users/:id/verify-email', controller.verifyUserEmail);
   router.post('/users/:id/reset-password', controller.resetUserPassword);
-  router.post('/requests/:id/approve', controller.approveRoleRequest);
-  router.post('/requests/:id/reject', controller.rejectRoleRequest);
-  router.post('/users/:id/approve', controller.approveRoleRequest);
-  router.post('/users/:id/reject', controller.rejectRoleRequest);
-  router.put('/users/:id/role', controller.changeUserRole);
   router.put('/users/:id/status', controller.changeUserStatus);
   router.get('/support-tickets', controller.listSupportTickets);
   router.put('/support-tickets/:id', controller.replySupportTicket);

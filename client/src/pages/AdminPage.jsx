@@ -27,7 +27,6 @@ const AdminPage = () => {
     user: currentUser,
     deleteAccount,
     listAdminUsers,
-    changeUserRole,
     changeUserStatus,
     verifyUserEmailAdmin,
     resetUserPasswordAdmin,
@@ -432,7 +431,7 @@ const AdminPage = () => {
     }
   };
 
-  // User Actions: Promote, Demote, Suspend, Activate, Email Verify, Password Reset
+  // User Actions: Suspend, Activate, Email Verify, Password Reset
   const handleOpenUserAction = (type, targetUser) => {
     setUserActionModal({ type, targetUser });
     setUserActionReason('');
@@ -455,15 +454,7 @@ const AdminPage = () => {
     setActionSuccess('');
 
     try {
-      if (type === 'promote') {
-        const res = await changeUserRole(targetId, 'admin', userActionReason.trim());
-        setActionSuccess(res.message || 'User promoted to Administrator. User workspace features have been terminated.');
-        setUserActionModal(null);
-      } else if (type === 'demote') {
-        const res = await changeUserRole(targetId, 'farmer', userActionReason.trim());
-        setActionSuccess(res.message || 'Administrator demoted to regular user.');
-        setUserActionModal(null);
-      } else if (type === 'suspend') {
+      if (type === 'suspend') {
         const res = await changeUserStatus(targetId, 'suspended', userActionReason.trim());
         setActionSuccess(res.message || 'User account suspended.');
         setUserActionModal(null);
@@ -843,11 +834,6 @@ const AdminPage = () => {
                       <span className="badge bg-success-subtle text-success border border-success-subtle rounded-pill">
                         {users.filter((u) => u.status === 'active').length} Active
                       </span>
-                      {users.some((u) => u.roleRequest?.status === 'pending') && (
-                        <span className="badge bg-warning text-dark border border-warning-subtle rounded-pill">
-                          {users.filter((u) => u.roleRequest?.status === 'pending').length} Pending
-                        </span>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -1104,7 +1090,7 @@ const AdminPage = () => {
                     User Registrations, Profiles &amp; Support Requests
                   </h3>
                   <p className="text-secondary small mb-0">
-                    Manage registered farmer profiles, review pending accounts, verify credentials, and resolve user support inquiries.
+                    Manage registered farmer profiles, verify credentials, and resolve user support inquiries.
                   </p>
                 </div>
                 <button
@@ -1360,26 +1346,7 @@ const AdminPage = () => {
                                     <i className="bi bi-key" />
                                   </button>
 
-                                  {/* Role Promotion / Demotion */}
-                                  {isAdmin ? (
-                                    <button
-                                      type="button"
-                                      className="btn btn-outline-warning"
-                                      onClick={() => handleOpenUserAction('demote', itemUser)}
-                                      title="Demote Admin to User"
-                                    >
-                                      <i className="bi bi-arrow-down-circle" />
-                                    </button>
-                                  ) : (
-                                    <button
-                                      type="button"
-                                      className="btn btn-outline-success"
-                                      onClick={() => handleOpenUserAction('promote', itemUser)}
-                                      title="Promote User to Admin (terminates user features)"
-                                    >
-                                      <i className="bi bi-arrow-up-circle" />
-                                    </button>
-                                  )}
+
 
                                   {/* Suspend / Activate */}
                                   {isSuspended ? (
@@ -2871,8 +2838,6 @@ const AdminPage = () => {
             <div className="modal-content border-0 shadow-lg rounded-4">
               <div className="modal-header border-bottom py-3 px-4">
                 <h5 className="modal-title fw-bold text-dark">
-                  {userActionModal.type === 'promote' && 'Promote User to Administrator'}
-                  {userActionModal.type === 'demote' && 'Demote Administrator to User'}
                   {userActionModal.type === 'suspend' && 'Suspend User Account'}
                   {userActionModal.type === 'activate' && 'Reactivate User Account'}
                   {userActionModal.type === 'verify-email' && 'Verify Email for User'}
@@ -2886,12 +2851,6 @@ const AdminPage = () => {
                     <p className="text-secondary small mb-3">
                       Target Account: <strong>{userActionModal.targetUser.name}</strong> ({userActionModal.targetUser.email})
                     </p>
-                    {userActionModal.type === 'promote' && (
-                      <div className="alert alert-warning small mb-3">
-                        <i className="bi bi-exclamation-triangle-fill me-1" />
-                        <strong>Notice:</strong> Only an existing administrator can make a user an admin. Once promoted, their standard user workspace features will get terminated, and they will gain administrative platform governance powers.
-                      </div>
-                    )}
                     <div className="mb-2">
                       <label className="form-label small fw-semibold text-dark">
                         Administrative Audit Reason <span className="text-danger">*</span>

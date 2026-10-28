@@ -27,11 +27,10 @@ export const createAdminController = (
     // 1. USER MANAGEMENT
     listUsers: async (req, res, next) => {
       try {
-        const { role, status, pendingOnly, search, limit, page } = req.query;
+        const { role, status, search, limit, page } = req.query;
         const result = await userStore.listUsers({
           role: role?.trim(),
           status: status?.trim(),
-          pendingOnly: pendingOnly === 'true' || pendingOnly === true,
           search: search?.trim(),
           limit: limit ? parseInt(limit, 10) : 50,
           page: page ? parseInt(page, 10) : 1,
@@ -40,24 +39,6 @@ export const createAdminController = (
         return res.status(200).json({
           success: true,
           ...result,
-        });
-      } catch (error) {
-        return next(error);
-      }
-    },
-
-    listPendingRequests: async (req, res, next) => {
-      try {
-        const result = await userStore.listUsers({
-          pendingOnly: true,
-          limit: 100,
-          page: 1,
-        });
-
-        return res.status(200).json({
-          success: true,
-          requests: result.users,
-          total: result.total,
         });
       } catch (error) {
         return next(error);
@@ -194,124 +175,7 @@ export const createAdminController = (
       }
     },
 
-    approveRoleRequest: async (req, res, next) => {
-      try {
-        const { id } = req.params;
-        const { reason } = req.body;
-        const actor = req.user;
-        const ipAddress = getClientIp(req);
 
-        const isSelf = (actor._id || actor.id)?.toString() === id.toString();
-        if (isSelf) {
-          return res.status(403).json({
-            error: 'Administrators cannot approve their own role requests.',
-            code: 'SELF_APPROVAL_FORBIDDEN',
-          });
-        }
-
-        const updatedUser = await userStore.approveRoleRequest({
-          targetUserId: id,
-          actor,
-          reason,
-          ipAddress,
-        });
-
-        if (!updatedUser) {
-          return res.status(404).json({ error: 'Role request not found or user does not exist.' });
-        }
-
-        return res.status(200).json({
-          success: true,
-          message: 'Admin role request approved successfully. User converted to Administrator.',
-          user: updatedUser,
-        });
-      } catch (error) {
-        return next(error);
-      }
-    },
-
-    rejectRoleRequest: async (req, res, next) => {
-      try {
-        const { id } = req.params;
-        const { reason } = req.body;
-        const actor = req.user;
-        const ipAddress = getClientIp(req);
-
-        const isSelf = (actor._id || actor.id)?.toString() === id.toString();
-        if (isSelf) {
-          return res.status(403).json({
-            error: 'Administrators cannot reject their own role requests.',
-            code: 'SELF_REJECTION_FORBIDDEN',
-          });
-        }
-
-        const updatedUser = await userStore.rejectRoleRequest({
-          targetUserId: id,
-          actor,
-          reason,
-          ipAddress,
-        });
-
-        if (!updatedUser) {
-          return res.status(404).json({ error: 'Role request not found or user does not exist.' });
-        }
-
-        return res.status(200).json({
-          success: true,
-          message: 'Role request rejected successfully.',
-          user: updatedUser,
-        });
-      } catch (error) {
-        return next(error);
-      }
-    },
-
-    changeUserRole: async (req, res, next) => {
-      try {
-        const { id } = req.params;
-        const { role, reason } = req.body || {};
-        const actor = req.user;
-        const ipAddress = getClientIp(req);
-
-        const isSelf = (actor._id || actor.id)?.toString() === id.toString();
-        if (isSelf) {
-          return res.status(403).json({
-            error: 'Administrators cannot modify their own role.',
-            code: 'SELF_ROLE_CHANGE_FORBIDDEN',
-          });
-        }
-
-        if (!['farmer', 'admin'].includes(role)) {
-          return res.status(400).json({ error: "Invalid role specified. Must be 'farmer' or 'admin'." });
-        }
-
-        const updatedUser = await userStore.changeUserRole({
-          targetUserId: id,
-          newRole: role,
-          actor,
-          reason,
-          ipAddress,
-        });
-
-        if (!updatedUser) {
-          return res.status(404).json({ error: 'User not found.' });
-        }
-
-        return res.status(200).json({
-          success: true,
-          message: `User role successfully updated to ${role}.`,
-          user: updatedUser,
-        });
-      } catch (error) {
-        if (error.message?.includes('last active administrator')) {
-          return res.status(403).json({
-            error: 'Cannot demote the last active administrator on the platform.',
-            code: 'LAST_ADMIN_PROTECTION',
-          });
-        }
-        return next(error);
-      }
-    },
 
     changeUserStatus: async (req, res, next) => {
       try {
