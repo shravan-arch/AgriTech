@@ -3,7 +3,7 @@ import { useLanguage } from '../context/useLanguage.js';
 import { INDIAN_LANGUAGES } from '../lib/translations.js';
 
 const LanguageToggle = ({ className = '', id = 'global-language-selector' }) => {
-  const { language, setLanguage } = useLanguage();
+  const { language, setLanguage, t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -78,11 +78,11 @@ const LanguageToggle = ({ className = '', id = 'global-language-selector' }) => 
         >
           <div className="px-3 py-2 border-bottom mb-1">
             <div className="d-flex align-items-center justify-content-between">
-              <span className="fw-bold text-dark small">Regional Languages</span>
+              <span className="fw-bold text-dark small">{t('common.regionalLanguages') || 'Regional Languages'}</span>
               <span className="badge bg-light text-secondary border small">India Hub</span>
             </div>
             <p className="text-muted mb-0" style={{ fontSize: '0.75rem', lineHeight: '1.3' }}>
-              Select language of your agricultural region
+              {t('common.selectLanguage') || 'Select language of your agricultural region'}
             </p>
           </div>
 

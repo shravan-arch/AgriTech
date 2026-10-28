@@ -195,10 +195,10 @@ export default function FeaturesPage() {
           </Link>
 
           <nav className="landing-nav-links d-none d-md-flex align-items-center gap-4" aria-label="Features navigation">
-            <Link to="/" className="landing-nav-link">Home</Link>
-            <Link to="/features" className="landing-nav-link active fw-bold text-success">Features Guide</Link>
-            <a href="/#intelligence" className="landing-nav-link">Intelligence</a>
-            <a href="/#metrics" className="landing-nav-link">Impact</a>
+            <Link to="/" className="landing-nav-link">{t('nav.home') || 'Home'}</Link>
+            <Link to="/features" className="landing-nav-link active fw-bold text-success">{t('nav.featuresGuide') || 'Features Guide'}</Link>
+            <a href="/#intelligence" className="landing-nav-link">{t('landing.features') || 'Intelligence'}</a>
+            <a href="/#metrics" className="landing-nav-link">{t('landing.metrics') || 'Impact'}</a>
           </nav>
 
           <div className="landing-nav-actions d-flex align-items-center gap-2 gap-sm-3">
@@ -219,21 +219,21 @@ export default function FeaturesPage() {
         <div className="landing-container">
           <nav aria-label="Breadcrumbs" className="mb-3">
             <ol className="breadcrumb small mb-0">
-              <li className="breadcrumb-item"><Link to="/" className="text-decoration-none text-muted">Home</Link></li>
-              <li className="breadcrumb-item"><Link to="/features" className="text-decoration-none text-muted">Features</Link></li>
+              <li className="breadcrumb-item"><Link to="/" className="text-decoration-none text-muted">{t('nav.home') || 'Home'}</Link></li>
+              <li className="breadcrumb-item"><Link to="/features" className="text-decoration-none text-muted">{t('nav.featuresGuide') || 'Features'}</Link></li>
               {activeFeature && <li className="breadcrumb-item active text-success fw-semibold" aria-current="page">{activeFeature.title}</li>}
             </ol>
           </nav>
 
           <div className="text-center max-w-750 mx-auto py-3">
             <span className="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-1-5 rounded-pill small fw-semibold mb-3">
-              Agricultural Engineering Platform
+              {t('features.eyebrow')}
             </span>
             <h1 className="h2 fw-bold text-dark mb-3">
-              Precision Agricultural Capabilities &amp; Smart Farming Features
+              {t('features.title')}
             </h1>
             <p className="text-secondary lead fs-6">
-              AgriTech integrates spatial GIS field mapping, live meteorological telemetry, stage-based crop scheduling, and farm resource inventory into a single private operational workspace.
+              {t('features.description')}
             </p>
 
             {/* Feature Filter Pills */}
@@ -246,7 +246,7 @@ export default function FeaturesPage() {
                   navigate('/features');
                 }}
               >
-                All Capabilities
+                {t('common.all') || 'All Capabilities'}
               </button>
               {FEATURE_LIST.map((feat) => (
                 <button
@@ -315,11 +315,11 @@ export default function FeaturesPage() {
 
                     <div className="d-flex flex-wrap align-items-center gap-3 pt-2">
                       <Link to="/register" className="btn btn-success px-4 py-2 fw-semibold">
-                        Open Free Farm Account
+                        {t('features.ctaCreateAccount')}
                         <i className="bi bi-arrow-right ms-2" />
                       </Link>
                       <Link to="/login" className="btn btn-outline-secondary px-3 py-2 fw-semibold">
-                        Farmer Sign In
+                        {t('features.ctaSignIn')}
                       </Link>
                     </div>
                   </div>
@@ -337,10 +337,10 @@ export default function FeaturesPage() {
                       </div>
                       <div className="fw-bold text-dark fs-5 mb-1">{feature.metric}</div>
                       <p className="small text-muted mb-3 max-w-320">
-                        Configured and tested in AgriTech production workspace with multi-lingual support.
+                        {t('features.langReady')}
                       </p>
                       <span className="badge bg-white text-dark border px-3 py-1-5 rounded-pill small fw-semibold shadow-2xs">
-                        Production Ready
+                        {t('features.productionActive')}
                       </span>
                     </div>
                   </div>
@@ -355,17 +355,17 @@ export default function FeaturesPage() {
       <section className="landing-cta-section">
         <div className="landing-container">
           <div className="landing-cta-banner text-center">
-            <h2 className="cta-banner-title mb-3">Begin Managing Your Agricultural Operations</h2>
+            <h2 className="cta-banner-title mb-3">{t('features.ctaTitle')}</h2>
             <p className="cta-banner-subtitle mx-auto mb-4">
-              Join growers and farm managers using AgriTech for spatial field mapping, IoT soil telemetry, and precision growth cycles.
+              {t('features.ctaSubtitle')}
             </p>
             <div className="d-flex flex-wrap justify-content-center gap-3">
               <Link to="/register" className="btn btn-light btn-lg cta-banner-btn shadow">
-                <span>Create Your Farm Account</span>
+                <span>{t('features.ctaCreateAccount')}</span>
                 <i className="bi bi-arrow-right ms-2" />
               </Link>
               <Link to="/login" className="btn btn-outline-light btn-lg">
-                <span>Sign In to Existing Farm</span>
+                <span>{t('features.ctaSignIn')}</span>
               </Link>
             </div>
           </div>
@@ -381,16 +381,16 @@ export default function FeaturesPage() {
                 <span className="fw-bold text-dark fs-5">AgriTech</span>
               </div>
               <p className="text-secondary small mb-3">
-                Smart agriculture and farm management platform. Helping growers optimize field boundaries, monitor soil moisture telemetry, and coordinate seasonal crop cycles.
+                {t('features.footerSummary')}
               </p>
               <div className="d-flex align-items-center gap-1 text-secondary small">
                 <span className="live-pulse-dot" style={{ width: '8px', height: '8px' }} />
-                <span>Production v2.5 Active</span>
+                <span>{t('features.productionActive')}</span>
               </div>
             </div>
 
             <div className="col-6 col-md-4">
-              <div className="fw-bold text-dark mb-3 small text-uppercase">Platform Capabilities</div>
+              <div className="fw-bold text-dark mb-3 small text-uppercase">{t('features.platformCapabilities')}</div>
               <ul className="list-unstyled d-flex flex-column gap-2 small">
                 <li><Link to="/features/farm-management" className="text-decoration-none text-muted">Farm &amp; Parcel Management</Link></li>
                 <li><Link to="/features/field-mapping" className="text-decoration-none text-muted">GPS Field Mapping</Link></li>
@@ -401,22 +401,22 @@ export default function FeaturesPage() {
             </div>
 
             <div className="col-6 col-md-4">
-              <div className="fw-bold text-dark mb-3 small text-uppercase">Farm Access</div>
+              <div className="fw-bold text-dark mb-3 small text-uppercase">{t('features.farmAccess')}</div>
               <ul className="list-unstyled d-flex flex-column gap-2 small">
-                <li><Link to="/login" className="text-decoration-none text-muted">Farmer Sign In</Link></li>
-                <li><Link to="/register" className="text-decoration-none text-muted">Register New Farm</Link></li>
-                <li><Link to="/features" className="text-decoration-none text-muted">Features Guide</Link></li>
-                <li><Link to="/" className="text-decoration-none text-muted">AgriTech Home</Link></li>
+                <li><Link to="/login" className="text-decoration-none text-muted">{t('landing.signIn')}</Link></li>
+                <li><Link to="/register" className="text-decoration-none text-muted">{t('landing.getStarted')}</Link></li>
+                <li><Link to="/features" className="text-decoration-none text-muted">{t('nav.featuresGuide') || 'Features Guide'}</Link></li>
+                <li><Link to="/" className="text-decoration-none text-muted">{t('nav.home') || 'AgriTech Home'}</Link></li>
               </ul>
             </div>
           </div>
 
           <div className="d-flex flex-column flex-md-row align-items-center justify-content-between gap-3 pt-4 mt-4 border-top text-secondary small">
-            <div>&copy; {new Date().getFullYear()} AgriTech. Precision Agriculture &amp; Farm Operations.</div>
+            <div>&copy; {new Date().getFullYear()} {t('features.copyright')}</div>
             <div className="d-flex align-items-center gap-3">
-              <span>Owner-Isolated Farm Vault</span>
+              <span>{t('features.vaultNote')}</span>
               <span>•</span>
-              <span>Multi-Regional Language Ready</span>
+              <span>{t('features.langReady')}</span>
             </div>
           </div>
         </div>

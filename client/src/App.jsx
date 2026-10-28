@@ -128,16 +128,18 @@ function App() {
           <div className="farmbrite-farm-pill mb-3">
             <span className="farm-pill-dot" style={{ backgroundColor: '#22c55e' }} />
             <div className="farm-pill-text">
-              <strong>AgriTech Admin Console Platform</strong>
-              <small>Governance Active</small>
+              <strong>{t('admin.consoleTitle') || 'AgriTech Admin Console'}</strong>
+              <small>{t('admin.governanceActive') || 'Governance Active'}</small>
             </div>
           </div>
 
-          <div className="admin-sidebar-section-label">ADMINISTRATION</div>
+          <div className="admin-sidebar-section-label">{t('admin.navSection') || 'ADMINISTRATION'}</div>
 
           <nav className="admin-sidebar-nav" aria-label="Admin domain navigation">
             {ADMIN_PAGES.map((page) => {
               const isActive = location.pathname === '/admin' && currentAdminTab === page.id;
+              const translatedLabel = t(`admin.nav.${page.id}`) !== `admin.nav.${page.id}` ? t(`admin.nav.${page.id}`) : page.label;
+              const translatedDesc = t(`admin.navDesc.${page.id}`) !== `admin.navDesc.${page.id}` ? t(`admin.navDesc.${page.id}`) : page.shortDesc;
               return (
                 <button
                   key={page.id}
@@ -152,8 +154,8 @@ function App() {
                     <i className={`bi ${page.icon}`} aria-hidden="true" />
                   </div>
                   <div className="admin-link-content">
-                    <span className="admin-link-title">{page.label}</span>
-                    <span className="admin-link-subtext">{page.shortDesc}</span>
+                    <span className="admin-link-title">{translatedLabel}</span>
+                    <span className="admin-link-subtext">{translatedDesc}</span>
                   </div>
                   {isActive && <i className="bi bi-chevron-right ms-auto admin-active-chevron" />}
                 </button>
@@ -165,8 +167,8 @@ function App() {
             <div className="admin-guard-note">
               <i className="bi bi-shield-check text-success flex-shrink-0" />
               <div>
-                <strong className="d-block text-white">Platform Administrator</strong>
-                <span style={{ fontSize: '0.68rem', color: '#a3c2a6' }}>User workspace isolated</span>
+                <strong className="d-block text-white">{t('admin.roleBadge') || 'Platform Administrator'}</strong>
+                <span style={{ fontSize: '0.68rem', color: '#a3c2a6' }}>{t('admin.securityGuardNotice') || 'User workspace isolated'}</span>
               </div>
             </div>
 
@@ -178,7 +180,7 @@ function App() {
                   navigate('/admin?tab=profile');
                   closeMenu();
                 }}
-                title="View Admin Profile"
+                title={t('admin.viewProfile') || 'View Admin Profile'}
               >
                 <div className="admin-avatar">
                   {initials || 'AD'}
@@ -191,8 +193,8 @@ function App() {
               <button
                 className="admin-logout-btn"
                 type="button"
-                aria-label="Sign out"
-                title="Sign out of Admin Environment"
+                aria-label={t('common.signOut') || 'Sign out'}
+                title={t('common.signOut') || 'Sign out'}
                 onClick={logout}
               >
                 <i className="bi bi-box-arrow-right" aria-hidden="true" />
@@ -222,10 +224,10 @@ function App() {
               <div className="d-none d-md-flex align-items-center gap-2">
                 <span className="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-3 py-1-5 small fw-semibold d-inline-flex align-items-center gap-2">
                   <span className="spinner-grow spinner-grow-sm text-success" style={{ width: '0.5rem', height: '0.5rem' }} role="status" aria-hidden="true" />
-                  AgriTech Intelligence Hub &bull; Administrator
+                  {t('admin.intelligenceHubAdmin') || 'AgriTech Intelligence Hub • Administrator'}
                 </span>
                 <span className="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-2 py-1 small d-none d-lg-inline-flex align-items-center gap-1">
-                  <i className="bi bi-check-circle-fill" /> All 8 Systems Active
+                  <i className="bi bi-check-circle-fill" /> {t('admin.allSystemsActive') || 'All 8 Systems Active'}
                 </span>
               </div>
             </div>
@@ -234,15 +236,15 @@ function App() {
               <LanguageToggle />
               <div className="d-none d-sm-flex align-items-center gap-2 text-muted small">
                 <i className="bi bi-shield-lock-fill text-success" />
-                <span>Authorized Admin</span>
+                <span>{t('admin.authorizedAdmin') || 'Authorized Admin'}</span>
               </div>
               <button
                 className="btn btn-outline-danger btn-sm d-flex align-items-center gap-2"
                 onClick={logout}
-                title="Sign out of Admin Console"
+                title={t('common.signOut') || 'Sign out of Admin Console'}
               >
                 <i className="bi bi-box-arrow-right" />
-                <span className="d-none d-md-inline">Sign Out</span>
+                <span className="d-none d-md-inline">{t('common.signOut') || 'Sign Out'}</span>
               </button>
             </div>
           </header>
@@ -371,14 +373,14 @@ function App() {
               <div className="d-none d-md-flex align-items-center gap-2">
                 <span className="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-3 py-1-5 small fw-semibold d-inline-flex align-items-center gap-2">
                   <span className="spinner-grow spinner-grow-sm text-success" style={{ width: '0.5rem', height: '0.5rem' }} role="status" aria-hidden="true" />
-                  AgriTech Intelligence Hub
+                  {t('nav.intelligenceHub') || 'AgriTech Intelligence Hub'}
                 </span>
               </div>
             </div>
 
             <div className="d-flex align-items-center gap-3">
               <LanguageToggle />
-              <Link to="/profile" className="avatar avatar-small text-decoration-none" title="User Profile">
+              <Link to="/profile" className="avatar avatar-small text-decoration-none" title={t('nav.profile') || 'User Profile'}>
                 {initials || 'F'}
               </Link>
             </div>
@@ -390,11 +392,11 @@ function App() {
                 <div className="d-flex align-items-center gap-2 small">
                   <i className="bi bi-exclamation-triangle-fill text-warning flex-shrink-0" style={{ fontSize: '1.1rem' }} />
                   <span>
-                    Your email address (<strong>{user.email}</strong>) is not verified. Complete verification to secure your farm account.
+                    {t('nav.unverifiedEmailNotice', { email: user.email }) || `Your email address (${user.email}) is not verified. Complete verification to secure your farm account.`}
                   </span>
                 </div>
                 <Link to="/profile" className="btn btn-warning btn-sm fw-semibold text-dark text-nowrap ms-2">
-                  Verify in Profile
+                  {t('nav.verifyInProfile') || 'Verify in Profile'}
                 </Link>
               </div>
             )}

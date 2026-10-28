@@ -698,7 +698,7 @@ const FarmDetailPage = () => {
   if (loading) {
     return (
       <section className="page-shell">
-        <LoadingState>Loading farm and fields…</LoadingState>
+        <LoadingState>{t('farms.loadingFarmAndFields')}</LoadingState>
       </section>
     );
   }
@@ -708,7 +708,7 @@ const FarmDetailPage = () => {
       <section className="page-shell">
         <Link to="/farms" className="back-link">
           <i className="bi bi-arrow-left me-2" aria-hidden="true" />
-          All farms
+          {t('farms.allFarms')}
         </Link>
         <div className="mt-3">
           <ErrorState
@@ -799,7 +799,7 @@ const FarmDetailPage = () => {
                         >
                           <div className="field-edit-grid">
                             <div>
-                              <label className="form-label" htmlFor={`field-name-${field._id}`}>Field name</label>
+                              <label className="form-label" htmlFor={`field-name-${field._id}`}>{t('farms.fieldNameLabel')}</label>
                               <input
                                 id={`field-name-${field._id}`}
                                 className="form-control"
@@ -810,7 +810,7 @@ const FarmDetailPage = () => {
                               />
                             </div>
                             <div>
-                              <label className="form-label" htmlFor={`field-area-${field._id}`}>Area (ha)</label>
+                              <label className="form-label" htmlFor={`field-area-${field._id}`}>{t('farms.fieldAreaLabel')}</label>
                               <input
                                 id={`field-area-${field._id}`}
                                 className="form-control"
@@ -824,7 +824,7 @@ const FarmDetailPage = () => {
                               />
                             </div>
                             <div>
-                              <label className="form-label" htmlFor={`field-soil-${field._id}`}>Soil type</label>
+                              <label className="form-label" htmlFor={`field-soil-${field._id}`}>{t('farms.soilTypeLabel')}</label>
                               <input
                                 id={`field-soil-${field._id}`}
                                 className="form-control"
@@ -834,7 +834,7 @@ const FarmDetailPage = () => {
                               />
                             </div>
                             <div>
-                              <label className="form-label" htmlFor={`field-water-${field._id}`}>Water source</label>
+                              <label className="form-label" htmlFor={`field-water-${field._id}`}>{t('farms.waterSourceLabel')}</label>
                               <input
                                 id={`field-water-${field._id}`}
                                 className="form-control"
@@ -900,8 +900,8 @@ const FarmDetailPage = () => {
 
                           {(field.soilType || field.waterSource) && (
                             <dl className="field-details">
-                              {field.soilType && <><dt>Soil</dt><dd>{field.soilType}</dd></>}
-                              {field.waterSource && <><dt>Water</dt><dd>{field.waterSource}</dd></>}
+                              {field.soilType && <><dt>{t('farms.soilTypeLabel')}</dt><dd>{field.soilType}</dd></>}
+                              {field.waterSource && <><dt>{t('farms.waterSourceLabel')}</dt><dd>{field.waterSource}</dd></>}
                             </dl>
                           )}
 
@@ -989,7 +989,7 @@ const FarmDetailPage = () => {
 
                                   {/* Lifecycle Stage Progression */}
                                   <div className="mt-2">
-                                    <span className="text-secondary small fw-semibold d-block mb-1">Advance lifecycle stage:</span>
+                                    <span className="text-secondary small fw-semibold d-block mb-1">{t('farms.advanceLifecycleStage')}</span>
                                     <div className="crop-stage-bar">
                                       {STAGES.map((s) => (
                                         <button
@@ -1009,9 +1009,9 @@ const FarmDetailPage = () => {
                                   {/* Harvesting form or Actions */}
                                   {isCompleting ? (
                                     <form className="mt-3 p-3 bg-white border rounded" onSubmit={(e) => handleCompleteCycle(activeCycle, e)}>
-                                      <h6>Record Harvest & Complete Cycle</h6>
+                                      <h6>{t('farms.recordHarvestTitle')}</h6>
                                       <div className="mb-2">
-                                        <label className="form-label small" htmlFor={`harvest-date-${activeCycle._id}`}>Harvest date</label>
+                                        <label className="form-label small" htmlFor={`harvest-date-${activeCycle._id}`}>{t('farms.harvestDateLabel')}</label>
                                         <input
                                           id={`harvest-date-${activeCycle._id}`}
                                           type="date"
@@ -1023,7 +1023,7 @@ const FarmDetailPage = () => {
                                       </div>
                                       <div className="row g-2 mb-3">
                                         <div className="col-8">
-                                          <label className="form-label small" htmlFor={`harvest-yield-${activeCycle._id}`}>Harvest Yield Quantity (Optional)</label>
+                                          <label className="form-label small" htmlFor={`harvest-yield-${activeCycle._id}`}>{t('farms.harvestYieldLabel')}</label>
                                           <input
                                             id={`harvest-yield-${activeCycle._id}`}
                                             type="number"
@@ -1036,7 +1036,7 @@ const FarmDetailPage = () => {
                                           />
                                         </div>
                                         <div className="col-4">
-                                          <label className="form-label small" htmlFor={`harvest-unit-${activeCycle._id}`}>Unit</label>
+                                          <label className="form-label small" htmlFor={`harvest-unit-${activeCycle._id}`}>{t('farms.unitLabel')}</label>
                                           <select
                                             id={`harvest-unit-${activeCycle._id}`}
                                             className="form-select form-select-sm"
@@ -1044,18 +1044,18 @@ const FarmDetailPage = () => {
                                             onChange={(e) => setHarvestYieldUnit(e.target.value)}
                                           >
                                             <option value="kg">kg</option>
-                                            <option value="tonnes">tonnes</option>
-                                            <option value="quintals">quintals</option>
-                                            <option value="bags">bags</option>
+                                            <option value="tonnes">{t('farms.unitTonnes')}</option>
+                                            <option value="quintals">{t('farms.unitQuintals')}</option>
+                                            <option value="bags">{t('farms.unitBags')}</option>
                                           </select>
                                         </div>
                                       </div>
                                       <div className="d-flex gap-2">
                                         <button className="btn btn-success btn-sm" type="submit" disabled={cycleSaving}>
-                                          {cycleSaving ? 'Saving…' : 'Confirm harvest'}
+                                          {cycleSaving ? t('common.saving') : t('farms.confirmHarvest')}
                                         </button>
                                         <button className="btn btn-outline-secondary btn-sm" type="button" onClick={() => setCompletingCycleId(null)} disabled={cycleSaving}>
-                                          Cancel
+                                          {t('common.cancel')}
                                         </button>
                                       </div>
                                     </form>
@@ -1086,7 +1086,7 @@ const FarmDetailPage = () => {
                                   <h5>Plant a new crop on {field.name}</h5>
                                   <div className="row g-2 mb-2">
                                     <div className="col-12 col-md-6">
-                                      <label className="form-label small" htmlFor={`crop-name-${field._id}`}>Crop name *</label>
+                                      <label className="form-label small" htmlFor={`crop-name-${field._id}`}>{t('farms.cropNameLabel')} *</label>
                                       <input
                                         id={`crop-name-${field._id}`}
                                         className="form-control form-control-sm"
@@ -1098,7 +1098,7 @@ const FarmDetailPage = () => {
                                       />
                                     </div>
                                     <div className="col-12 col-md-6">
-                                      <label className="form-label small" htmlFor={`crop-variety-${field._id}`}>Variety</label>
+                                      <label className="form-label small" htmlFor={`crop-variety-${field._id}`}>{t('farms.cropVarietyLabel')}</label>
                                       <input
                                         id={`crop-variety-${field._id}`}
                                         className="form-control form-control-sm"
@@ -1111,7 +1111,7 @@ const FarmDetailPage = () => {
                                   </div>
                                   <div className="row g-2 mb-2">
                                     <div className="col-12 col-md-4">
-                                      <label className="form-label small" htmlFor={`crop-season-${field._id}`}>Season</label>
+                                      <label className="form-label small" htmlFor={`crop-season-${field._id}`}>{t('farms.cropSeasonLabel')}</label>
                                       <input
                                         id={`crop-season-${field._id}`}
                                         className="form-control form-control-sm"
@@ -1122,7 +1122,7 @@ const FarmDetailPage = () => {
                                       />
                                     </div>
                                     <div className="col-12 col-md-4">
-                                      <label className="form-label small" htmlFor={`crop-plant-date-${field._id}`}>Planting date *</label>
+                                      <label className="form-label small" htmlFor={`crop-plant-date-${field._id}`}>{t('farms.plantingDateLabel')} *</label>
                                       <input
                                         id={`crop-plant-date-${field._id}`}
                                         type="date"
@@ -1133,7 +1133,7 @@ const FarmDetailPage = () => {
                                       />
                                     </div>
                                     <div className="col-12 col-md-4">
-                                      <label className="form-label small" htmlFor={`crop-exp-date-${field._id}`}>Expected harvest</label>
+                                      <label className="form-label small" htmlFor={`crop-exp-date-${field._id}`}>{t('farms.expectedHarvestLabel')}</label>
                                       <input
                                         id={`crop-exp-date-${field._id}`}
                                         type="date"
@@ -1145,7 +1145,7 @@ const FarmDetailPage = () => {
                                     </div>
                                   </div>
                                   <div className="mb-2">
-                                    <label className="form-label small" htmlFor={`crop-notes-${field._id}`}>Notes</label>
+                                    <label className="form-label small" htmlFor={`crop-notes-${field._id}`}>{t('common.notes')}</label>
                                     <input
                                       id={`crop-notes-${field._id}`}
                                       className="form-control form-control-sm"
@@ -1157,7 +1157,7 @@ const FarmDetailPage = () => {
                                   </div>
                                   <div className="d-flex gap-2">
                                     <button className="btn btn-primary btn-sm" type="submit" disabled={cycleSaving}>
-                                      {cycleSaving ? 'Saving…' : 'Start crop cycle'}
+                                      {cycleSaving ? t('common.saving') : t('farms.quickAddField')}
                                     </button>
                                     <button
                                       className="btn btn-outline-secondary btn-sm"
@@ -1257,7 +1257,7 @@ const FarmDetailPage = () => {
                                   <h6>Log new field activity on {field.name}</h6>
                                   <div className="row g-2 mb-2">
                                     <div className="col-12 col-md-6">
-                                      <label className="form-label small" htmlFor={`act-type-${field._id}`}>Activity type *</label>
+                                      <label className="form-label small" htmlFor={`act-type-${field._id}`}>{t('operations.activityTypeLabel')} *</label>
                                       <select
                                         id={`act-type-${field._id}`}
                                         className="form-select form-select-sm"
@@ -1271,7 +1271,7 @@ const FarmDetailPage = () => {
                                       </select>
                                     </div>
                                     <div className="col-12 col-md-6">
-                                      <label className="form-label small" htmlFor={`act-date-${field._id}`}>Date occurred *</label>
+                                      <label className="form-label small" htmlFor={`act-date-${field._id}`}>{t('farms.dateOccurredLabel')} *</label>
                                       <input
                                         id={`act-date-${field._id}`}
                                         type="date"
@@ -1285,7 +1285,7 @@ const FarmDetailPage = () => {
 
                                   <div className="row g-2 mb-2">
                                     <div className="col-12 col-md-6">
-                                      <label className="form-label small" htmlFor={`act-performer-${field._id}`}>Performed by</label>
+                                      <label className="form-label small" htmlFor={`act-performer-${field._id}`}>{t('operations.performedByLabel')}</label>
                                       <input
                                         id={`act-performer-${field._id}`}
                                         className="form-control form-control-sm"
@@ -1296,7 +1296,7 @@ const FarmDetailPage = () => {
                                       />
                                     </div>
                                     <div className="col-12 col-md-6">
-                                      <label className="form-label small" htmlFor={`act-cost-${field._id}`}>Cost ($)</label>
+                                      <label className="form-label small" htmlFor={`act-cost-${field._id}`}>{t('farms.activityCostLabel')}</label>
                                       <input
                                         id={`act-cost-${field._id}`}
                                         type="number"
@@ -1313,7 +1313,7 @@ const FarmDetailPage = () => {
                                   {/* Inputs list */}
                                   <div className="mb-2">
                                     <div className="d-flex justify-content-between align-items-center mb-1">
-                                      <label className="form-label small mb-0">Materials / Inputs applied</label>
+                                      <label className="form-label small mb-0">{t('farms.materialsInputsApplied')}</label>
                                       <button
                                         type="button"
                                         className="btn btn-link btn-sm p-0 text-decoration-none"
@@ -1368,7 +1368,7 @@ const FarmDetailPage = () => {
                                   </div>
 
                                   <div className="mb-2">
-                                    <label className="form-label small" htmlFor={`act-notes-${field._id}`}>Notes / Observations</label>
+                                    <label className="form-label small" htmlFor={`act-notes-${field._id}`}>{t('farms.observationNotesLabel')}</label>
                                     <input
                                       id={`act-notes-${field._id}`}
                                       className="form-control form-control-sm"
@@ -1381,7 +1381,7 @@ const FarmDetailPage = () => {
 
                                   <div className="d-flex gap-2">
                                     <button className="btn btn-primary btn-sm" type="submit" disabled={activitySaving}>
-                                      {activitySaving ? 'Saving…' : 'Record activity'}
+                                      {activitySaving ? t('common.saving') : t('operations.logActivity')}
                                     </button>
                                     <button
                                       className="btn btn-outline-secondary btn-sm"
@@ -1389,7 +1389,7 @@ const FarmDetailPage = () => {
                                       onClick={() => setActivityFieldId(null)}
                                       disabled={activitySaving}
                                     >
-                                      Cancel
+                                      {t('common.cancel')}
                                     </button>
                                   </div>
                                 </form>
@@ -1503,7 +1503,7 @@ const FarmDetailPage = () => {
                                   <h6>Schedule operational task for {field.name}</h6>
                                   <div className="row g-2 mb-2">
                                     <div className="col-12 col-md-8">
-                                      <label className="form-label small" htmlFor={`task-title-${field._id}`}>Task title *</label>
+                                      <label className="form-label small" htmlFor={`task-title-${field._id}`}>{t('operations.taskTitleLabel')} *</label>
                                       <input
                                         id={`task-title-${field._id}`}
                                         className="form-control form-control-sm"
@@ -1515,7 +1515,7 @@ const FarmDetailPage = () => {
                                       />
                                     </div>
                                     <div className="col-12 col-md-4">
-                                      <label className="form-label small" htmlFor={`task-type-${field._id}`}>Type *</label>
+                                      <label className="form-label small" htmlFor={`task-type-${field._id}`}>{t('common.type')} *</label>
                                       <select
                                         id={`task-type-${field._id}`}
                                         className="form-select form-select-sm"
@@ -1532,7 +1532,7 @@ const FarmDetailPage = () => {
 
                                   <div className="row g-2 mb-2">
                                     <div className="col-12 col-md-4">
-                                      <label className="form-label small" htmlFor={`task-due-${field._id}`}>Due date *</label>
+                                      <label className="form-label small" htmlFor={`task-due-${field._id}`}>{t('operations.dueDateLabel')} *</label>
                                       <input
                                         id={`task-due-${field._id}`}
                                         type="date"
@@ -1543,7 +1543,7 @@ const FarmDetailPage = () => {
                                       />
                                     </div>
                                     <div className="col-12 col-md-4">
-                                      <label className="form-label small" htmlFor={`task-priority-${field._id}`}>Priority</label>
+                                      <label className="form-label small" htmlFor={`task-priority-${field._id}`}>{t('operations.priorityLabel')}</label>
                                       <select
                                         id={`task-priority-${field._id}`}
                                         className="form-select form-select-sm"
@@ -1556,7 +1556,7 @@ const FarmDetailPage = () => {
                                       </select>
                                     </div>
                                     <div className="col-12 col-md-4">
-                                      <label className="form-label small" htmlFor={`task-assignee-${field._id}`}>Assignee</label>
+                                      <label className="form-label small" htmlFor={`task-assignee-${field._id}`}>{t('operations.assigneeLabel')}</label>
                                       <input
                                         id={`task-assignee-${field._id}`}
                                         className="form-control form-control-sm"
@@ -1569,7 +1569,7 @@ const FarmDetailPage = () => {
                                   </div>
 
                                   <div className="mb-2">
-                                    <label className="form-label small" htmlFor={`task-notes-${field._id}`}>Notes</label>
+                                    <label className="form-label small" htmlFor={`task-notes-${field._id}`}>{t('operations.notesLabel')}</label>
                                     <input
                                       id={`task-notes-${field._id}`}
                                       className="form-control form-control-sm"
@@ -1582,7 +1582,7 @@ const FarmDetailPage = () => {
 
                                   <div className="d-flex gap-2">
                                     <button className="btn btn-primary btn-sm" type="submit" disabled={taskSaving}>
-                                      {taskSaving ? 'Saving…' : 'Schedule task'}
+                                      {taskSaving ? t('common.saving') : t('operations.createTask')}
                                     </button>
                                     <button
                                       className="btn btn-outline-secondary btn-sm"
@@ -1590,7 +1590,7 @@ const FarmDetailPage = () => {
                                       onClick={() => setTaskFieldId(null)}
                                       disabled={taskSaving}
                                     >
-                                      Cancel
+                                      {t('common.cancel')}
                                     </button>
                                   </div>
                                 </form>
@@ -1598,10 +1598,10 @@ const FarmDetailPage = () => {
 
                               {editingTaskId && (
                                 <form className="p-3 mb-3 bg-white border rounded" onSubmit={(e) => handleSaveEditTask(editingTaskId, e)}>
-                                  <h6>Edit Task</h6>
+                                  <h6>{t('operations.editTaskModalTitle')}</h6>
                                   <div className="row g-2 mb-2">
                                     <div className="col-12 col-md-8">
-                                      <label className="form-label small" htmlFor="edit-task-title">Title *</label>
+                                      <label className="form-label small" htmlFor="edit-task-title">{t('operations.taskTitleLabel')} *</label>
                                       <input
                                         id="edit-task-title"
                                         className="form-control form-control-sm"
@@ -1612,7 +1612,7 @@ const FarmDetailPage = () => {
                                       />
                                     </div>
                                     <div className="col-12 col-md-4">
-                                      <label className="form-label small" htmlFor="edit-task-type">Type</label>
+                                      <label className="form-label small" htmlFor="edit-task-type">{t('common.type')}</label>
                                       <select
                                         id="edit-task-type"
                                         className="form-select form-select-sm"
@@ -1627,7 +1627,7 @@ const FarmDetailPage = () => {
                                   </div>
                                   <div className="row g-2 mb-2">
                                     <div className="col-12 col-md-4">
-                                      <label className="form-label small" htmlFor="edit-task-due">Due date *</label>
+                                      <label className="form-label small" htmlFor="edit-task-due">{t('operations.dueDateLabel')} *</label>
                                       <input
                                         id="edit-task-due"
                                         type="date"
@@ -1638,7 +1638,7 @@ const FarmDetailPage = () => {
                                       />
                                     </div>
                                     <div className="col-12 col-md-4">
-                                      <label className="form-label small" htmlFor="edit-task-priority">Priority</label>
+                                      <label className="form-label small" htmlFor="edit-task-priority">{t('operations.priorityLabel')}</label>
                                       <select
                                         id="edit-task-priority"
                                         className="form-select form-select-sm"
@@ -1651,7 +1651,7 @@ const FarmDetailPage = () => {
                                       </select>
                                     </div>
                                     <div className="col-12 col-md-4">
-                                      <label className="form-label small" htmlFor="edit-task-assignee">Assignee</label>
+                                      <label className="form-label small" htmlFor="edit-task-assignee">{t('operations.assigneeLabel')}</label>
                                       <input
                                         id="edit-task-assignee"
                                         className="form-control form-control-sm"
@@ -1663,14 +1663,15 @@ const FarmDetailPage = () => {
                                   </div>
                                   <div className="d-flex gap-2">
                                     <button className="btn btn-primary btn-sm" type="submit" disabled={taskSaving}>
-                                      Save changes
+                                      {taskSaving ? t('common.saving') : t('common.save')}
                                     </button>
                                     <button
                                       className="btn btn-outline-secondary btn-sm"
                                       type="button"
                                       onClick={() => setEditingTaskId(null)}
+                                      disabled={taskSaving}
                                     >
-                                      Cancel
+                                      {t('common.cancel')}
                                     </button>
                                   </div>
                                 </form>
@@ -1858,7 +1859,7 @@ const FarmDetailPage = () => {
 
                                     <div className="col-12 col-md-6">
                                       <label className="form-label small fw-semibold" htmlFor={`photo-cycle-${field._id}`}>
-                                        Associated Crop Cycle <span className="text-muted fw-normal">(optional)</span>
+                                        {t('farms.associatedCycleLabel')} <span className="text-muted fw-normal">({t('common.optional')})</span>
                                       </label>
                                       <select
                                         id={`photo-cycle-${field._id}`}
@@ -1866,7 +1867,7 @@ const FarmDetailPage = () => {
                                         value={photoForm.cropCycleId}
                                         onChange={(e) => setPhotoForm((p) => ({ ...p, cropCycleId: e.target.value }))}
                                       >
-                                        <option value="">No cycle association / General field</option>
+                                        <option value="">{t('farms.generalFieldPhoto')}</option>
                                         {fieldCycles.map((c) => (
                                           <option key={c._id} value={c._id}>
                                             {c.cropName} {c.variety ? `(${c.variety})` : ''} — {c.status} ({c.stage})
@@ -1878,7 +1879,7 @@ const FarmDetailPage = () => {
 
                                   <div className="mb-3">
                                     <label className="form-label small fw-semibold" htmlFor={`photo-notes-${field._id}`}>
-                                      Observation Notes <span className="text-muted fw-normal">(optional)</span>
+                                      {t('farms.observationNotesLabel')} <span className="text-muted fw-normal">({t('common.optional')})</span>
                                     </label>
                                     <textarea
                                       id={`photo-notes-${field._id}`}
@@ -1896,7 +1897,7 @@ const FarmDetailPage = () => {
                                       {photoSaving ? (
                                         <>
                                           <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true" />
-                                          Uploading…
+                                          {t('common.saving')}
                                         </>
                                       ) : (
                                         <>
@@ -1911,7 +1912,7 @@ const FarmDetailPage = () => {
                                       onClick={() => setPhotoFieldId(null)}
                                       disabled={photoSaving}
                                     >
-                                      Cancel
+                                      {t('common.cancel')}
                                     </button>
                                   </div>
                                 </form>
@@ -1920,7 +1921,7 @@ const FarmDetailPage = () => {
                               {fieldPhotos.length === 0 ? (
                                 <div className="p-4 text-center text-muted bg-light rounded border">
                                   <i className="bi bi-camera fs-1 mb-2 d-block text-secondary" aria-hidden="true" />
-                                  <h5 className="fw-semibold text-dark">No field photographs yet</h5>
+                                  <h5 className="fw-semibold text-dark">{t('farms.noPhotosYet')}</h5>
                                   <p className="small text-muted mb-3" style={{ maxWidth: '440px', margin: '0 auto' }}>
                                     Upload genuine field photographs to build an authentic visual record of crop stages, canopy development, and seasonal conditions over time.
                                   </p>
@@ -1966,7 +1967,7 @@ const FarmDetailPage = () => {
                                           {photo.notes ? (
                                             <p className="photo-card-notes" title={photo.notes}>{photo.notes}</p>
                                           ) : (
-                                            <p className="photo-card-notes text-muted fst-italic">No observation notes</p>
+                                            <p className="photo-card-notes text-muted fst-italic">{t('farms.noObservationNotes')}</p>
                                           )}
                                           <div className="photo-card-actions">
                                             <button
@@ -2033,7 +2034,7 @@ const FarmDetailPage = () => {
                                             {photo.notes ? (
                                               <p className="small text-muted mb-2">{photo.notes}</p>
                                             ) : (
-                                              <p className="small text-muted fst-italic mb-2">No observation notes</p>
+                                              <p className="small text-muted fst-italic mb-2">{t('farms.noObservationNotes')}</p>
                                             )}
                                             <div className="d-flex align-items-center gap-3">
                                               <button
@@ -2072,9 +2073,9 @@ const FarmDetailPage = () => {
             <Card>
               <EmptyState
                 icon="bi-bounding-box"
-                title="No fields yet"
-                description="Add a field when you’re ready. Only the records you enter will appear here."
-                action={<a className="btn btn-primary" href="#add-field">Add your first field</a>}
+                title={t('farms.noFieldsYet')}
+                description={t('farms.addFieldsDesc')}
+                action={<a className="btn btn-primary" href="#add-field">{t('farms.addFirstField')}</a>}
               />
             </Card>
           )}
@@ -2199,7 +2200,7 @@ const FarmDetailPage = () => {
               </div>
               {previewPhoto.cropCycleId && (
                 <div>
-                  <span className="text-secondary small fw-semibold me-2">Associated Cycle:</span>
+                  <span className="text-secondary small fw-semibold me-2">{t('farms.associatedCycleLabel')}</span>
                   <Badge tone="sowing">
                     {cropCycles.find((c) => String(c._id) === String(previewPhoto.cropCycleId))?.cropName || 'Crop Cycle'}
                   </Badge>
@@ -2207,11 +2208,11 @@ const FarmDetailPage = () => {
               )}
               {previewPhoto.notes ? (
                 <div className="p-2 bg-light rounded border small">
-                  <span className="fw-semibold text-secondary d-block mb-1">Observation Notes:</span>
+                  <span className="fw-semibold text-secondary d-block mb-1">{t('farms.observationNotesLabel')}</span>
                   {previewPhoto.notes}
                 </div>
               ) : (
-                <div className="text-muted small fst-italic">No observation notes entered for this photograph.</div>
+                <div className="text-muted small fst-italic">{t('farms.noObservationNotes')}</div>
               )}
             </div>
           </div>

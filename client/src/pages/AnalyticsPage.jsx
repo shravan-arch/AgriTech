@@ -461,7 +461,7 @@ export default function AnalyticsPage() {
             >
               <option value="all">{t('common.all')}</option>
               <option value="30d">{t('monitoring.range30d')}</option>
-              <option value="90d">90 Days</option>
+              <option value="90d">{t('analytics.ninetyDays')}</option>
               <option value="year">2026</option>
             </select>
           </div>
@@ -477,7 +477,7 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {loading && <LoadingState>Calculating farm economics and field intelligence…</LoadingState>}
+      {loading && <LoadingState>{t('analytics.loadingIntelligence')}</LoadingState>}
 
       {/* Database-Backed Summary Metrics Grid */}
       <div className="dashboard-metrics">
@@ -492,7 +492,7 @@ export default function AnalyticsPage() {
           <strong className="metric-value text-success">
             {loading ? '—' : formatINR(metrics.totalRevenue)}
           </strong>
-          <span className="metric-note">Recorded crop harvest sales & revenue</span>
+          <span className="metric-note">{t('analytics.recordedSalesNote')}</span>
         </Card>
 
         {/* Metric 2: Operating Expenses */}
@@ -506,7 +506,7 @@ export default function AnalyticsPage() {
           <strong className="metric-value text-danger">
             {loading ? '—' : formatINR(metrics.totalExpense)}
           </strong>
-          <span className="metric-note">Seeds, fertilizers, chemicals, labor & fuel</span>
+          <span className="metric-note">{t('analytics.inputsCostNote')}</span>
         </Card>
 
         {/* Metric 3: Net Operating Profit / Loss */}
@@ -548,7 +548,7 @@ export default function AnalyticsPage() {
               ? '-100%'
               : '0%'}
           </strong>
-          <span className="metric-note">Calculation: Net Profit ÷ Revenue × 100%</span>
+          <span className="metric-note">{t('analytics.netMarginCalculationNote')}</span>
         </Card>
 
         {/* Metric 5: Total Production */}
@@ -598,11 +598,11 @@ export default function AnalyticsPage() {
         <div className="chart-card">
           <div className="chart-card-header">
             <div>
-              <span className="eyebrow">Cash Flow Analysis</span>
-              <h3>Revenue vs. Operating Expenses</h3>
-              <p>Grouped monthly comparison of farm receipts and operational disbursements.</p>
+              <span className="eyebrow">{t('analytics.revenueVsExpensesEyebrow')}</span>
+              <h3>{t('analytics.revenueVsExpensesTitle')}</h3>
+              <p>{t('analytics.revenueVsExpensesDesc')}</p>
             </div>
-            <Badge tone="green">Monthly</Badge>
+            <Badge tone="green">{t('analytics.monthlyBadge')}</Badge>
           </div>
           <RevenueExpensesBarChart data={monthlyFinancesData} />
         </div>
@@ -611,11 +611,11 @@ export default function AnalyticsPage() {
         <div className="chart-card">
           <div className="chart-card-header">
             <div>
-              <span className="eyebrow">Input Cost Allocation</span>
-              <h3>Operating Expense Distribution</h3>
-              <p>Breakdown of farm investments into seeds, nutrients, labor, irrigation and fuel.</p>
+              <span className="eyebrow">{t('analytics.costAllocationEyebrow')}</span>
+              <h3>{t('analytics.costAllocationTitle')}</h3>
+              <p>{t('analytics.costAllocationDesc')}</p>
             </div>
-            <Badge tone="gold">Category</Badge>
+            <Badge tone="gold">{t('analytics.categoryBadge')}</Badge>
           </div>
           <ExpenseBreakdownDonut data={expensesByCategoryData} />
         </div>
@@ -624,11 +624,11 @@ export default function AnalyticsPage() {
         <div className="chart-card">
           <div className="chart-card-header">
             <div>
-              <span className="eyebrow">Production Volume</span>
-              <h3>Crop Harvest Production Comparison</h3>
-              <p>Total harvested yield by crop variety, normalized to standard Kilograms (kg).</p>
+              <span className="eyebrow">{t('analytics.productionVolumeEyebrow')}</span>
+              <h3>{t('analytics.cropHarvestComparisonTitle')}</h3>
+              <p>{t('analytics.cropHarvestComparisonDesc')}</p>
             </div>
-            <Badge tone="green">Normalized kg</Badge>
+            <Badge tone="green">{t('analytics.normalizedKgBadge')}</Badge>
           </div>
           <CropProductionBarChart data={cropProductionData} />
         </div>
@@ -637,11 +637,11 @@ export default function AnalyticsPage() {
         <div className="chart-card">
           <div className="chart-card-header">
             <div>
-              <span className="eyebrow">Land Efficiency</span>
-              <h3>Field Productivity (kg / Hectare)</h3>
-              <p>Harvest yield per unit area across cultivated plots with documented acreage.</p>
+              <span className="eyebrow">{t('analytics.landEfficiencyEyebrow')}</span>
+              <h3>{t('analytics.fieldProductivityTitle')}</h3>
+              <p>{t('analytics.fieldProductivityDesc')}</p>
             </div>
-            <Badge tone="neutral">kg / ha</Badge>
+            <Badge tone="neutral">{t('analytics.kgHaBadge')}</Badge>
           </div>
           <FieldProductivityBarChart data={fieldProductivityData} />
         </div>
@@ -650,11 +650,11 @@ export default function AnalyticsPage() {
         <div className="chart-card">
           <div className="chart-card-header">
             <div>
-              <span className="eyebrow">Economic Trajectory</span>
-              <h3>Financial Trend & Net Operating Profit</h3>
-              <p>Chronological trajectory of revenue, operating expenses, and net profit margin.</p>
+              <span className="eyebrow">{t('analytics.economicTrajectoryEyebrow')}</span>
+              <h3>{t('analytics.financialTrendTitle')}</h3>
+              <p>{t('analytics.financialTrendDesc')}</p>
             </div>
-            <Badge tone="green">Trajectory</Badge>
+            <Badge tone="green">{t('analytics.trajectoryBadge')}</Badge>
           </div>
           <FinancialTrendLineChart data={monthlyFinancesData} />
         </div>
@@ -663,11 +663,11 @@ export default function AnalyticsPage() {
         <div className="chart-card">
           <div className="chart-card-header">
             <div>
-              <span className="eyebrow">Official APMC Benchmarks</span>
-              <h3>Commodity Market Benchmark Prices</h3>
-              <p>Official modal prices from Ministry of Agriculture & Farmers Welfare price series.</p>
+              <span className="eyebrow">{t('analytics.apmcBenchmarksEyebrow')}</span>
+              <h3>{t('analytics.commodityMarketPricesTitle')}</h3>
+              <p>{t('analytics.commodityMarketPricesDesc')}</p>
             </div>
-            <Badge tone="gold">₹ / Quintal</Badge>
+            <Badge tone="gold">{t('analytics.rupeesQuintalBadge')}</Badge>
           </div>
           <MarketPriceComparisonChart data={marketPrices} />
         </div>
@@ -711,7 +711,7 @@ export default function AnalyticsPage() {
         <Card className="p-0 overflow-hidden mb-5">
           <div className="p-3 border-bottom d-flex justify-content-between align-items-center">
             <div>
-              <h3 className="h6 mb-0">Farm Operational Transactions Ledger</h3>
+              <h3 className="h6 mb-0">{t('analytics.farmTransactionsLedger')}</h3>
               <small className="text-muted">
                 Showing {financeRecords.length} database-backed entries for selected filters.
               </small>
@@ -740,7 +740,7 @@ export default function AnalyticsPage() {
           ) : (
             <DataTable
               headers={['Date', 'Type & Category', 'Farm / Field', 'Description', 'Receipt / Ref', 'Amount (₹)', 'Actions']}
-              label="Farm financial records"
+              label={t('analytics.farmTransactionsLedger')}
             >
               {financeRecords.map((r) => {
                 const isRev = r.type === 'revenue';
@@ -811,8 +811,8 @@ export default function AnalyticsPage() {
       {activeSection === 'yields' && (
         <Card className="p-0 overflow-hidden mb-5">
           <div className="p-4 border-bottom">
-            <span className="eyebrow">Crop Yield Performance</span>
-            <h3 className="h5 mb-1">Harvested Yields by Crop Variety</h3>
+            <span className="eyebrow">{t('analytics.cropYieldPerformanceEyebrow')}</span>
+            <h3 className="h5 mb-1">{t('analytics.harvestedYieldsByVariety')}</h3>
             <p className="text-muted small mb-0">
               Recorded yields from completed field cultivation cycles, with unit normalization to kilograms.
             </p>
@@ -844,7 +844,7 @@ export default function AnalyticsPage() {
                 'Productivity (kg/ha)',
                 'Status',
               ]}
-              label="Crop harvest yields ledger"
+              label={t('analytics.harvestedYieldsByVariety')}
             >
               {completedHarvests.map((c) => {
                 const farmObj = farms.find((f) => String(f._id || f.id) === String(c.farmId));
@@ -887,11 +887,11 @@ export default function AnalyticsPage() {
                           {productivity.toLocaleString('en-IN')} kg/ha
                         </span>
                       ) : (
-                        <span className="text-muted small">Acreage needed</span>
+                        <span className="text-muted small">{t('analytics.acreageNeeded')}</span>
                       )}
                     </td>
                     <td>
-                      <Badge tone="green">Completed Harvest</Badge>
+                      <Badge tone="green">{t('analytics.completedHarvestBadge')}</Badge>
                     </td>
                   </tr>
                 );
@@ -905,8 +905,8 @@ export default function AnalyticsPage() {
       {activeSection === 'market' && (
         <Card className="p-0 overflow-hidden mb-5">
           <div className="p-4 border-bottom">
-            <span className="eyebrow">Agmarknet / Agricultural Price Network</span>
-            <h3 className="h5 mb-1">Verifiable Commodity Market Benchmark Rates</h3>
+            <span className="eyebrow">{t('analytics.agmarknetEyebrow')}</span>
+            <h3 className="h5 mb-1">{t('analytics.verifiableMarketRates')}</h3>
             <p className="text-muted small mb-0">
               Official public modal prices from representative agricultural primary markets and APMCs.
             </p>
@@ -1001,13 +1001,13 @@ export default function AnalyticsPage() {
                           });
                         }}
                       >
-                        <option value="expense">Operating Expense</option>
-                        <option value="revenue">Farm Revenue / Sale</option>
+                        <option value="expense">{t('analytics.optExpense')}</option>
+                        <option value="revenue">{t('analytics.optRevenue')}</option>
                       </select>
                     </div>
                     <div className="col-6">
                       <label className="form-label" htmlFor="tx-cat">
-                        Category *
+                        {t('common.category')} *
                       </label>
                       <select
                         id="tx-cat"
@@ -1028,7 +1028,7 @@ export default function AnalyticsPage() {
                   <div className="row g-2 mb-3">
                     <div className="col-6">
                       <label className="form-label" htmlFor="tx-amount">
-                        Amount (₹) *
+                        {t('common.price')} / {t('common.totalAmount')} (₹) *
                       </label>
                       <input
                         id="tx-amount"
@@ -1044,7 +1044,7 @@ export default function AnalyticsPage() {
                     </div>
                     <div className="col-6">
                       <label className="form-label" htmlFor="tx-date">
-                        Transaction Date *
+                        {t('common.date')} *
                       </label>
                       <input
                         id="tx-date"
@@ -1060,7 +1060,7 @@ export default function AnalyticsPage() {
                   <div className="row g-2 mb-3">
                     <div className="col-6">
                       <label className="form-label" htmlFor="tx-farm">
-                        Farm *
+                        {t('operations.farmLabel')} *
                       </label>
                       <select
                         id="tx-farm"
@@ -1081,7 +1081,7 @@ export default function AnalyticsPage() {
                     </div>
                     <div className="col-6">
                       <label className="form-label" htmlFor="tx-field">
-                        Field (Optional)
+                        {t('operations.fieldPlotLabel')} ({t('common.optional')})
                       </label>
                       <select
                         id="tx-field"
@@ -1089,7 +1089,7 @@ export default function AnalyticsPage() {
                         value={txForm.fieldId}
                         onChange={(e) => setTxForm({ ...txForm, fieldId: e.target.value })}
                       >
-                        <option value="">Farm General</option>
+                        <option value="">{t('analytics.farmGeneral')}</option>
                         {fields.map((f) => (
                           <option key={f._id} value={f._id}>
                             {f.name}

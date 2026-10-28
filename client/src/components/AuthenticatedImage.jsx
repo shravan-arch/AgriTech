@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/useAuth.js';
+import { useLanguage } from '../context/useLanguage.js';
 import { fetchPhotoBlobUrl } from '../lib/api.js';
 
 export const AuthenticatedImage = ({
@@ -10,6 +11,7 @@ export const AuthenticatedImage = ({
   onClick,
 }) => {
   const { token } = useAuth();
+  const { t } = useLanguage();
   const [imageState, setImageState] = useState({
     forPhotoId: null,
     src: null,
@@ -51,7 +53,7 @@ export const AuthenticatedImage = ({
   if (loading) {
     return (
       <div className={`photo-loading-skeleton ${className}`.trim()} style={style}>
-        <div className="spinner-border spinner-border-sm text-success" role="status" aria-label="Loading image" />
+        <div className="spinner-border spinner-border-sm text-success" role="status" aria-label={t('common.loadingImage')} />
       </div>
     );
   }
@@ -60,7 +62,7 @@ export const AuthenticatedImage = ({
     return (
       <div className={`photo-error-placeholder ${className}`.trim()} style={style}>
         <i className="bi bi-image" aria-hidden="true" style={{ fontSize: '1.75rem' }} />
-        <span className="small">Photograph unavailable</span>
+        <span className="small">{t('common.photoUnavailable')}</span>
       </div>
     );
   }

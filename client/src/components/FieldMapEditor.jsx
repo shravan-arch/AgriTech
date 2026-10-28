@@ -8,6 +8,7 @@ import {
   TerraDrawRenderMode,
 } from 'terra-draw';
 import { TerraDrawLeafletAdapter } from 'terra-draw-leaflet-adapter';
+import { useLanguage } from '../context/useLanguage.js';
 import {
   calculatePolygonArea,
   calculatePolygonPerimeter,
@@ -62,6 +63,7 @@ export const FieldMapEditor = ({
   height = '520px',
   activeFieldName = '',
 }) => {
+  const { t } = useLanguage();
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const baseTileLayerRef = useRef(null);
@@ -458,35 +460,35 @@ export const FieldMapEditor = ({
       <div className="bg-dark text-white p-2 p-md-3 d-flex flex-wrap align-items-center justify-content-between gap-2 border-bottom border-secondary border-opacity-50">
         {/* Left: Mode Selection Toolbar */}
         <div className="d-flex align-items-center flex-wrap gap-1">
-          <div className="btn-group btn-group-sm" role="group" aria-label="Drawing Tools">
+          <div className="btn-group btn-group-sm" role="group" aria-label={t('mapping.drawingTools')}>
             <button
               type="button"
               className={`btn ${currentMode === 'polygon' ? 'btn-success fw-bold' : 'btn-outline-light'}`}
               onClick={() => handleSetMode('polygon')}
               disabled={readOnly}
-              title="Click points on satellite map to draw field boundary"
+              title={t('mapping.drawingHint')}
             >
               <i className="bi bi-pencil-fill me-1" />
-              <span>{drawnBoundary ? 'Redraw Polygon' : 'Draw Boundary'}</span>
+              <span>{drawnBoundary ? t('mapping.redrawPolygon') : t('mapping.drawBoundary')}</span>
             </button>
             <button
               type="button"
               className={`btn ${currentMode === 'select' ? 'btn-warning text-dark fw-bold' : 'btn-outline-light'}`}
               onClick={() => handleSetMode('select')}
               disabled={readOnly || !drawnBoundary}
-              title="Drag corners or add midpoint points to fine-tune boundary"
+              title={t('mapping.editHint')}
             >
               <i className="bi bi-cursor-fill me-1" />
-              <span>Edit Vertices</span>
+              <span>{t('mapping.editVertices')}</span>
             </button>
             <button
               type="button"
               className={`btn ${currentMode === 'static' ? 'btn-secondary fw-semibold' : 'btn-outline-light'}`}
               onClick={() => handleSetMode('static')}
-              title="Explore and pan map"
+              title={t('mapping.panHint')}
             >
               <i className="bi bi-hand-index-thumb me-1" />
-              <span>Pan Map</span>
+              <span>{t('mapping.panMap')}</span>
             </button>
           </div>
 
@@ -495,10 +497,10 @@ export const FieldMapEditor = ({
               type="button"
               className="btn btn-outline-danger btn-sm ms-1"
               onClick={handleClear}
-              title="Delete current boundary"
+              title={t('mapping.deleteBoundaryHint')}
             >
               <i className="bi bi-trash3 me-1" />
-              <span className="d-none d-sm-inline">Clear</span>
+              <span className="d-none d-sm-inline">{t('common.clear') || 'Clear'}</span>
             </button>
           )}
         </div>
@@ -511,7 +513,7 @@ export const FieldMapEditor = ({
               <input
                 type="text"
                 className="form-control form-control-sm bg-dark text-white border-secondary"
-                placeholder="Search village/coords..."
+                placeholder={t('mapping.searchPlaceholder') || 'Search village/coords…'}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -519,7 +521,7 @@ export const FieldMapEditor = ({
                 type="submit"
                 className="btn btn-outline-light"
                 disabled={searching || !searchQuery.trim()}
-                title="Search location"
+                title={t('common.search')}
               >
                 {searching ? (
                   <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" />
@@ -536,10 +538,10 @@ export const FieldMapEditor = ({
             className="btn btn-outline-info btn-sm d-flex align-items-center gap-1"
             onClick={handleDeviceGps}
             disabled={gpsLocating}
-            title="Locate device GPS position"
+            title={t('farms.useDeviceGps')}
           >
             <i className={`bi bi-geo-alt-fill ${gpsLocating ? 'spin-animation' : ''}`} />
-            <span className="d-none d-md-inline">{gpsLocating ? 'Locating…' : 'Device GPS'}</span>
+            <span className="d-none d-md-inline">{gpsLocating ? t('mapping.locating') : t('farms.useDeviceGps')}</span>
           </button>
 
           {/* Basemap Switcher Dropdown */}
@@ -552,7 +554,7 @@ export const FieldMapEditor = ({
             >
               <i className="bi bi-layers-fill" />
               <span className="d-none d-sm-inline">
-                {activeLayer === 'esriSatellite' ? 'Satellite' : activeLayer === 'hybridLabels' ? 'Hybrid' : 'Street'}
+                {activeLayer === 'esriSatellite' ? t('mapping.satellite') : activeLayer === 'hybridLabels' ? t('mapping.hybrid') : t('mapping.street')}
               </span>
             </button>
             <ul className="dropdown-menu dropdown-menu-end dropdown-menu-dark shadow">
@@ -563,7 +565,7 @@ export const FieldMapEditor = ({
                   onClick={() => handleSwitchLayer('esriSatellite')}
                 >
                   <i className="bi bi-globe-americas me-2" />
-                  Satellite (Esri World Imagery)
+                  {t('mapping.satellite')} (Esri World Imagery)
                 </button>
               </li>
               <li>
@@ -573,7 +575,7 @@ export const FieldMapEditor = ({
                   onClick={() => handleSwitchLayer('hybridLabels')}
                 >
                   <i className="bi bi-map me-2" />
-                  Hybrid (Satellite + Place Labels)
+                  {t('mapping.hybrid')} (Satellite + Place Labels)
                 </button>
               </li>
               <li>
@@ -583,7 +585,7 @@ export const FieldMapEditor = ({
                   onClick={() => handleSwitchLayer('osmStreet')}
                 >
                   <i className="bi bi-signpost-2 me-2" />
-                  OpenStreetMap (Street / Roads)
+                  {t('mapping.street')} (OpenStreetMap)
                 </button>
               </li>
             </ul>
@@ -671,7 +673,7 @@ export const FieldMapEditor = ({
             style={{ zIndex: 1000, fontSize: '0.8rem', maxWidth: 'calc(100% - 1.5rem)', textAlign: 'center' }}
           >
             <span className="spinner-grow spinner-grow-sm text-success flex-shrink-0" role="status" aria-hidden="true" />
-            <span className="text-truncate-2">Click around field on imagery. Click start vertex to close.</span>
+            <span className="text-truncate-2">{t('mapping.drawingHint')}</span>
           </div>
         )}
       </div>
@@ -683,7 +685,7 @@ export const FieldMapEditor = ({
           <div className="col-12 col-md-7">
             <div className="d-flex flex-wrap align-items-center gap-3">
               <div>
-                <span className="text-muted d-block small" style={{ fontSize: '0.75rem' }}>Approx. Area</span>
+                <span className="text-muted d-block small" style={{ fontSize: '0.75rem' }}>{t('mapping.approxArea')}</span>
                 <span className="h5 fw-bold text-success mb-0">
                   {metrics.hectares > 0 ? `${metrics.hectares} ha` : '—'}
                 </span>
@@ -692,13 +694,13 @@ export const FieldMapEditor = ({
                 )}
               </div>
               <div className="border-start ps-3">
-                <span className="text-muted d-block small" style={{ fontSize: '0.75rem' }}>Perimeter</span>
+                <span className="text-muted d-block small" style={{ fontSize: '0.75rem' }}>{t('mapping.perimeter')}</span>
                 <span className="fw-semibold text-dark mb-0">
                   {metrics.perimeterMeters > 0 ? `${metrics.perimeterMeters} m` : '—'}
                 </span>
               </div>
               <div className="border-start ps-3">
-                <span className="text-muted d-block small" style={{ fontSize: '0.75rem' }}>Boundary Points</span>
+                <span className="text-muted d-block small" style={{ fontSize: '0.75rem' }}>{t('mapping.boundaryPoints')}</span>
                 <span className="fw-semibold text-dark mb-0">
                   {metrics.vertexCount > 0 ? `${metrics.vertexCount} vertices` : '0 points'}
                 </span>
@@ -711,7 +713,7 @@ export const FieldMapEditor = ({
             <div className="d-flex align-items-start gap-2 p-2 bg-light rounded-3 border">
               <i className="bi bi-shield-exclamation text-warning flex-shrink-0 mt-1" />
               <div className="text-muted" style={{ fontSize: '0.72rem', lineHeight: '1.25' }}>
-                <strong>Legal Notice:</strong> {LEGAL_DISCLAIMER_TEXT}
+                <strong>{t('mapping.legalNotice')}:</strong> {t('mapping.legalNoticeText') || LEGAL_DISCLAIMER_TEXT}
               </div>
             </div>
           </div>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLanguage } from '../../context/useLanguage.js';
 import { formatINR, formatKg } from '../../lib/formatters.js';
 
 // Empty State for Charts
@@ -16,14 +17,15 @@ export function ChartEmptyState({ icon = 'bi-bar-chart', title, message }) {
 
 // ==================== 1. REVENUE VS EXPENSES GROUPED BAR CHART ====================
 export function RevenueExpensesBarChart({ data = [] }) {
+  const { t } = useLanguage();
   const [hoveredIdx, setHoveredIdx] = useState(null);
 
   if (!data || data.length === 0) {
     return (
       <ChartEmptyState
         icon="bi-cash-coin"
-        title="No Financial Records In Period"
-        message="Record operating expenses (fertilizer, seeds, labor) or crop harvest revenues to visualize monthly comparison."
+        title={t('analytics.noFinancialRecords')}
+        message={t('analytics.noFinancialRecordsDesc')}
       />
     );
   }
@@ -55,7 +57,7 @@ export function RevenueExpensesBarChart({ data = [] }) {
           className="chart-svg"
           viewBox={`0 0 ${width} ${height}`}
           role="img"
-          aria-label="Grouped bar chart comparing monthly farm revenue and expenses"
+          aria-label={t('analytics.revenueExpensesBarAria')}
         >
           {/* Gridlines & Y-Axis Labels */}
           {yTicks.map((tickRatio, i) => {
@@ -183,11 +185,11 @@ export function RevenueExpensesBarChart({ data = [] }) {
       <div className="chart-legend justify-content-center">
         <div className="chart-legend-item">
           <span className="chart-legend-dot" style={{ background: '#285d43' }} />
-          <span>Farm Revenue (Sales & Income)</span>
+          <span>{t('analytics.farmRevenueLegend')}</span>
         </div>
         <div className="chart-legend-item">
           <span className="chart-legend-dot" style={{ background: '#d97706' }} />
-          <span>Operating Expenses</span>
+          <span>{t('analytics.operatingExpensesLegend')}</span>
         </div>
       </div>
     </div>
@@ -196,6 +198,7 @@ export function RevenueExpensesBarChart({ data = [] }) {
 
 // ==================== 2. EXPENSE BREAKDOWN DONUT CHART ====================
 export function ExpenseBreakdownDonut({ data = [] }) {
+  const { t } = useLanguage();
   const [hoveredCat, setHoveredCat] = useState(null);
 
   const totalExpense = data.reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
@@ -204,8 +207,8 @@ export function ExpenseBreakdownDonut({ data = [] }) {
     return (
       <ChartEmptyState
         icon="bi-pie-chart"
-        title="No Operational Expenses Logged"
-        message="Log fertilizer, seed purchases, equipment fuel, irrigation or labor expenses to see cost distribution."
+        title={t('analytics.noOperationalExpenses')}
+        message={t('analytics.noOperationalExpensesDesc')}
       />
     );
   }
@@ -254,7 +257,7 @@ export function ExpenseBreakdownDonut({ data = [] }) {
             viewBox={`0 0 ${size} ${size}`}
             style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}
             role="img"
-            aria-label="Donut chart showing operational expense breakdown by category"
+            aria-label={t('analytics.expenseDonutAria')}
           >
             {/* Background ring */}
             <circle
@@ -370,12 +373,13 @@ export function ExpenseBreakdownDonut({ data = [] }) {
 
 // ==================== 3. CROP PRODUCTION COMPARISON BAR CHART ====================
 export function CropProductionBarChart({ data = [] }) {
+  const { t } = useLanguage();
   if (!data || data.length === 0) {
     return (
       <ChartEmptyState
         icon="bi-basket2"
-        title="No Completed Harvest Yields Recorded"
-        message="Mark crop cycles as harvested with recorded quantities to compare total yield production."
+        title={t('analytics.noHarvestYields')}
+        message={t('analytics.noHarvestYieldsDesc')}
       />
     );
   }
@@ -432,8 +436,8 @@ export function CropProductionBarChart({ data = [] }) {
         })}
       </div>
       <div className="text-muted small mt-2 pt-2 border-top d-flex justify-content-between">
-        <span>* All harvested units automatically normalized to standard Kilograms (kg)</span>
-        <span>1 Quintal = 100 kg</span>
+        <span>{t('analytics.normalizedUnitsNote')}</span>
+        <span>{t('analytics.quintalNote')}</span>
       </div>
     </div>
   );
@@ -441,12 +445,13 @@ export function CropProductionBarChart({ data = [] }) {
 
 // ==================== 4. FIELD PRODUCTIVITY (KG / HECTARE) BAR CHART ====================
 export function FieldProductivityBarChart({ data = [] }) {
+  const { t } = useLanguage();
   if (!data || data.length === 0) {
     return (
       <ChartEmptyState
         icon="bi-speedometer2"
-        title="Field Acreage Data Needed"
-        message="Record field area (hectares) in Farms & Fields and harvest yield quantity in Crop Cycles to calculate productivity per hectare."
+        title={t('analytics.fieldAcreageNeeded')}
+        message={t('analytics.fieldAcreageNeededDesc')}
       />
     );
   }
@@ -460,9 +465,9 @@ export function FieldProductivityBarChart({ data = [] }) {
     <div className="w-100">
       <div className="d-flex justify-content-between align-items-center mb-2 px-1">
         <span className="badge bg-light text-success border">
-          Average Productivity: {avgYieldPerHa.toLocaleString('en-IN')} kg/ha
+          {t('analytics.averageProductivity')}: {avgYieldPerHa.toLocaleString('en-IN')} kg/ha
         </span>
-        <span className="text-muted small">Calculation: Harvested kg ÷ Area (ha)</span>
+        <span className="text-muted small">{t('analytics.productivityCalculationNote')}</span>
       </div>
 
       <div className="d-flex flex-column gap-3 py-2">
@@ -511,14 +516,15 @@ export function FieldProductivityBarChart({ data = [] }) {
 
 // ==================== 5. FINANCIAL CASH FLOW & NET PROFIT TREND LINE CHART ====================
 export function FinancialTrendLineChart({ data = [] }) {
+  const { t } = useLanguage();
   const [hoveredIdx, setHoveredIdx] = useState(null);
 
   if (!data || data.length < 2) {
     return (
       <ChartEmptyState
         icon="bi-graph-up"
-        title="Insufficient Historical Transactions"
-        message="Log income and expenses across at least 2 distinct dates or months to visualize operational financial trends over time."
+        title={t('analytics.insufficientTransactions')}
+        message={t('analytics.insufficientTransactionsDesc')}
       />
     );
   }
@@ -554,7 +560,7 @@ export function FinancialTrendLineChart({ data = [] }) {
           className="chart-svg"
           viewBox={`0 0 ${width} ${height}`}
           role="img"
-          aria-label="Line chart showing revenue, expense, and net profit trends over time"
+          aria-label={t('analytics.profitLineAria')}
         >
           {/* Zero baseline */}
           <line
@@ -667,15 +673,15 @@ export function FinancialTrendLineChart({ data = [] }) {
       <div className="chart-legend justify-content-center">
         <div className="chart-legend-item">
           <span className="chart-legend-dot" style={{ background: '#16a34a' }} />
-          <span>Revenue</span>
+          <span>{t('analytics.revenueLegend')}</span>
         </div>
         <div className="chart-legend-item">
           <span className="chart-legend-dot" style={{ background: '#ef4444' }} />
-          <span>Expenses</span>
+          <span>{t('analytics.expensesLegend')}</span>
         </div>
         <div className="chart-legend-item">
           <span className="chart-legend-dot" style={{ background: '#2563eb' }} />
-          <span>Net Profit</span>
+          <span>{t('analytics.netProfitLegend')}</span>
         </div>
       </div>
     </div>
@@ -684,12 +690,13 @@ export function FinancialTrendLineChart({ data = [] }) {
 
 // ==================== 6. COMMODITY MARKET BENCHMARK PRICE COMPARISON ====================
 export function MarketPriceComparisonChart({ data = [] }) {
+  const { t } = useLanguage();
   if (!data || data.length === 0) {
     return (
       <ChartEmptyState
         icon="bi-shop"
-        title="Market Reference Data Unavailable"
-        message="Official Agmarknet commodity benchmark series could not be retrieved at this time."
+        title={t('analytics.marketDataUnavailable')}
+        message={t('analytics.marketDataUnavailableDesc')}
       />
     );
   }
@@ -756,7 +763,7 @@ export function MarketPriceComparisonChart({ data = [] }) {
           <i className="bi bi-shield-check text-success me-1" />
           Official Agmarknet public benchmark series
         </span>
-        <span>Updated daily</span>
+        <span>{t('analytics.updatedDaily')}</span>
       </div>
     </div>
   );

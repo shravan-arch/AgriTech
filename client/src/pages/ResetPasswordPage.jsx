@@ -62,20 +62,20 @@ export const ResetPasswordPage = () => {
           <span>Agri<span className="brand-accent">Tech</span></span>
         </Link>
         <span className="eyebrow">{t('auth.appName')}</span>
-        <h1>{t('auth.passwordLabel')}</h1>
+        <h1>{t('auth.resetPasswordTitle')}</h1>
         <p className="text-secondary">
-          Set a new, secure password for your AgriTech farm account.
+          {t('auth.resetPasswordDesc')}
         </p>
 
         {error && <div className="alert alert-danger" role="alert">{error}</div>}
 
         {!token && (
           <div className="alert alert-warning" role="alert">
-            <p className="mb-2"><strong>Reset link is invalid or incomplete.</strong></p>
-            <p className="small mb-0">No reset token was found in this URL. Please request a new password reset link.</p>
+            <p className="mb-2"><strong>{t('auth.resetLinkInvalid')}</strong></p>
+            <p className="small mb-0">{t('auth.noResetTokenFound')}</p>
             <div className="mt-3">
               <Link to="/forgot-password" className="btn btn-sm btn-outline-dark">
-                Request new link
+                {t('auth.requestNewLink')}
               </Link>
             </div>
           </div>
@@ -88,7 +88,7 @@ export const ResetPasswordPage = () => {
             </div>
             <h2 className="h5 fw-bold mb-2">{t('common.confirm')}</h2>
             <p className="text-muted small mb-4">
-              Your password has been securely updated. You can now sign in with your new password.
+              {t('auth.resetPasswordSuccess')}
             </p>
             <Link to="/login" className="btn btn-primary w-100">
               {t('auth.signInBtn')}
@@ -115,7 +115,7 @@ export const ResetPasswordPage = () => {
               </div>
 
               <div className="mb-4">
-                <label className="form-label" htmlFor="confirm-password">{t('common.confirm')} {t('auth.passwordLabel')}</label>
+                <label className="form-label" htmlFor="confirm-password">{t('auth.confirmPasswordLabel')}</label>
                 <input
                   id="confirm-password"
                   name="confirmPassword"

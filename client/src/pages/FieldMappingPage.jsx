@@ -266,13 +266,13 @@ const FieldMappingPage = () => {
       {/* Top Header: Title, Farm Selector & Status */}
       <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 pb-2 border-bottom">
         <div>
-          <span className="topbar-breadcrumb">AgriTech / Farm Operations</span>
+          <span className="topbar-breadcrumb">{t('mapping.topbarBreadcrumb')}</span>
           <h1 className="h3 fw-bold topbar-heading mb-1 d-flex align-items-center gap-2">
             <i className="bi bi-map-fill text-success" />
-            Field Boundary Mapping
+            {t('mapping.title')}
           </h1>
           <p className="text-muted small mb-0">
-            Draw, inspect, and calculate approximate field boundaries using satellite imagery and Terra Draw.
+            {t('mapping.subtitle')}
           </p>
         </div>
 
@@ -282,7 +282,7 @@ const FieldMappingPage = () => {
             <div className="d-flex align-items-center gap-2 bg-white px-3 py-1-5 rounded-pill shadow-sm border">
               <i className="bi bi-houses text-success" />
               <label htmlFor="farm-select-dropdown" className="small fw-semibold text-muted mb-0">
-                Active Farm:
+                {t('mapping.activeFarm')}:
               </label>
               <select
                 id="farm-select-dropdown"
@@ -302,7 +302,7 @@ const FieldMappingPage = () => {
 
           <Link to="/farms" className="btn btn-outline-secondary btn-sm">
             <i className="bi bi-arrow-left me-1" />
-            Farms List
+            {t('mapping.farmsList')}
           </Link>
         </div>
       </div>
@@ -317,12 +317,12 @@ const FieldMappingPage = () => {
       {farms.length === 0 ? (
         <div className="p-4 bg-white rounded-4 shadow-sm text-center">
           <i className="bi bi-houses display-4 text-muted mb-3" />
-          <h2 className="h5 fw-bold text-dark">No Farms Registered Yet</h2>
+          <h2 className="h5 fw-bold text-dark">{t('mapping.noFarmsTitle')}</h2>
           <p className="text-secondary small mb-3">
-            You need at least one registered farm before mapping fields and boundaries.
+            {t('mapping.noFarmsDesc')}
           </p>
           <Link to="/farms" className="btn btn-primary btn-sm">
-            <i className="bi bi-plus-lg me-1" /> Create Your First Farm
+            <i className="bi bi-plus-lg me-1" /> {t('mapping.createFirstFarm')}
           </Link>
         </div>
       ) : (
@@ -347,15 +347,15 @@ const FieldMappingPage = () => {
             {/* Quick Action Bar under map */}
             <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3 p-3 bg-white rounded-4 shadow-sm border">
               <div>
-                <span className="small text-muted d-block">Boundary Status</span>
+                <span className="small text-muted d-block">{t('mapping.boundaryStatus')}</span>
                 <span className="fw-bold text-dark">
                   {currentDrawnBoundary ? (
                     <span className="text-success d-inline-flex align-items-center gap-1">
                       <i className="bi bi-check-circle-fill" />
-                      {activeField ? `Boundary Drawn for "${activeField.name}"` : 'New Boundary Drawn (Unsaved)'}
+                      {activeField ? t('mapping.boundaryDrawn', { name: activeField.name }) : t('mapping.boundaryUnsaved')}
                     </span>
                   ) : (
-                    <span className="text-secondary">Click "Draw Boundary" on the map to outline a field</span>
+                    <span className="text-secondary">{t('mapping.clickToDraw')}</span>
                   )}
                 </span>
               </div>
@@ -368,7 +368,7 @@ const FieldMappingPage = () => {
                   disabled={!currentDrawnBoundary}
                 >
                   <i className="bi bi-cloud-arrow-up-fill" />
-                  <span>{activeField ? 'Update Field Boundary' : 'Save as Field'}</span>
+                  <span>{activeField ? t('mapping.updateBoundary') : t('mapping.saveAsField')}</span>
                 </button>
               </div>
             </div>
@@ -379,7 +379,7 @@ const FieldMappingPage = () => {
             <div className="card shadow-sm border-0 rounded-4 overflow-hidden h-100 bg-white">
               <div className="card-header bg-white border-bottom py-3 px-3 d-flex align-items-center justify-content-between">
                 <div>
-                  <h2 className="h6 fw-bold mb-0 text-dark">Mapped Fields</h2>
+                  <h2 className="h6 fw-bold mb-0 text-dark">{t('mapping.fieldsOnFarm')}</h2>
                   <small className="text-muted">{farmFields.length} field(s) in {activeFarm?.name}</small>
                 </div>
                 <button
@@ -391,7 +391,7 @@ const FieldMappingPage = () => {
                     setCurrentDrawnMetrics(null);
                     setSearchParams({ farmId: selectedFarmId });
                   }}
-                  title="Start drawing a new field"
+                  title={t('mapping.startDrawingHint')}
                 >
                   <i className="bi bi-plus-lg me-1" />
                   New
@@ -402,7 +402,7 @@ const FieldMappingPage = () => {
                 {farmFields.length === 0 ? (
                   <div className="p-4 text-center text-muted small">
                     <i className="bi bi-bounding-box fs-2 mb-2 d-block text-secondary opacity-50" />
-                    No fields mapped for this farm yet. Click <strong>Draw Boundary</strong> on the satellite map to begin.
+                    {t('mapping.noFieldsOnFarm')}
                   </div>
                 ) : (
                   <div className="d-flex flex-column gap-2">
@@ -473,7 +473,7 @@ const FieldMappingPage = () => {
               <div className="modal-header border-bottom py-3 px-4">
                 <h3 className="modal-title h6 fw-bold text-dark d-flex align-items-center gap-2 mb-0">
                   <i className="bi bi-cloud-arrow-up-fill text-success" />
-                  {activeField ? `Update Field "${activeField.name}"` : 'Save Mapped Field'}
+                  {activeField ? t('mapping.updateModalTitle', { name: activeField.name }) : t('mapping.saveModalTitle')}
                 </h3>
                 <button
                   type="button"
@@ -504,15 +504,15 @@ const FieldMappingPage = () => {
                     <div className="p-3 bg-light rounded-3 mb-3 border">
                       <div className="row g-2 text-center">
                         <div className="col-4">
-                          <span className="text-muted d-block small" style={{ fontSize: '0.72rem' }}>Calculated Area</span>
+                          <span className="text-muted d-block small" style={{ fontSize: '0.72rem' }}>{t('mapping.approximateArea')}</span>
                           <strong className="text-success">{currentDrawnMetrics.hectares} ha</strong>
                         </div>
                         <div className="col-4 border-start">
-                          <span className="text-muted d-block small" style={{ fontSize: '0.72rem' }}>Acres</span>
+                          <span className="text-muted d-block small" style={{ fontSize: '0.72rem' }}>{t('farms.acres')}</span>
                           <strong className="text-dark">{currentDrawnMetrics.acres} ac</strong>
                         </div>
                         <div className="col-4 border-start">
-                          <span className="text-muted d-block small" style={{ fontSize: '0.72rem' }}>Perimeter</span>
+                          <span className="text-muted d-block small" style={{ fontSize: '0.72rem' }}>{t('mapping.perimeter')}</span>
                           <strong className="text-dark">{currentDrawnMetrics.perimeterMeters} m</strong>
                         </div>
                       </div>
@@ -521,7 +521,7 @@ const FieldMappingPage = () => {
 
                   <div className="mb-3">
                     <label className="form-label small fw-semibold text-dark">
-                      Field Name <span className="text-danger">*</span>
+                      {t('mapping.fieldNameLabel')} <span className="text-danger">*</span>
                     </label>
                     <input
                       type="text"
@@ -536,7 +536,7 @@ const FieldMappingPage = () => {
 
                   <div className="row g-2 mb-3">
                     <div className="col-6">
-                      <label className="form-label small fw-semibold text-dark">Soil Type</label>
+                      <label className="form-label small fw-semibold text-dark">{t('mapping.soilType')}</label>
                       <select
                         className="form-select form-select-sm"
                         value={fieldForm.soilType}
@@ -551,7 +551,7 @@ const FieldMappingPage = () => {
                     </div>
 
                     <div className="col-6">
-                      <label className="form-label small fw-semibold text-dark">Water Source</label>
+                      <label className="form-label small fw-semibold text-dark">{t('mapping.waterSource')}</label>
                       <select
                         className="form-select form-select-sm"
                         value={fieldForm.waterSource}
@@ -569,7 +569,7 @@ const FieldMappingPage = () => {
                   {/* Cadastral Reference Extensibility Field */}
                   <div className="mb-3">
                     <label className="form-label small fw-semibold text-dark">
-                      Cadastral Survey / Khasra Reference <span className="text-muted fw-normal">(Optional)</span>
+                      {t('mapping.surveyNumber')} <span className="text-muted fw-normal">({t('common.optional')})</span>
                     </label>
                     <input
                       type="text"
@@ -582,14 +582,14 @@ const FieldMappingPage = () => {
                       maxLength={100}
                     />
                     <small className="text-muted d-block mt-1" style={{ fontSize: '0.72rem' }}>
-                      Stored for farm record-keeping and future cadastral survey alignment.
+                      {t('mapping.cadastralAlignmentHint')}
                     </small>
                   </div>
 
                   {/* Legal Caution Callout */}
                   <div className="p-2 bg-warning bg-opacity-10 rounded-3 border border-warning border-opacity-25 small text-secondary" style={{ fontSize: '0.75rem' }}>
                     <i className="bi bi-info-circle-fill text-warning me-1" />
-                    <strong>Notice:</strong> This boundary is saved as a user-defined approximate estimate for operational management. It does not replace official cadastral surveys or revenue deeds.
+                    <strong>{t('mapping.noticeLabel')}</strong> {t('mapping.cadastralNotice')}
                   </div>
                 </div>
 
@@ -600,7 +600,7 @@ const FieldMappingPage = () => {
                     onClick={() => setFieldModalOpen(false)}
                     disabled={savingField}
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     type="submit"
@@ -610,12 +610,12 @@ const FieldMappingPage = () => {
                     {savingField ? (
                       <>
                         <span className="spinner-border spinner-border-sm me-1" aria-hidden="true" />
-                        Saving to Atlas…
+                        {t('mapping.savingToAtlas')}
                       </>
                     ) : (
                       <>
                         <i className="bi bi-check2 me-1" />
-                        Confirm &amp; Save
+                        {t('mapping.confirmAndSave')}
                       </>
                     )}
                   </button>
