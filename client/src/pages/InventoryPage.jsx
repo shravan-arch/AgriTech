@@ -47,6 +47,18 @@ const createEmptyMoveData = () => ({
 export default function InventoryPage() {
   const { token } = useAuth();
   const { t } = useLanguage();
+
+  const categories = [
+    { id: 'all', label: t('inventory.catAll') || 'All Items' },
+    { id: 'seeds', label: t('inventory.catSeeds') || 'Seeds' },
+    { id: 'fertilizer', label: t('inventory.catFertilizers') || 'Fertilizers' },
+    { id: 'chemical', label: t('inventory.catChemicals') || 'Crop Protection' },
+    { id: 'fuel', label: t('inventory.catFuel') || 'Fuel' },
+    { id: 'tools', label: t('inventory.catTools') || 'Tools & Parts' },
+    { id: 'feed', label: t('inventory.catFeed') || 'Feed & Fodder' },
+    { id: 'other', label: t('inventory.catOther') || 'Other Supplies' },
+  ];
+
   const [items, setItems] = useState([]);
   const [movements, setMovements] = useState([]);
   const [farms, setFarms] = useState([]);
@@ -115,10 +127,10 @@ export default function InventoryPage() {
       farmId: farms[0]?._id || '',
       name: '',
       category: 'fertilizer',
-      quantity: 0,
+      quantity: '',
       unit: 'kg',
-      minThreshold: 10,
-      costPerUnit: 0,
+      minThreshold: '10',
+      costPerUnit: '',
       location: '',
       notes: '',
     });
@@ -161,18 +173,24 @@ export default function InventoryPage() {
     setFormSubmitting(true);
     setFormError('');
     try {
+      const payload = {
+        ...formData,
+        quantity: formData.quantity === '' ? 0 : Number(formData.quantity),
+        minThreshold: formData.minThreshold === '' ? 0 : Number(formData.minThreshold),
+        costPerUnit: formData.costPerUnit === '' ? 0 : Number(formData.costPerUnit),
+      };
       if (editingItem) {
         await apiRequest(`/inventory/${editingItem._id}`, {
           method: 'PATCH',
           token,
-          body: formData,
+          body: payload,
         });
         setActionNotice(`Supply item "${formData.name}" updated successfully.`);
       } else {
         await apiRequest('/inventory', {
           method: 'POST',
           token,
-          body: formData,
+          body: payload,
         });
         setActionNotice(`Supply item "${formData.name}" added to inventory.`);
       }
@@ -253,15 +271,16 @@ export default function InventoryPage() {
         title={t('inventory.title')}
         description={t('inventory.description')}
         actions={
-          <div className="d-flex gap-2">
+          <div className="d-flex gap-2 flex-wrap flex-grow-1 flex-sm-grow-0">
             <Button
               variant="outline-secondary"
+              className="flex-grow-1 flex-sm-grow-0"
               onClick={() => setActiveTab(activeTab === 'catalog' ? 'movements' : 'catalog')}
             >
               <i className={`bi ${activeTab === 'catalog' ? 'bi-clock-history' : 'bi-boxes'} me-1`} />
-              {activeTab === 'catalog' ? 'Movement History' : 'Stock Catalog'}
+              {activeTab === 'catalog' ? t('inventory.movementHistory') : t('inventory.stockCatalog')}
             </Button>
-            <Button variant="primary" onClick={handleOpenAdd}>
+            <Button variant="primary" className="flex-grow-1 flex-sm-grow-0" onClick={handleOpenAdd}>
               <i className="bi bi-plus-lg me-1" /> {t('inventory.addItem')}
             </Button>
           </div>
@@ -292,7 +311,7 @@ export default function InventoryPage() {
             </span>
           </div>
           <strong className="metric-value">{loading ? '—' : items.length}</strong>
-          <span className="metric-note">Supplies registered</span>
+          <span className="metric-note">{t('inventory.suppliesRegistered')}</span>
         </Card>
 
         <Card className="metric-card">
@@ -305,12 +324,12 @@ export default function InventoryPage() {
           <strong className="metric-value" style={{ color: lowStockItems.length > 0 ? '#b94a48' : 'inherit' }}>
             {loading ? '—' : lowStockItems.length}
           </strong>
-          <span className="metric-note">Items at or below threshold</span>
+          <span className="metric-note">{t('inventory.itemsAtOrBelow')}</span>
         </Card>
 
         <Card className="metric-card">
           <div className="metric-card-top">
-            <span>Estimated Stock Value</span>
+            <span>{t('inventory.estimatedStockValue')}</span>
             <span className="metric-icon metric-icon-sage">
               <i className="bi bi-currency-rupee" />
             </span>
@@ -318,18 +337,18 @@ export default function InventoryPage() {
           <strong className="metric-value">
             {loading ? '—' : `₹${new Intl.NumberFormat('en-IN').format(Math.round(totalValue))}`}
           </strong>
-          <span className="metric-note">Based on unit costs</span>
+          <span className="metric-note">{t('inventory.basedOnUnitCosts')}</span>
         </Card>
 
         <Card className="metric-card">
           <div className="metric-card-top">
-            <span>Movement Events</span>
+            <span>{t('inventory.movementEvents')}</span>
             <span className="metric-icon">
               <i className="bi bi-arrow-left-right" />
             </span>
           </div>
           <strong className="metric-value">{loading ? '—' : movements.length}</strong>
-          <span className="metric-note">Audited in/out movements</span>
+          <span className="metric-note">{t('inventory.auditedMovements')}</span>
         </Card>
       </div>
 
@@ -339,7 +358,7 @@ export default function InventoryPage() {
           <div className="alert-banner-content">
             <i className="bi bi-exclamation-octagon-fill alert-banner-icon" />
             <div>
-              <strong>Low Inventory Warning:</strong>{' '}
+              <strong>{t('inventory.lowInventoryWarning')}:</strong>{' '}
               {lowStockItems.map((i) => `${i.name} (${i.quantity} ${i.unit} left)`).join(', ')}.
             </div>
           </div>
@@ -354,14 +373,14 @@ export default function InventoryPage() {
             className={`segment-tab ${activeTab === 'catalog' ? 'active' : ''}`}
             onClick={() => setActiveTab('catalog')}
           >
-            <i className="bi bi-boxes me-1" /> Supply Catalog ({items.length})
+            <i className="bi bi-boxes me-1" /> {t('inventory.stockCatalog')} ({items.length})
           </button>
           <button
             type="button"
             className={`segment-tab ${activeTab === 'movements' ? 'active' : ''}`}
             onClick={() => setActiveTab('movements')}
           >
-            <i className="bi bi-clock-history me-1" /> Movement Audit ({movements.length})
+            <i className="bi bi-clock-history me-1" /> {t('inventory.movementAudit')} ({movements.length})
           </button>
         </div>
 
@@ -374,7 +393,7 @@ export default function InventoryPage() {
               value={selectedFarmFilter}
               onChange={(e) => setSelectedFarmFilter(e.target.value)}
             >
-              <option value="all">All Farms</option>
+              <option value="all">{t('operations.allFarms') || 'All Farms'}</option>
               {farms.map((f) => (
                 <option key={f._id} value={f._id}>
                   {f.name}
@@ -387,8 +406,8 @@ export default function InventoryPage() {
             <input
               type="search"
               className="form-control form-control-sm"
-              placeholder="Search supply or storage..."
-              style={{ width: '220px' }}
+              placeholder={t('inventory.searchSupplyOrStorage') || 'Search supply or storage…'}
+              style={{ minWidth: '160px', maxWidth: '280px', width: 'auto' }}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -398,12 +417,12 @@ export default function InventoryPage() {
 
       {/* Category Pills (only in catalog mode) */}
       {activeTab === 'catalog' && (
-        <div className="d-flex gap-1 flex-wrap mb-3">
-          {CATEGORIES.map((c) => (
+        <div className="d-flex gap-1 flex-nowrap overflow-x-auto mb-3 pb-1 no-scrollbar">
+          {categories.map((c) => (
             <button
               key={c.id}
               type="button"
-              className={`btn btn-sm ${selectedCategory === c.id ? 'btn-success' : 'btn-outline-secondary'}`}
+              className={`btn btn-sm flex-shrink-0 text-nowrap ${selectedCategory === c.id ? 'btn-success' : 'btn-outline-secondary'}`}
               style={{ borderRadius: '20px', padding: '0.25rem 0.75rem', fontSize: '0.8rem' }}
               onClick={() => setSelectedCategory(c.id)}
             >
@@ -413,7 +432,7 @@ export default function InventoryPage() {
         </div>
       )}
 
-      {loading && <LoadingState>Loading inventory records…</LoadingState>}
+      {loading && <LoadingState>{t('inventory.loadingInventory')}</LoadingState>}
 
       {/* CATALOG VIEW */}
       {!loading && activeTab === 'catalog' && (
@@ -422,15 +441,15 @@ export default function InventoryPage() {
             <div className="p-4">
               <EmptyState
                 icon="bi-box-seam"
-                title="No inventory supplies found"
+                title={t('inventory.noSuppliesFound')}
                 description={
                   searchQuery || selectedCategory !== 'all'
-                    ? 'No items matched your current filter criteria.'
-                    : 'Record your farm fertilizers, seeds, and supplies to track stock usage and receive low inventory alerts.'
+                    ? t('inventory.noSuppliesDesc')
+                    : t('inventory.noSuppliesEmpty')
                 }
                 action={
                   <Button variant="primary" onClick={handleOpenAdd}>
-                    <i className="bi bi-plus-lg me-1" /> Add First Supply Item
+                    <i className="bi bi-plus-lg me-1" /> {t('inventory.addFirstSupply')}
                   </Button>
                 }
               />
@@ -438,14 +457,14 @@ export default function InventoryPage() {
           ) : (
             <DataTable
               headers={[
-                'Supply Name & Category',
-                'Stock Level',
-                'Storage Location',
-                'Unit Cost',
-                'Estimated Total',
-                'Actions',
+                t('inventory.thSupplyNameCategory'),
+                t('inventory.thStockLevel'),
+                t('inventory.thStorageLocation'),
+                t('inventory.thUnitCost'),
+                t('inventory.thEstimatedTotal'),
+                t('inventory.thActions'),
               ]}
-              label="Farm supplies catalog"
+              label={t('inventory.stockCatalog')}
             >
               {filteredItems.map((item) => {
                 const farmObj = farms.find((f) => f._id === item.farmId);
@@ -472,16 +491,16 @@ export default function InventoryPage() {
                         <div className="mt-1">
                           {item.isLowStock ? (
                             <Badge tone="amber">
-                              <i className="bi bi-exclamation-triangle-fill me-1" /> Low Stock (Min: {item.minThreshold})
+                              <i className="bi bi-exclamation-triangle-fill me-1" /> {t('inventory.lowStock')} (Min: {item.minThreshold})
                             </Badge>
                           ) : (
-                            <Badge tone="green">Adequate (Min: {item.minThreshold})</Badge>
+                            <Badge tone="green">{t('inventory.adequateStock')} (Min: {item.minThreshold})</Badge>
                           )}
                         </div>
                       </div>
                     </td>
                     <td>
-                      <span className="text-muted">{item.location || 'Warehouse / Farm Shed'}</span>
+                      <span className="text-muted">{item.location || t('inventory.warehouseFarmShed')}</span>
                     </td>
                     <td>{item.costPerUnit > 0 ? `₹${item.costPerUnit} / ${item.unit}` : '—'}</td>
                     <td>
@@ -492,23 +511,23 @@ export default function InventoryPage() {
                         <button
                           type="button"
                           className="btn btn-sm btn-outline-success"
-                          title="Log stock inflow / purchase"
+                          title={t('inventory.titleStockIn')}
                           onClick={() => handleOpenMove(item, 'in')}
                         >
-                          <i className="bi bi-plus-circle" /> In
+                          <i className="bi bi-plus-circle" /> {t('inventory.btnIn')}
                         </button>
                         <button
                           type="button"
                           className="btn btn-sm btn-outline-primary"
-                          title="Log field usage / application"
+                          title={t('inventory.titleStockOut')}
                           onClick={() => handleOpenMove(item, 'out')}
                         >
-                          <i className="bi bi-dash-circle" /> Out
+                          <i className="bi bi-dash-circle" /> {t('inventory.btnOut')}
                         </button>
                         <button
                           type="button"
                           className="btn btn-sm btn-outline-secondary"
-                          title="Edit item details"
+                          title={t('common.edit')}
                           onClick={() => handleOpenEdit(item)}
                         >
                           <i className="bi bi-pencil" />
@@ -516,7 +535,7 @@ export default function InventoryPage() {
                         <button
                           type="button"
                           className="btn btn-sm btn-outline-danger"
-                          title="Delete item"
+                          title={t('common.delete')}
                           onClick={() => handleDeleteItem(item)}
                         >
                           <i className="bi bi-trash" />
@@ -538,14 +557,21 @@ export default function InventoryPage() {
             <div className="p-4">
               <EmptyState
                 icon="bi-clock-history"
-                title="No stock movements recorded"
-                description="Movement audit logs will appear whenever you record supplies purchases or field applications."
+                title={t('inventory.noMovementsRecorded')}
+                description={t('inventory.noMovementsDesc')}
               />
             </div>
           ) : (
             <DataTable
-              headers={['Date & Time', 'Supply Item', 'Movement Type', 'Quantity', 'Reason', 'Notes']}
-              label="Stock movement audit log"
+              headers={[
+                t('inventory.thDateTime'),
+                t('inventory.itemName'),
+                t('inventory.thMovementType'),
+                t('inventory.thQuantity'),
+                t('inventory.thReason'),
+                t('inventory.thNotes'),
+              ]}
+              label={t('inventory.movementAudit')}
             >
               {movements.map((move) => {
                 const itemObj = items.find((i) => i._id === move.itemId);
@@ -569,7 +595,7 @@ export default function InventoryPage() {
                     <td>
                       <span className={`badge ${isIn ? 'bg-success' : 'bg-primary'}`}>
                         {isIn ? <i className="bi bi-arrow-down-left me-1" /> : <i className="bi bi-arrow-up-right me-1" />}
-                        {isIn ? 'Stock Inflow' : 'Stock Outflow'}
+                        {isIn ? t('inventory.stockInflow') : t('inventory.stockOutflow')}
                       </span>
                     </td>
                     <td>
@@ -599,7 +625,7 @@ export default function InventoryPage() {
               <div className="modal-header">
                 <h5 className="modal-title">
                   <i className="bi bi-box-seam me-2" />
-                  {editingItem ? 'Edit Supply Item' : 'Add Supply Item to Inventory'}
+                  {editingItem ? t('inventory.editSupplyItem') : t('inventory.addSupplyToInventory')}
                 </h5>
                 <button
                   type="button"
@@ -614,7 +640,7 @@ export default function InventoryPage() {
 
                   <div className="mb-3">
                     <label className="form-label" htmlFor="inv-farmId">
-                      Farm *
+                      {t('farms.title')} *
                     </label>
                     <select
                       id="inv-farmId"
@@ -633,7 +659,7 @@ export default function InventoryPage() {
 
                   <div className="mb-3">
                     <label className="form-label" htmlFor="inv-name">
-                      Supply Item Name *
+                      {t('inventory.itemName')} *
                     </label>
                     <input
                       id="inv-name"
@@ -649,7 +675,7 @@ export default function InventoryPage() {
                   <div className="row g-2 mb-3">
                     <div className="col-6">
                       <label className="form-label" htmlFor="inv-category">
-                        Category *
+                        {t('inventory.category')} *
                       </label>
                       <select
                         id="inv-category"
@@ -658,7 +684,7 @@ export default function InventoryPage() {
                         required
                         onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                       >
-                        {CATEGORIES.filter((c) => c.id !== 'all').map((c) => (
+                        {categories.filter((c) => c.id !== 'all').map((c) => (
                           <option key={c.id} value={c.id}>
                             {c.label}
                           </option>
@@ -688,31 +714,35 @@ export default function InventoryPage() {
                   <div className="row g-2 mb-3">
                     <div className="col-6">
                       <label className="form-label" htmlFor="inv-quantity">
-                        Current In-Stock Quantity *
+                        {t('inventory.quantity')} *
                       </label>
                       <input
                         id="inv-quantity"
                         type="number"
                         step="any"
                         min="0"
+                        inputMode="decimal"
+                        placeholder="0"
                         className="form-control"
                         value={formData.quantity}
                         required
-                        onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
+                        onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
                       />
                     </div>
                     <div className="col-6">
                       <label className="form-label" htmlFor="inv-threshold">
-                        Low Stock Alert Threshold
+                        {t('inventory.reorderLevel')}
                       </label>
                       <input
                         id="inv-threshold"
                         type="number"
                         step="any"
                         min="0"
+                        inputMode="decimal"
+                        placeholder="0"
                         className="form-control"
                         value={formData.minThreshold}
-                        onChange={(e) => setFormData({ ...formData, minThreshold: Number(e.target.value) })}
+                        onChange={(e) => setFormData({ ...formData, minThreshold: e.target.value })}
                       />
                     </div>
                   </div>
@@ -720,21 +750,23 @@ export default function InventoryPage() {
                   <div className="row g-2 mb-3">
                     <div className="col-6">
                       <label className="form-label" htmlFor="inv-cost">
-                        Cost per Unit (₹)
+                        {t('inventory.thUnitCost')} (₹)
                       </label>
                       <input
                         id="inv-cost"
                         type="number"
-                        step="any"
+                        step="0.01"
                         min="0"
+                        inputMode="decimal"
+                        placeholder="0.00"
                         className="form-control"
                         value={formData.costPerUnit}
-                        onChange={(e) => setFormData({ ...formData, costPerUnit: Number(e.target.value) })}
+                        onChange={(e) => setFormData({ ...formData, costPerUnit: e.target.value })}
                       />
                     </div>
                     <div className="col-6">
                       <label className="form-label" htmlFor="inv-location">
-                        Storage Location
+                        {t('inventory.thStorageLocation')}
                       </label>
                       <input
                         id="inv-location"
@@ -749,7 +781,7 @@ export default function InventoryPage() {
 
                   <div className="mb-2">
                     <label className="form-label" htmlFor="inv-notes">
-                      Notes / Supplier Details
+                      {t('common.notes')}
                     </label>
                     <textarea
                       id="inv-notes"
@@ -762,10 +794,10 @@ export default function InventoryPage() {
                 </div>
                 <div className="modal-footer">
                   <Button variant="outline-secondary" type="button" onClick={() => setShowAddModal(false)}>
-                    Cancel
+                    {t('common.cancel')}
                   </Button>
                   <Button variant="primary" type="submit" disabled={formSubmitting}>
-                    {formSubmitting ? 'Saving…' : editingItem ? 'Update Supply' : 'Add to Inventory'}
+                    {formSubmitting ? t('common.saving') : editingItem ? t('inventory.updateSupply') : t('inventory.addToInventory')}
                   </Button>
                 </div>
               </form>
@@ -782,7 +814,7 @@ export default function InventoryPage() {
               <div className="modal-header">
                 <h5 className="modal-title">
                   <i className="bi bi-arrow-left-right me-2" />
-                  Log Movement: {activeItemForMove.name}
+                  {t('inventory.logMovement')}: {activeItemForMove.name}
                 </h5>
                 <button
                   type="button"
@@ -797,20 +829,20 @@ export default function InventoryPage() {
 
                   <div className="p-3 bg-light rounded mb-3 d-flex justify-content-between align-items-center">
                     <div>
-                      <small className="text-muted d-block">Current Stock Level</small>
+                      <small className="text-muted d-block">{t('inventory.currentStockLevel')}</small>
                       <strong className="fs-5">
                         {activeItemForMove.quantity} {activeItemForMove.unit}
                       </strong>
                     </div>
                     <Badge tone={activeItemForMove.isLowStock ? 'amber' : 'green'}>
-                      {activeItemForMove.isLowStock ? 'Low Stock' : 'Good Stock'}
+                      {activeItemForMove.isLowStock ? t('inventory.lowStock') : t('inventory.adequateStock')}
                     </Badge>
                   </div>
 
                   <div className="row g-2 mb-3">
                     <div className="col-6">
                       <label className="form-label" htmlFor="mov-type">
-                        Action Type *
+                        {t('inventory.actionType')} *
                       </label>
                       <select
                         id="mov-type"
@@ -826,19 +858,20 @@ export default function InventoryPage() {
                           });
                         }}
                       >
-                        <option value="out">Stock Out (Usage / Applied)</option>
-                        <option value="in">Stock In (Purchase / Restock)</option>
+                        <option value="out">{t('inventory.stockOutOption')}</option>
+                        <option value="in">{t('inventory.stockInOption')}</option>
                       </select>
                     </div>
                     <div className="col-6">
                       <label className="form-label" htmlFor="mov-qty">
-                        Quantity ({activeItemForMove.unit}) *
+                        {t('inventory.thQuantity')} ({activeItemForMove.unit}) *
                       </label>
                       <input
                         id="mov-qty"
                         type="number"
                         step="any"
                         min="0.001"
+                        inputMode="decimal"
                         max={moveData.type === 'out' ? activeItemForMove.quantity : undefined}
                         className="form-control"
                         value={moveData.quantity}
@@ -851,7 +884,7 @@ export default function InventoryPage() {
                   <div className="row g-2 mb-3">
                     <div className="col-6">
                       <label className="form-label" htmlFor="mov-reason">
-                        Movement Reason *
+                        {t('inventory.thReason')} *
                       </label>
                       <select
                         id="mov-reason"
@@ -869,7 +902,7 @@ export default function InventoryPage() {
                     </div>
                     <div className="col-6">
                       <label className="form-label" htmlFor="mov-date">
-                        Date *
+                        {t('common.date')} *
                       </label>
                       <input
                         id="mov-date"
@@ -884,7 +917,7 @@ export default function InventoryPage() {
 
                   <div className="mb-2">
                     <label className="form-label" htmlFor="mov-notes">
-                      Notes / Application Remarks
+                      {t('common.notes')}
                     </label>
                     <textarea
                       id="mov-notes"
@@ -898,10 +931,10 @@ export default function InventoryPage() {
                 </div>
                 <div className="modal-footer">
                   <Button variant="outline-secondary" type="button" onClick={() => setShowMoveModal(false)}>
-                    Cancel
+                    {t('common.cancel')}
                   </Button>
                   <Button variant="primary" type="submit" disabled={formSubmitting}>
-                    {formSubmitting ? 'Recording…' : 'Record Movement'}
+                    {formSubmitting ? t('common.saving') : t('inventory.recordMovement')}
                   </Button>
                 </div>
               </form>

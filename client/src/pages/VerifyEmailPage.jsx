@@ -116,8 +116,8 @@ const VerifyEmailPage = () => {
         {status === 'checking' && (
           <div className="py-4" role="status" aria-live="polite">
             <span className="spinner-border text-success mb-3" style={{ width: '2.5rem', height: '2.5rem' }} aria-hidden="true" />
-            <h2 className="h4 fw-bold mb-2">Validating link…</h2>
-            <p className="text-secondary small mb-0">Please wait while we verify your activation link.</p>
+            <h2 className="h4 fw-bold mb-2">{t('auth.validatingLink')}</h2>
+            <p className="text-secondary small mb-0">{t('auth.validatingLinkDesc')}</p>
           </div>
         )}
 
@@ -150,8 +150,8 @@ const VerifyEmailPage = () => {
         {status === 'verifying' && (
           <div className="py-4" role="status" aria-live="polite">
             <span className="spinner-border text-success mb-3" style={{ width: '2.5rem', height: '2.5rem' }} aria-hidden="true" />
-            <h2 className="h4 fw-bold mb-2">Activating your account…</h2>
-            <p className="text-secondary small mb-0">Securing your farm credentials.</p>
+            <h2 className="h4 fw-bold mb-2">{t('auth.activatingAccount')}</h2>
+            <p className="text-secondary small mb-0">{t('auth.securingCredentials')}</p>
           </div>
         )}
 
@@ -161,12 +161,12 @@ const VerifyEmailPage = () => {
             <div className="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle bg-success bg-opacity-10 text-success p-3" style={{ width: '64px', height: '64px' }}>
               <i className="bi bi-check-circle-fill" style={{ fontSize: '2.2rem' }} aria-hidden="true" />
             </div>
-            <h1 className="h3 fw-bold mb-2">Email Verified!</h1>
+            <h1 className="h3 fw-bold mb-2">{t('auth.emailVerifiedSuccess')}</h1>
             <p className="text-secondary small mb-4">
-              Your email address has been successfully verified. Your account is now active and ready to manage your farm and fields.
+              {t('auth.emailVerifiedDesc')}
             </p>
             <Link to="/login" className="btn btn-primary btn-lg w-100 mb-3">
-              Proceed to Sign In
+              {t('auth.proceedToSignIn')}
               <i className="bi bi-arrow-right ms-2" aria-hidden="true" />
             </Link>
           </div>
@@ -178,12 +178,12 @@ const VerifyEmailPage = () => {
             <div className="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle bg-info bg-opacity-10 text-primary p-3" style={{ width: '64px', height: '64px' }}>
               <i className="bi bi-patch-check-fill" style={{ fontSize: '2.2rem' }} aria-hidden="true" />
             </div>
-            <h1 className="h3 fw-bold mb-2">Already Verified</h1>
+            <h1 className="h3 fw-bold mb-2">{t('auth.alreadyVerified')}</h1>
             <p className="text-secondary small mb-4">
-              This email address is already verified. You can sign in directly to access your farm workspace.
+              {t('auth.alreadyVerifiedDesc')}
             </p>
             <Link to="/login" className="btn btn-primary btn-lg w-100 mb-3">
-              Go to Sign In
+              {t('auth.signInBtn')}
               <i className="bi bi-box-arrow-in-right ms-2" aria-hidden="true" />
             </Link>
           </div>
@@ -196,9 +196,9 @@ const VerifyEmailPage = () => {
               <div className="d-inline-flex align-items-center justify-content-center rounded-circle bg-danger bg-opacity-10 text-danger p-3" style={{ width: '64px', height: '64px' }}>
                 <i className="bi bi-exclamation-triangle-fill" style={{ fontSize: '2rem' }} aria-hidden="true" />
               </div>
-              <h1 className="h3 fw-bold mt-2 mb-1">Link Expired or Invalid</h1>
+              <h1 className="h3 fw-bold mt-2 mb-1">{t('auth.linkExpiredOrInvalid')}</h1>
               <p className="text-secondary small mb-3">
-                {errorMessage || 'This verification link may have expired (valid for 24 hours), already been used, or is invalid.'}
+                {errorMessage || t('auth.linkExpiredOrInvalidDesc')}
               </p>
             </div>
 
@@ -218,14 +218,14 @@ const VerifyEmailPage = () => {
 
             <form onSubmit={handleResend} className="mb-3">
               <label className="form-label small fw-semibold" htmlFor="resend-email">
-                Request a new verification link
+                {t('auth.requestNewLink')}
               </label>
               <div className="mb-3">
                 <input
                   id="resend-email"
                   type="email"
                   className="form-control"
-                  placeholder="Enter your registered email"
+                  placeholder={t('auth.enterRegisteredEmail')}
                   value={resendEmail}
                   onChange={(e) => setResendEmail(e.target.value)}
                   required
@@ -237,13 +237,13 @@ const VerifyEmailPage = () => {
                 disabled={resending || cooldown > 0 || !resendEmail.trim()}
               >
                 {resending ? (
-                  <><span className="spinner-border spinner-border-sm me-2" aria-hidden="true" />Sending…</>
+                  <><span className="spinner-border spinner-border-sm me-2" aria-hidden="true" />{t('auth.sending')}</>
                 ) : cooldown > 0 ? (
                   `Resend available in ${cooldown}s`
                 ) : (
                   <>
                     <i className="bi bi-send me-2" aria-hidden="true" />
-                    Resend Verification Email
+                    {t('auth.resendEmail')}
                   </>
                 )}
               </button>
@@ -252,7 +252,7 @@ const VerifyEmailPage = () => {
             <div className="text-center">
               <Link to="/login" className="small text-decoration-none">
                 <i className="bi bi-arrow-left me-1" />
-                Back to Sign In
+                {t('auth.backToSignIn')}
               </Link>
             </div>
           </div>
@@ -265,9 +265,9 @@ const VerifyEmailPage = () => {
               <div className="d-inline-flex align-items-center justify-content-center rounded-circle bg-success bg-opacity-10 text-success p-3" style={{ width: '64px', height: '64px' }}>
                 <i className="bi bi-envelope-paper" style={{ fontSize: '2rem' }} aria-hidden="true" />
               </div>
-              <h1 className="h3 fw-bold mt-2 mb-1">Verify Your Email</h1>
+              <h1 className="h3 fw-bold mt-2 mb-1">{t('auth.verifyEmailTitle')}</h1>
               <p className="text-secondary small mb-3">
-                Enter your email address below to receive an account activation link.
+                {t('auth.enterEmailForActivation')}
               </p>
             </div>
 
@@ -288,7 +288,7 @@ const VerifyEmailPage = () => {
             <form onSubmit={handleResend} className="mb-3">
               <div className="mb-3">
                 <label className="form-label small fw-semibold" htmlFor="verify-email-input">
-                  Email address
+                  {t('auth.emailLabel')}
                 </label>
                 <input
                   id="verify-email-input"
@@ -306,11 +306,11 @@ const VerifyEmailPage = () => {
                 disabled={resending || cooldown > 0 || !resendEmail.trim()}
               >
                 {resending ? (
-                  <><span className="spinner-border spinner-border-sm me-2" aria-hidden="true" />Sending link…</>
+                  <><span className="spinner-border spinner-border-sm me-2" aria-hidden="true" />{t('auth.sending')}</>
                 ) : cooldown > 0 ? (
                   `Resend available in ${cooldown}s`
                 ) : (
-                  'Send Verification Link'
+                  t('auth.sendResetLink')
                 )}
               </button>
             </form>
@@ -318,7 +318,7 @@ const VerifyEmailPage = () => {
             <div className="text-center">
               <Link to="/login" className="small text-decoration-none">
                 <i className="bi bi-arrow-left me-1" />
-                Back to Sign In
+                {t('auth.backToSignIn')}
               </Link>
             </div>
           </div>

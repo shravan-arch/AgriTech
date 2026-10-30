@@ -116,7 +116,8 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const updateProfile = useCallback(async (profileData) => {
-    const data = await apiRequest('/auth/profile', {
+    const endpoint = user?.role === 'admin' ? '/admin/my-profile' : '/auth/profile';
+    const data = await apiRequest(endpoint, {
       method: 'PUT',
       token,
       body: profileData,
@@ -125,7 +126,7 @@ export const AuthProvider = ({ children }) => {
       setUser(data.user);
     }
     return data;
-  }, [token]);
+  }, [token, user?.role]);
 
   const logout = useCallback(() => {
     localStorage.removeItem('agritech_token');

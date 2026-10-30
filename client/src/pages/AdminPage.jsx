@@ -562,7 +562,12 @@ const AdminPage = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await createResourceAdmin(resourceForm);
+      await createResourceAdmin({
+        ...resourceForm,
+        currentStock: Number(resourceForm.currentStock) || 0,
+        minThreshold: Number(resourceForm.minThreshold) || 0,
+        unitPriceINR: Number(resourceForm.unitPriceINR) || 0,
+      });
       setActionSuccess('Agricultural product resource added to platform inventory.');
       setResourceCreateModal(false);
       fetchTabData();
@@ -726,24 +731,24 @@ const AdminPage = () => {
       {/* Platform Administration Header */}
       <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4 border-bottom pb-3">
         <div>
-          <div className="d-flex align-items-center gap-2 mb-1">
+          <div className="d-flex flex-wrap align-items-center gap-2 mb-1">
             <span className="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2.5 py-1.5 small fw-bold">
-              <i className="bi bi-flower1 me-1" /> ENTERPRISE GOVERNANCE
+              <i className="bi bi-flower1 me-1" /> {t('admin.governanceActive')}
             </span>
             <span className="badge bg-success-subtle text-success border border-success-subtle rounded-pill small">
-              <i className="bi bi-circle-fill me-1" style={{ fontSize: '0.5rem' }} /> All 8 Systems Operational
+              <i className="bi bi-circle-fill me-1" style={{ fontSize: '0.5rem' }} /> {t('admin.allSystemsActive')}
             </span>
           </div>
-          <h1 className="h3 fw-bold text-dark mb-0">AgriTech Platform Administration</h1>
+          <h1 className="h3 fw-bold text-dark mb-0">{t('admin.consoleTitle')}</h1>
           <p className="text-secondary small mb-0">
-            Dedicated central governance suite for user oversight, content, resources, service dispatch, security, and policy compliance.
+            {t('admin.securityGuardNotice')}
           </p>
         </div>
 
         <div className="d-flex align-items-center gap-2">
           <span className="badge bg-white text-dark border px-3 py-2 small fw-semibold shadow-sm">
             <i className="bi bi-person-badge-fill text-success me-1" />
-            Acting Admin: {currentUser?.name}
+            {t('admin.authorizedAdmin')}: {currentUser?.name}
           </span>
         </div>
       </div>
@@ -767,8 +772,8 @@ const AdminPage = () => {
 
       {/* 8 Core Administrative Domain Tabs */}
       <div className="card border-0 shadow-sm rounded-4 mb-4">
-        <div className="card-header bg-white border-0 pt-3 px-3">
-          <ul className="nav nav-pills card-header-pills flex-nowrap overflow-x-auto gap-2 pb-2" role="tablist">
+        <div className="card-header bg-white border-0 pt-3 px-3 overflow-hidden">
+          <ul className="nav nav-pills card-header-pills flex-nowrap overflow-x-auto gap-2 pb-2 no-scrollbar" role="tablist">
             {ADMIN_TABS.map((tab) => {
               const isActive = activeTab === tab.id;
               return (
@@ -779,7 +784,7 @@ const AdminPage = () => {
                     onClick={() => handleTabChange(tab.id)}
                   >
                     <i className={`bi ${tab.icon}`} />
-                    <span>{tab.label}</span>
+                    <span>{t(`admin.nav.${tab.id}`) || tab.label}</span>
                   </button>
                 </li>
               );
@@ -787,7 +792,7 @@ const AdminPage = () => {
           </ul>
         </div>
 
-        <div className="card-body p-4">
+        <div className="card-body p-3 p-sm-4">
           {/* =========================================================================
               DOMAIN 0: PLATFORM GOVERNANCE OVERVIEW
              ========================================================================= */}
@@ -797,10 +802,10 @@ const AdminPage = () => {
                 <div>
                   <h3 className="h5 fw-bold text-dark mb-1 d-flex align-items-center gap-2">
                     <i className="bi bi-grid-1x2 text-success" />
-                    Platform Governance Overview
+                    {t('admin.overview.title')}
                   </h3>
                   <p className="text-secondary small mb-0">
-                    Executive summary of registered users, published agricultural intelligence, platform resources, active services, and system telemetry.
+                    {t('admin.overview.subtitle')}
                   </p>
                 </div>
                 <button
@@ -810,21 +815,21 @@ const AdminPage = () => {
                   onClick={fetchTabData}
                 >
                   <i className={`bi bi-arrow-clockwise ${loading ? 'spin-animation' : ''}`} />
-                  <span>Refresh Dashboard</span>
+                  <span>{t('common.update')}</span>
                 </button>
               </div>
 
               {/* KPI Summary Cards */}
               <div className="row g-3 mb-4">
                 {/* 1. Users */}
-                <div className="col-12 col-sm-6 col-xl-3">
+                <div className="col-6 col-xl-3">
                   <div
                     className="card h-100 border rounded-3 p-3 bg-white shadow-sm cursor-pointer"
                     style={{ cursor: 'pointer', transition: 'all 0.15s ease' }}
                     onClick={() => handleTabChange('users')}
                   >
                     <div className="d-flex justify-content-between align-items-start mb-2">
-                      <span className="text-secondary small fw-semibold">Platform Users</span>
+                      <span className="text-secondary small fw-semibold">{t('admin.overview.registeredFarmers')}</span>
                       <span className="p-2 rounded-2 bg-success bg-opacity-10 text-success">
                         <i className="bi bi-people fs-5" />
                       </span>
@@ -832,21 +837,21 @@ const AdminPage = () => {
                     <div className="h3 fw-bold text-dark mb-1">{users.length}</div>
                     <div className="d-flex align-items-center gap-1 small text-muted">
                       <span className="badge bg-success-subtle text-success border border-success-subtle rounded-pill">
-                        {users.filter((u) => u.status === 'active').length} Active
+                        {users.filter((u) => u.status === 'active').length} {t('admin.users.active')}
                       </span>
                     </div>
                   </div>
                 </div>
 
                 {/* 2. Content */}
-                <div className="col-12 col-sm-6 col-xl-3">
+                <div className="col-6 col-xl-3">
                   <div
                     className="card h-100 border rounded-3 p-3 bg-white shadow-sm cursor-pointer"
                     style={{ cursor: 'pointer', transition: 'all 0.15s ease' }}
                     onClick={() => handleTabChange('content')}
                   >
                     <div className="d-flex justify-content-between align-items-start mb-2">
-                      <span className="text-secondary small fw-semibold">Agri Knowledge Content</span>
+                      <span className="text-secondary small fw-semibold">{t('admin.overview.activeAdvisories')}</span>
                       <span className="p-2 rounded-2 bg-success bg-opacity-10 text-success">
                         <i className="bi bi-journal-richtext fs-5" />
                       </span>
@@ -854,24 +859,21 @@ const AdminPage = () => {
                     <div className="h3 fw-bold text-dark mb-1">{cropContent.length}</div>
                     <div className="small text-muted d-flex align-items-center gap-1">
                       <span className="badge bg-success-subtle text-success border border-success-subtle rounded-pill">
-                        {cropContent.filter((c) => c.isPublished).length} Published
-                      </span>
-                      <span className="badge bg-light text-secondary border rounded-pill">
-                        {cropContent.filter((c) => c.accuracyVerified).length} Verified
+                        {cropContent.filter((c) => c.isPublished).length}
                       </span>
                     </div>
                   </div>
                 </div>
 
                 {/* 3. Resources */}
-                <div className="col-12 col-sm-6 col-xl-3">
+                <div className="col-6 col-xl-3">
                   <div
                     className="card h-100 border rounded-3 p-3 bg-white shadow-sm cursor-pointer"
                     style={{ cursor: 'pointer', transition: 'all 0.15s ease' }}
                     onClick={() => handleTabChange('resources')}
                   >
                     <div className="d-flex justify-content-between align-items-start mb-2">
-                      <span className="text-secondary small fw-semibold">Shared Stock Items</span>
+                      <span className="text-secondary small fw-semibold">{t('admin.overview.inventoryItems')}</span>
                       <span className="p-2 rounded-2 bg-success bg-opacity-10 text-success">
                         <i className="bi bi-boxes fs-5" />
                       </span>
@@ -881,11 +883,11 @@ const AdminPage = () => {
                       {resources.filter((r) => r.currentStock <= r.minThreshold).length > 0 ? (
                         <span className="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill">
                           <i className="bi bi-exclamation-triangle-fill me-1" />
-                          {resources.filter((r) => r.currentStock <= r.minThreshold).length} Low Stock
+                          {resources.filter((r) => r.currentStock <= r.minThreshold).length} {t('common.needsRestock')}
                         </span>
                       ) : (
                         <span className="badge bg-success-subtle text-success border border-success-subtle rounded-pill">
-                          Stock Levels Optimal
+                          {t('common.optimal')}
                         </span>
                       )}
                     </div>
@@ -893,14 +895,14 @@ const AdminPage = () => {
                 </div>
 
                 {/* 4. Services */}
-                <div className="col-12 col-sm-6 col-xl-3">
+                <div className="col-6 col-xl-3">
                   <div
                     className="card h-100 border rounded-3 p-3 bg-white shadow-sm cursor-pointer"
                     style={{ cursor: 'pointer', transition: 'all 0.15s ease' }}
                     onClick={() => handleTabChange('services')}
                   >
                     <div className="d-flex justify-content-between align-items-start mb-2">
-                      <span className="text-secondary small fw-semibold">Service Bookings</span>
+                      <span className="text-secondary small fw-semibold">{t('admin.nav.services')}</span>
                       <span className="p-2 rounded-2 bg-success bg-opacity-10 text-success">
                         <i className="bi bi-calendar-check fs-5" />
                       </span>
@@ -908,10 +910,10 @@ const AdminPage = () => {
                     <div className="h3 fw-bold text-dark mb-1">{serviceBookings.length}</div>
                     <div className="small text-muted d-flex align-items-center gap-1">
                       <span className="badge bg-success-subtle text-success border border-success-subtle rounded-pill">
-                        {serviceBookings.filter((b) => b.status === 'completed').length} Delivered
+                        {serviceBookings.filter((b) => b.status === 'completed').length} {t('common.completed')}
                       </span>
                       <span className="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill">
-                        {serviceBookings.filter((b) => b.status === 'scheduled').length} Scheduled
+                        {serviceBookings.filter((b) => b.status === 'scheduled').length} {t('common.pending')}
                       </span>
                     </div>
                   </div>
@@ -923,7 +925,7 @@ const AdminPage = () => {
                 <div className="card-header bg-white border-bottom py-3 px-3 d-flex justify-content-between align-items-center">
                   <h4 className="h6 fw-bold mb-0 text-dark d-flex align-items-center gap-2">
                     <i className="bi bi-lightning-charge-fill text-warning" />
-                    Quick Administrative Navigation
+                    {t('admin.overview.quickActions')}
                   </h4>
                   <span className="text-muted small">8 Operational Domains</span>
                 </div>
@@ -935,14 +937,14 @@ const AdminPage = () => {
                         type="button"
                         className="admin-quick-nav-tile"
                         onClick={() => handleTabChange(tab.id)}
-                        aria-label={`Navigate to ${tab.label}: ${tab.desc}`}
+                        aria-label={`Navigate to ${t(`admin.nav.${tab.id}`) || tab.label}: ${t(`admin.navDesc.${tab.id}`) || tab.desc}`}
                       >
                         <div className="admin-quick-nav-icon">
                           <i className={`bi ${tab.icon}`} aria-hidden="true" />
                         </div>
                         <div className="admin-quick-nav-text">
-                          <div className="admin-quick-nav-title">{tab.label}</div>
-                          <div className="admin-quick-nav-desc">{tab.desc}</div>
+                          <div className="admin-quick-nav-title">{t(`admin.nav.${tab.id}`) || tab.label}</div>
+                          <div className="admin-quick-nav-desc">{t(`admin.navDesc.${tab.id}`) || tab.desc}</div>
                         </div>
                         <i className="bi bi-chevron-right admin-quick-nav-chevron" aria-hidden="true" />
                       </button>
@@ -959,10 +961,10 @@ const AdminPage = () => {
                     <div className="card-header bg-white border-bottom py-3 px-3 d-flex justify-content-between align-items-center">
                       <h4 className="h6 fw-bold mb-0 text-dark d-flex align-items-center gap-2">
                         <i className="bi bi-cpu-fill text-success" />
-                        System Diagnostics
+                        {t('admin.overview.systemDiagnostics')}
                       </h4>
                       <span className="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1.5 small fw-semibold">
-                        Healthy
+                        {t('common.optimal')}
                       </span>
                     </div>
                     <div className="card-body p-3.5 p-md-4">
@@ -986,13 +988,13 @@ const AdminPage = () => {
                             </span>
                           </div>
                           <div className="list-group-item bg-transparent d-flex justify-content-between align-items-center px-2 py-2 border-0 border-bottom border-success border-opacity-10">
-                            <span className="text-secondary">Active Security Safeguards</span>
-                            <span className="fw-semibold text-success">Last-Admin &amp; Isolation Guard</span>
+                            <span className="text-secondary">{t('admin.securityGuardNotice')}</span>
+                            <span className="fw-semibold text-success">Active</span>
                           </div>
                           <div className="list-group-item bg-transparent d-flex justify-content-between align-items-center px-2 py-2 border-0">
                             <span className="text-secondary">Credentials Protection</span>
                             <span className="badge bg-white text-success border border-success border-opacity-25 rounded-pill px-3 py-1.5 small fw-semibold shadow-xs">
-                              Enforced (Zero leaks)
+                              Enforced
                             </span>
                           </div>
                         </div>
@@ -1006,7 +1008,7 @@ const AdminPage = () => {
                             handleTabChange('security_policies');
                           }}
                         >
-                          Inspect Maintenance Details &rarr;
+                          {t('admin.security.tabMaintenance')} &rarr;
                         </button>
                       </div>
                     </div>
@@ -1019,7 +1021,7 @@ const AdminPage = () => {
                     <div className="card-header bg-white border-bottom py-3 px-3 d-flex justify-content-between align-items-center">
                       <h4 className="h6 fw-bold mb-0 text-dark d-flex align-items-center gap-2">
                         <i className="bi bi-clock-history text-success" />
-                        Recent Administrative Activity
+                        {t('admin.overview.recentActivity')}
                       </h4>
                       <button
                         type="button"
@@ -1029,23 +1031,23 @@ const AdminPage = () => {
                           handleTabChange('security_policies');
                         }}
                       >
-                        View Full Audit Trail &rarr;
+                        {t('admin.security.tabAuditLogs')} &rarr;
                       </button>
                     </div>
                     <div className="card-body p-0">
                       {recentActivity.length === 0 ? (
                         <div className="p-4 text-center text-muted small">
-                          No recent administrative events logged.
+                          {t('admin.overview.noRecentActivity')}
                         </div>
                       ) : (
                         <div className="table-responsive">
                           <table className="table table-hover align-middle mb-0 small">
                             <thead className="bg-light text-secondary">
                               <tr>
-                                <th className="ps-3 py-2">Action</th>
-                                <th className="py-2">Admin</th>
-                                <th className="py-2">Target</th>
-                                <th className="py-2 pe-3 text-end">Timestamp</th>
+                                <th className="ps-3 py-2">{t('admin.security.auditAction')}</th>
+                                <th className="py-2">{t('admin.security.auditActor')}</th>
+                                <th className="py-2">{t('admin.security.auditTarget')}</th>
+                                <th className="py-2 pe-3 text-end">{t('admin.security.auditTime')}</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -1087,10 +1089,10 @@ const AdminPage = () => {
                 <div>
                   <h3 className="h5 fw-bold text-dark mb-1 d-flex align-items-center gap-2">
                     <i className="bi bi-people-fill text-success" />
-                    User Registrations, Profiles &amp; Support Requests
+                    {t('admin.users.title')}
                   </h3>
                   <p className="text-secondary small mb-0">
-                    Manage registered farmer profiles, verify credentials, and resolve user support inquiries.
+                    {t('admin.users.subtitle')}
                   </p>
                 </div>
                 <button
@@ -1100,7 +1102,7 @@ const AdminPage = () => {
                   onClick={fetchTabData}
                 >
                   <i className={`bi bi-arrow-clockwise ${loading ? 'spin-animation' : ''}`} />
-                  <span>Refresh</span>
+                  <span>{t('common.update')}</span>
                 </button>
               </div>
 
@@ -1109,7 +1111,7 @@ const AdminPage = () => {
                 <div className="card-header bg-white border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
                   <h4 className="h6 fw-bold mb-0 d-flex align-items-center gap-2 text-dark">
                     <i className="bi bi-chat-left-dots-fill text-success" />
-                    Farmer Queries &amp; Support Requests ({supportTickets.length})
+                    {t('admin.users.supportTicketsTab')} ({supportTickets.length})
                   </h4>
                   <div className="btn-group btn-group-sm">
                     <button
@@ -1117,21 +1119,21 @@ const AdminPage = () => {
                       className={`btn btn-sm ${supportFilter === 'all' ? 'btn-success' : 'btn-outline-secondary'}`}
                       onClick={() => setSupportFilter('all')}
                     >
-                      All
+                      {t('common.all') || 'All'}
                     </button>
                     <button
                       type="button"
                       className={`btn btn-sm ${supportFilter === 'open' ? 'btn-success' : 'btn-outline-secondary'}`}
                       onClick={() => setSupportFilter('open')}
                     >
-                      Open
+                      {t('admin.users.statusOpen')}
                     </button>
                     <button
                       type="button"
                       className={`btn btn-sm ${supportFilter === 'resolved' ? 'btn-success' : 'btn-outline-secondary'}`}
                       onClick={() => setSupportFilter('resolved')}
                     >
-                      Resolved
+                      {t('admin.users.statusResolved')}
                     </button>
                   </div>
                 </div>
@@ -1176,7 +1178,7 @@ const AdminPage = () => {
                                 }}
                               >
                                 <i className="bi bi-reply me-1" />
-                                {ticket.status === 'resolved' ? 'Edit Response' : 'Handle & Reply'}
+                                {t('admin.users.reply')}
                               </button>
                             </div>
                           </div>
@@ -1197,7 +1199,7 @@ const AdminPage = () => {
                     <input
                       type="text"
                       className="form-control border-start-0"
-                      placeholder="Search users by name, email, or farm..."
+                      placeholder={t('admin.users.searchPlaceholder')}
                       value={userSearch}
                       onChange={(e) => setUserSearch(e.target.value)}
                     />
@@ -1209,9 +1211,9 @@ const AdminPage = () => {
                     value={userRoleFilter}
                     onChange={(e) => setUserRoleFilter(e.target.value)}
                   >
-                    <option value="">All Roles</option>
-                    <option value="farmer">Farmer / User</option>
-                    <option value="admin">Administrator</option>
+                    <option value="">{t('admin.users.allRoles')}</option>
+                    <option value="farmer">{t('admin.users.farmer')}</option>
+                    <option value="admin">{t('admin.users.admin')}</option>
                   </select>
                 </div>
                 <div className="col-6 col-md-3">
@@ -1220,9 +1222,9 @@ const AdminPage = () => {
                     value={userStatusFilter}
                     onChange={(e) => setUserStatusFilter(e.target.value)}
                   >
-                    <option value="">All Statuses</option>
-                    <option value="active">Active</option>
-                    <option value="suspended">Suspended</option>
+                    <option value="">{t('admin.users.allStatuses')}</option>
+                    <option value="active">{t('admin.users.active')}</option>
+                    <option value="suspended">{t('admin.users.suspended')}</option>
                   </select>
                 </div>
               </div>
@@ -1232,12 +1234,12 @@ const AdminPage = () => {
                 <table className="table align-middle table-hover mb-0">
                   <thead className="table-light small text-secondary">
                     <tr>
-                      <th scope="col">User / Profile</th>
-                      <th scope="col">Email &amp; Verification</th>
-                      <th scope="col">Role</th>
-                      <th scope="col">Status</th>
-                      <th scope="col">Registered</th>
-                      <th scope="col" className="text-end">Administrative Actions</th>
+                      <th scope="col">{t('admin.users.thUser')}</th>
+                      <th scope="col">{t('admin.users.thContact')}</th>
+                      <th scope="col">{t('admin.profile.role')}</th>
+                      <th scope="col">{t('admin.users.thStatus')}</th>
+                      <th scope="col">{t('admin.users.thJoined')}</th>
+                      <th scope="col" className="text-end">{t('admin.users.thActions')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1282,7 +1284,7 @@ const AdminPage = () => {
                                 <i className="bi bi-check-circle-fill text-success" title="Verified email" style={{ fontSize: '0.85rem' }} />
                               ) : (
                                 <span className="badge bg-warning-subtle text-warning-emphasis border" style={{ fontSize: '0.65rem' }}>
-                                  Unverified
+                                  {t('admin.profile.emailUnverified')}
                                 </span>
                               )}
                             </div>
@@ -1290,22 +1292,22 @@ const AdminPage = () => {
                           <td>
                             {isAdmin ? (
                               <span className="badge bg-success text-white">
-                                <i className="bi bi-shield-fill me-1" /> Admin
+                                <i className="bi bi-shield-fill me-1" /> {t('admin.users.admin')}
                               </span>
                             ) : (
                               <span className="badge bg-light text-dark border">
-                                <i className="bi bi-person me-1" /> User / Farmer
+                                <i className="bi bi-person me-1" /> {t('admin.users.farmer')}
                               </span>
                             )}
                           </td>
                           <td>
                             {isSuspended ? (
                               <span className="badge bg-danger-subtle text-danger border border-danger-subtle">
-                                Suspended
+                                {t('admin.users.suspended')}
                               </span>
                             ) : (
                               <span className="badge bg-success-subtle text-success border border-success-subtle">
-                                Active
+                                {t('admin.users.active')}
                               </span>
                             )}
                           </td>
@@ -1317,7 +1319,7 @@ const AdminPage = () => {
                                 type="button"
                                 className="btn btn-outline-secondary"
                                 onClick={() => setInspectedUser(itemUser)}
-                                title="View full profile"
+                                title={t('common.details')}
                               >
                                 <i className="bi bi-eye" />
                               </button>
@@ -1330,7 +1332,7 @@ const AdminPage = () => {
                                       type="button"
                                       className="btn btn-outline-success"
                                       onClick={() => handleOpenUserAction('verify-email', itemUser)}
-                                      title="Verify email for user"
+                                      title={t('admin.users.verifyEmail')}
                                     >
                                       <i className="bi bi-envelope-check" />
                                     </button>
@@ -1341,12 +1343,10 @@ const AdminPage = () => {
                                     type="button"
                                     className="btn btn-outline-warning"
                                     onClick={() => handleOpenUserAction('reset-password', itemUser)}
-                                    title="Generate secure password reset link"
+                                    title={t('admin.users.resetPassword')}
                                   >
                                     <i className="bi bi-key" />
                                   </button>
-
-
 
                                   {/* Suspend / Activate */}
                                   {isSuspended ? (
@@ -1354,7 +1354,7 @@ const AdminPage = () => {
                                       type="button"
                                       className="btn btn-outline-success"
                                       onClick={() => handleOpenUserAction('activate', itemUser)}
-                                      title="Reactivate account"
+                                      title={t('admin.users.reactivateAccount')}
                                     >
                                       <i className="bi bi-check2-circle" />
                                     </button>
@@ -1363,7 +1363,7 @@ const AdminPage = () => {
                                       type="button"
                                       className="btn btn-outline-danger"
                                       onClick={() => handleOpenUserAction('suspend', itemUser)}
-                                      title="Suspend account"
+                                      title={t('admin.users.suspendAccount')}
                                     >
                                       <i className="bi bi-slash-circle" />
                                     </button>
@@ -1396,10 +1396,10 @@ const AdminPage = () => {
                 <div>
                   <h3 className="h5 fw-bold text-dark mb-1 d-flex align-items-center gap-2">
                     <i className="bi bi-journal-richtext text-success" />
-                    Crops, Products &amp; Agricultural Knowledge Content
+                    {t('admin.content.title')}
                   </h3>
                   <p className="text-secondary small mb-0">
-                    Maintain authoritative agronomic guidelines, crop sowing standards, integrated pest advisories, and service specifications.
+                    {t('admin.content.subtitle')}
                   </p>
                 </div>
                 <button
@@ -1424,7 +1424,7 @@ const AdminPage = () => {
                   }}
                 >
                   <i className="bi bi-plus-lg" />
-                  <span>Create Agricultural Content</span>
+                  <span>{t('admin.content.publishNew')}</span>
                 </button>
               </div>
 
@@ -1449,7 +1449,7 @@ const AdminPage = () => {
                     <div className="card h-100 border shadow-sm rounded-3">
                       <div className="card-header bg-white border-bottom p-3 d-flex justify-content-between align-items-start gap-2">
                         <div>
-                          <div className="d-flex align-items-center gap-2 mb-1">
+                          <div className="d-flex flex-wrap align-items-center gap-2 mb-1">
                             <span className="badge bg-success-subtle text-success border border-success-subtle text-uppercase" style={{ fontSize: '0.7rem' }}>
                               {item.category}
                             </span>
@@ -1526,10 +1526,10 @@ const AdminPage = () => {
                 <div>
                   <h3 className="h5 fw-bold text-dark mb-1 d-flex align-items-center gap-2">
                     <i className="bi bi-boxes text-success" />
-                    Agricultural Products Inventory &amp; Supplier Coordination
+                    {t('admin.resources.title')}
                   </h3>
                   <p className="text-secondary small mb-0">
-                    Monitor strategic stocks of certified seeds, fertilizers, biopesticides, and equipment, and coordinate replenishment orders with verified suppliers.
+                    {t('admin.resources.subtitle')}
                   </p>
                 </div>
                 <button
@@ -1538,7 +1538,7 @@ const AdminPage = () => {
                   onClick={() => setResourceCreateModal(true)}
                 >
                   <i className="bi bi-plus-lg" />
-                  <span>Add Product Resource</span>
+                  <span>{t('admin.resources.requestRestock')}</span>
                 </button>
               </div>
 
@@ -1546,23 +1546,23 @@ const AdminPage = () => {
               <div className="row g-3 mb-4">
                 <div className="col-6 col-md-3">
                   <div className="p-3 bg-light rounded-3 border">
-                    <small className="text-muted d-block mb-1">Cataloged Resources</small>
+                    <small className="text-muted d-block mb-1">{t('admin.resources.totalSupplies')}</small>
                     <div className="h4 fw-bold text-dark mb-0">{resources.length}</div>
                     <small className="text-success" style={{ fontSize: '0.72rem' }}>100% Quality Audited</small>
                   </div>
                 </div>
                 <div className="col-6 col-md-3">
                   <div className="p-3 bg-light rounded-3 border">
-                    <small className="text-muted d-block mb-1">Low Stock Alerts</small>
+                    <small className="text-muted d-block mb-1">{t('admin.resources.lowStockCount')}</small>
                     <div className="h4 fw-bold text-danger mb-0">
                       {resources.filter((r) => r.status === 'low_stock' || r.status === 'out_of_stock').length}
                     </div>
-                    <small className="text-muted" style={{ fontSize: '0.72rem' }}>Below Minimum Threshold</small>
+                    <small className="text-muted" style={{ fontSize: '0.72rem' }}>{t('common.needsRestock')}</small>
                   </div>
                 </div>
                 <div className="col-6 col-md-3">
                   <div className="p-3 bg-light rounded-3 border">
-                    <small className="text-muted d-block mb-1">Active Suppliers</small>
+                    <small className="text-muted d-block mb-1">{t('admin.resources.suppliersCount')}</small>
                     <div className="h4 fw-bold text-dark mb-0">
                       {new Set(resources.map((r) => r.supplierName)).size}
                     </div>
@@ -1571,7 +1571,7 @@ const AdminPage = () => {
                 </div>
                 <div className="col-6 col-md-3">
                   <div className="p-3 bg-light rounded-3 border">
-                    <small className="text-muted d-block mb-1">Restock Shipments</small>
+                    <small className="text-muted d-block mb-1">{t('purchases.statPending')}</small>
                     <div className="h4 fw-bold text-dark mb-0">
                       {resources.filter((r) => r.status === 'reordered').length}
                     </div>
@@ -1585,13 +1585,13 @@ const AdminPage = () => {
                 <table className="table align-middle table-hover mb-0">
                   <thead className="table-light small text-secondary">
                     <tr>
-                      <th scope="col">Product / SKU</th>
-                      <th scope="col">Category</th>
-                      <th scope="col">Current Stock</th>
-                      <th scope="col">Unit Price (₹)</th>
-                      <th scope="col">Supplier Coordination</th>
-                      <th scope="col">Status</th>
-                      <th scope="col" className="text-end">Actions</th>
+                      <th scope="col">{t('admin.resources.itemName')}</th>
+                      <th scope="col">{t('admin.resources.category')}</th>
+                      <th scope="col">{t('admin.resources.quantity')}</th>
+                      <th scope="col">{t('common.price')} (₹)</th>
+                      <th scope="col">{t('admin.resources.supplier')}</th>
+                      <th scope="col">{t('admin.resources.stockStatus')}</th>
+                      <th scope="col" className="text-end">{t('admin.users.thActions')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1653,10 +1653,10 @@ const AdminPage = () => {
                 <div>
                   <h3 className="h5 fw-bold text-dark mb-1 d-flex align-items-center gap-2">
                     <i className="bi bi-calendar-check-fill text-success" />
-                    Agricultural Services Scheduling &amp; Delivery Management
+                    {t('admin.services.title')}
                   </h3>
                   <p className="text-secondary small mb-0">
-                    Oversee bookings for drone spraying, GPS soil laboratory testing, combine machinery rentals, and expert agronomy consultations.
+                    {t('admin.services.subtitle')}
                   </p>
                 </div>
                 <div className="btn-group btn-group-sm">
@@ -1667,7 +1667,7 @@ const AdminPage = () => {
                       className={`btn text-capitalize ${serviceFilter === st ? 'btn-success' : 'btn-outline-secondary'}`}
                       onClick={() => setServiceFilter(st)}
                     >
-                      {st}
+                      {st === 'all' ? (t('common.all') || 'All') : st === 'pending' ? t('common.pending') : st === 'completed' ? t('common.completed') : st}
                     </button>
                   ))}
                 </div>
@@ -1678,13 +1678,13 @@ const AdminPage = () => {
                 <table className="table align-middle table-hover mb-0">
                   <thead className="table-light small text-secondary">
                     <tr>
-                      <th scope="col">Service Name</th>
-                      <th scope="col">Farmer &amp; Farmland</th>
-                      <th scope="col">Scheduled Date</th>
+                      <th scope="col">{t('admin.services.serviceName')}</th>
+                      <th scope="col">{t('admin.services.farmerName')}</th>
+                      <th scope="col">{t('admin.services.bookingDate')}</th>
                       <th scope="col">Technician / Pilot</th>
-                      <th scope="col">Status</th>
-                      <th scope="col">Fee (₹)</th>
-                      <th scope="col" className="text-end">Schedule Actions</th>
+                      <th scope="col">{t('admin.services.bookingStatus')}</th>
+                      <th scope="col">{t('common.price')} (₹)</th>
+                      <th scope="col" className="text-end">{t('admin.services.updateStatus')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1745,10 +1745,10 @@ const AdminPage = () => {
                 <div>
                   <h3 className="h5 fw-bold text-dark mb-1 d-flex align-items-center gap-2">
                     <i className="bi bi-graph-up text-success" />
-                    Data Analytics &amp; Strategic Decision Reports
+                    {t('admin.analytics.title')}
                   </h3>
                   <p className="text-secondary small mb-0">
-                    Real-time data analytics calculated directly from stored registrations, services, and inventory without synthetic data.
+                    {t('admin.analytics.subtitle')}
                   </p>
                 </div>
                 <div className="btn-group btn-group-sm">
@@ -1758,7 +1758,7 @@ const AdminPage = () => {
                     disabled={loading}
                     onClick={() => handleGenerateReport('strategic_overview')}
                   >
-                    <i className="bi bi-file-earmark-text me-1" /> Generate Strategic Report
+                    <i className="bi bi-file-earmark-text me-1" /> {t('admin.analytics.exportReport')}
                   </button>
                 </div>
               </div>
@@ -1767,32 +1767,32 @@ const AdminPage = () => {
               <div className="row g-3 mb-4">
                 <div className="col-6 col-md-3">
                   <div className="p-3 bg-light rounded-3 border">
-                    <small className="text-muted d-block mb-1">Total Users</small>
+                    <small className="text-muted d-block mb-1">{t('admin.overview.registeredFarmers')}</small>
                     <div className="h4 fw-bold text-dark mb-0">{analyticsData?.totalUsers ?? users.length}</div>
                     <small className="text-success" style={{ fontSize: '0.72rem' }}>Stored platform accounts</small>
                   </div>
                 </div>
                 <div className="col-6 col-md-3">
                   <div className="p-3 bg-light rounded-3 border">
-                    <small className="text-muted d-block mb-1">Active Accounts</small>
+                    <small className="text-muted d-block mb-1">{t('admin.users.active')}</small>
                     <div className="h4 fw-bold text-success mb-0">{analyticsData?.activeUsers ?? users.filter((u) => u.status === 'active').length}</div>
                     <small className="text-muted" style={{ fontSize: '0.72rem' }}>In good standing</small>
                   </div>
                 </div>
                 <div className="col-6 col-md-3">
                   <div className="p-3 bg-light rounded-3 border">
-                    <small className="text-muted d-block mb-1">Service Bookings</small>
+                    <small className="text-muted d-block mb-1">{t('admin.nav.services')}</small>
                     <div className="h4 fw-bold text-dark mb-0">{analyticsData?.totalBookings ?? serviceBookings.length}</div>
                     <small className="text-success" style={{ fontSize: '0.72rem' }}>Total bookings recorded</small>
                   </div>
                 </div>
                 <div className="col-6 col-md-3">
                   <div className="p-3 bg-light rounded-3 border">
-                    <small className="text-muted d-block mb-1">Low-Stock Items</small>
+                    <small className="text-muted d-block mb-1">{t('admin.resources.lowStockCount')}</small>
                     <div className={`h4 fw-bold mb-0 ${(analyticsData?.lowStockCount ?? resources.filter((r) => r.currentStock <= r.reorderLevel).length) > 0 ? 'text-warning' : 'text-success'}`}>
                       {analyticsData?.lowStockCount ?? resources.filter((r) => r.currentStock <= r.reorderLevel).length}
                     </div>
-                    <small className="text-muted" style={{ fontSize: '0.72rem' }}>Inventory replenishment warnings</small>
+                    <small className="text-muted" style={{ fontSize: '0.72rem' }}>{t('common.needsRestock')}</small>
                   </div>
                 </div>
               </div>
@@ -1924,7 +1924,7 @@ const AdminPage = () => {
                   onClick={() => setSecSubTab('maintenance')}
                 >
                   <i className="bi bi-cpu" />
-                  <span>System Maintenance &amp; Diagnostics</span>
+                  <span>{t('admin.security.tabMaintenance')}</span>
                 </button>
                 <button
                   type="button"
@@ -1932,7 +1932,7 @@ const AdminPage = () => {
                   onClick={() => setSecSubTab('security')}
                 >
                   <i className="bi bi-shield-lock" />
-                  <span>Security &amp; Audit Logs</span>
+                  <span>{t('admin.security.tabAuditLogs')}</span>
                 </button>
                 <button
                   type="button"
@@ -1940,7 +1940,7 @@ const AdminPage = () => {
                   onClick={() => setSecSubTab('policies')}
                 >
                   <i className="bi bi-briefcase" />
-                  <span>Terms Compliance &amp; Policies</span>
+                  <span>{t('admin.security.tabViolations')}</span>
                 </button>
               </div>
 
@@ -1948,7 +1948,7 @@ const AdminPage = () => {
               {secSubTab === 'maintenance' && (
                 <div>
                   <div className="d-flex justify-content-between align-items-center mb-3">
-                    <h4 className="h6 fw-bold text-dark mb-0">System Checks, Diagnostics &amp; Operational Health</h4>
+                    <h4 className="h6 fw-bold text-dark mb-0">{t('admin.security.title')}</h4>
                     <div className="d-flex gap-2">
                       <button
                         type="button"
@@ -1957,7 +1957,7 @@ const AdminPage = () => {
                         onClick={handleRunDiagnostics}
                       >
                         <i className="bi bi-activity" />
-                        <span>Run Diagnostic Check</span>
+                        <span>{t('admin.security.runDiagnostics')}</span>
                       </button>
                       <button
                         type="button"
@@ -1966,7 +1966,7 @@ const AdminPage = () => {
                         onClick={handleClearCache}
                       >
                         <i className="bi bi-arrow-repeat" />
-                        <span>Flush Cache</span>
+                        <span>{t('admin.security.clearCache')}</span>
                       </button>
                     </div>
                   </div>
@@ -2338,7 +2338,7 @@ const AdminPage = () => {
               </div>
 
               {/* Profile Identity Card */}
-              <div className="card border shadow-sm rounded-4 p-4 mb-4 bg-white">
+              <div className="card border shadow-sm rounded-4 p-3 p-sm-4 mb-4 bg-white">
                 <div className="d-flex flex-wrap align-items-center justify-content-between gap-3">
                   <div className="d-flex align-items-center gap-3">
                     {adminProfileForm.profilePhoto ? (
@@ -2518,7 +2518,7 @@ const AdminPage = () => {
                 {/* Column 2: Account Security, Password & Governance Boundaries */}
                 <div className="col-12 col-lg-6">
                   {/* Password Change Form */}
-                  <div className="card border shadow-sm rounded-4 p-4 mb-4 bg-white">
+                  <div className="card border shadow-sm rounded-4 p-3 p-sm-4 mb-4 bg-white">
                     <h4 className="h6 fw-bold text-dark mb-3 d-flex align-items-center gap-2">
                       <i className="bi bi-key-fill text-success" />
                       {t('admin.profile.accountSecurity')}
@@ -2613,7 +2613,7 @@ const AdminPage = () => {
                     Irreversible Governance Action
                   </span>
                 </div>
-                <div className="card-body p-4">
+                <div className="card-body p-3 p-sm-4">
                   <p className="text-secondary small mb-3">
                     Deleting your administrator account is permanent and cannot be undone. All administrative credentials, personal profile details, active authorization sessions, and personal identifying data will be permanently wiped immediately.
                   </p>
@@ -2838,10 +2838,10 @@ const AdminPage = () => {
             <div className="modal-content border-0 shadow-lg rounded-4">
               <div className="modal-header border-bottom py-3 px-4">
                 <h5 className="modal-title fw-bold text-dark">
-                  {userActionModal.type === 'suspend' && 'Suspend User Account'}
-                  {userActionModal.type === 'activate' && 'Reactivate User Account'}
-                  {userActionModal.type === 'verify-email' && 'Verify Email for User'}
-                  {userActionModal.type === 'reset-password' && 'Generate Password Reset Link'}
+                  {userActionModal.type === 'suspend' && t('admin.users.modalSuspendTitle')}
+                  {userActionModal.type === 'activate' && t('admin.users.modalActivateTitle')}
+                  {userActionModal.type === 'verify-email' && t('admin.users.modalVerifyEmailTitle')}
+                  {userActionModal.type === 'reset-password' && t('admin.users.modalResetPasswordTitle')}
                 </h5>
                 <button type="button" className="btn-close" aria-label="Close" onClick={() => setUserActionModal(null)} />
               </div>
@@ -2853,12 +2853,12 @@ const AdminPage = () => {
                     </p>
                     <div className="mb-2">
                       <label className="form-label small fw-semibold text-dark">
-                        Administrative Audit Reason <span className="text-danger">*</span>
+                        {t('admin.users.auditReasonLabel')} <span className="text-danger">*</span>
                       </label>
                       <input
                         type="text"
                         className="form-control form-control-sm"
-                        placeholder="Required: State the reason (min 5 characters)..."
+                        placeholder={t('admin.users.auditReasonPlaceholder')}
                         value={userActionReason}
                         onChange={(e) => setUserActionReason(e.target.value)}
                         required
@@ -2889,7 +2889,7 @@ const AdminPage = () => {
               </div>
               <div className="modal-footer border-top py-2 px-4">
                 <button type="button" className="btn btn-secondary btn-sm" onClick={() => setUserActionModal(null)}>
-                  {issuedResetLink ? 'Done' : 'Cancel'}
+                  {issuedResetLink ? (t('common.completed') || 'Done') : (t('common.cancel') || 'Cancel')}
                 </button>
                 {!issuedResetLink && (
                   <button
@@ -2898,7 +2898,7 @@ const AdminPage = () => {
                     disabled={loading || !userActionReason.trim() || userActionReason.trim().length < 5}
                     onClick={handleExecuteUserAction}
                   >
-                    Confirm Action
+                    {t('common.submit')}
                   </button>
                 )}
               </div>
@@ -2914,7 +2914,7 @@ const AdminPage = () => {
             <div className="modal-content border-0 shadow-lg rounded-4">
               <div className="modal-header border-bottom py-3 px-4">
                 <h5 className="modal-title fw-bold text-dark">
-                  Respond to Support Request
+                  {t('admin.users.replyModalTitle')}
                 </h5>
                 <button type="button" className="btn-close" aria-label="Close" onClick={() => setActiveTicket(null)} />
               </div>
@@ -2928,13 +2928,13 @@ const AdminPage = () => {
 
                   <div className="mb-3">
                     <label className="form-label small fw-semibold" htmlFor="ticketReply">
-                      Administrative Reply &amp; Resolution
+                      {t('admin.users.reply')}
                     </label>
                     <textarea
                       id="ticketReply"
                       rows={4}
                       className="form-control form-control-sm"
-                      placeholder="Type official resolution or instructions for farmer..."
+                      placeholder={t('admin.users.replyPlaceholder')}
                       value={ticketReplyText}
                       onChange={(e) => setTicketReplyText(e.target.value)}
                       required
@@ -2943,10 +2943,10 @@ const AdminPage = () => {
                 </div>
                 <div className="modal-footer border-top py-2 px-4">
                   <button type="button" className="btn btn-secondary btn-sm" onClick={() => setActiveTicket(null)}>
-                    Cancel
+                    {t('common.cancel') || 'Cancel'}
                   </button>
                   <button type="submit" className="btn btn-success btn-sm" disabled={loading || !ticketReplyText.trim()}>
-                    Send Response &amp; Mark Resolved
+                    {t('admin.users.reply')}
                   </button>
                 </div>
               </form>
@@ -3071,6 +3071,7 @@ const AdminPage = () => {
                       value={restockQty}
                       onChange={(e) => setRestockQty(e.target.value)}
                       min={1}
+                      inputMode="numeric"
                       required
                     />
                   </div>
@@ -3147,8 +3148,10 @@ const AdminPage = () => {
                         type="number"
                         className="form-control form-control-sm"
                         value={resourceForm.currentStock}
-                        onChange={(e) => setResourceForm((p) => ({ ...p, currentStock: Number(e.target.value) }))}
+                        onChange={(e) => setResourceForm((p) => ({ ...p, currentStock: e.target.value }))}
                         min={0}
+                        step="any"
+                        inputMode="decimal"
                         required
                       />
                     </div>
@@ -3169,8 +3172,10 @@ const AdminPage = () => {
                         type="number"
                         className="form-control form-control-sm"
                         value={resourceForm.minThreshold}
-                        onChange={(e) => setResourceForm((p) => ({ ...p, minThreshold: Number(e.target.value) }))}
+                        onChange={(e) => setResourceForm((p) => ({ ...p, minThreshold: e.target.value }))}
                         min={1}
+                        step="any"
+                        inputMode="decimal"
                         required
                       />
                     </div>
@@ -3180,8 +3185,10 @@ const AdminPage = () => {
                         type="number"
                         className="form-control form-control-sm"
                         value={resourceForm.unitPriceINR}
-                        onChange={(e) => setResourceForm((p) => ({ ...p, unitPriceINR: Number(e.target.value) }))}
+                        onChange={(e) => setResourceForm((p) => ({ ...p, unitPriceINR: e.target.value }))}
                         min={0}
+                        step="0.01"
+                        inputMode="decimal"
                         required
                       />
                     </div>

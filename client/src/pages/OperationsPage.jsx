@@ -436,14 +436,14 @@ const OperationsPage = () => {
         </div>
 
         {farms.length > 1 && (
-          <div className="d-flex align-items-center gap-2">
-            <label htmlFor="farm-filter-select" className="small text-muted text-nowrap">Filter Farm:</label>
+          <div className="d-flex align-items-center gap-2 flex-grow-1 flex-sm-grow-0">
+            <label htmlFor="farm-filter-select" className="small text-muted text-nowrap mb-0">{t('operations.filterFarm')}</label>
             <select
               id="farm-filter-select"
-              className="form-select form-select-sm"
+              className="form-select form-select-sm flex-grow-1"
               value={selectedFarmId}
               onChange={(e) => setSelectedFarmId(e.target.value)}
-              style={{ minWidth: '180px' }}
+              style={{ minWidth: '140px', maxWidth: '280px' }}
             >
               <option value="all">All Farms ({farms.length})</option>
               {farms.map((f) => (
@@ -460,7 +460,7 @@ const OperationsPage = () => {
         /* ================== TASKS TAB ================== */
         <div>
           {/* Quick Sub-filters */}
-          <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
+          <div className="d-flex flex-nowrap overflow-x-auto align-items-center gap-2 mb-3 pb-1 no-scrollbar">
             {[
               { id: 'all', label: t('operations.filterAll'), count: tasks.length },
               { id: 'today', label: t('operations.filterToday'), count: tasks.filter((t) => t.status !== 'completed' && new Date(t.dueDate).getTime() >= todayStartMs && new Date(t.dueDate).getTime() < todayStartMs + 86400000).length },
@@ -471,7 +471,7 @@ const OperationsPage = () => {
               <button
                 key={f.id}
                 type="button"
-                className={`btn btn-sm ${taskFilter === f.id ? 'btn-dark' : 'btn-outline-secondary'}`}
+                className={`btn btn-sm text-nowrap flex-shrink-0 ${taskFilter === f.id ? 'btn-dark' : 'btn-outline-secondary'}`}
                 onClick={() => setTaskFilter(f.id)}
               >
                 {f.label} ({f.count})
@@ -513,48 +513,48 @@ const OperationsPage = () => {
                 return (
                   <Card key={task._id} className="p-3">
                     <div className="d-flex flex-wrap align-items-center justify-content-between gap-2">
-                      <div className="d-flex align-items-center gap-3">
+                      <div className="d-flex align-items-center gap-3" style={{ minWidth: 0, flex: '1 1 200px' }}>
                         <button
                           type="button"
-                          className={`btn btn-sm p-1 ${isCompleted ? 'text-success' : 'text-muted'}`}
+                          className={`btn btn-sm p-1 flex-shrink-0 ${isCompleted ? 'text-success' : 'text-muted'}`}
                           title={isCompleted ? 'Mark as in-progress' : 'Mark as complete'}
                           disabled={actionLoadingId === task._id}
                           onClick={() => handleToggleTaskStatus(task)}
                         >
                           <i className={`bi ${isCompleted ? 'bi-check-circle-fill fs-5' : 'bi-circle fs-5'}`} />
                         </button>
-                        <div>
-                          <strong className={`d-block text-dark ${isCompleted ? 'text-decoration-line-through text-muted' : ''}`}>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <strong className={`d-block text-dark text-truncate ${isCompleted ? 'text-decoration-line-through text-muted' : ''}`}>
                             {task.title}
                           </strong>
                           <div className="d-flex flex-wrap align-items-center gap-2 small text-muted mt-1">
-                            <span className={isOverdue ? 'text-danger fw-semibold' : isToday ? 'text-warning fw-semibold' : ''}>
+                            <span className={`text-nowrap ${isOverdue ? 'text-danger fw-semibold' : isToday ? 'text-warning fw-semibold' : ''}`}>
                               <i className="bi bi-calendar-event me-1" />
                               {new Date(task.dueDate).toLocaleDateString()}
                               {isOverdue && ' (Overdue)'}
                               {isToday && ' (Today)'}
                             </span>
                             {farmObj && (
-                              <span className="badge bg-light text-secondary border">
+                              <span className="badge bg-light text-secondary border text-truncate" style={{ maxWidth: 'min(180px, 45vw)' }}>
                                 {farmObj.name}{fieldObj ? ` • ${fieldObj.name}` : ''}
                               </span>
                             )}
                             {task.cropCycleId && (() => {
                               const cycle = cropCycles.find((c) => String(c._id) === String(task.cropCycleId));
                               return cycle ? (
-                                <span className="badge bg-success-subtle text-success border">
+                                <span className="badge bg-success-subtle text-success border text-truncate" style={{ maxWidth: '140px' }}>
                                   <i className="bi bi-sprout me-1" />{cycle.cropName}
                                 </span>
                               ) : null;
                             })()}
                             {task.assignee && (
-                              <span><i className="bi bi-person me-1" />{task.assignee}</span>
+                              <span className="text-nowrap"><i className="bi bi-person me-1" />{task.assignee}</span>
                             )}
                           </div>
                         </div>
                       </div>
 
-                      <div className="d-flex align-items-center gap-2">
+                      <div className="d-flex align-items-center gap-2 flex-shrink-0 ms-auto ms-sm-0">
                         <span className={`badge ${priorityMeta.badgeClass}`}>
                           {priorityMeta.label}
                         </span>
@@ -593,7 +593,7 @@ const OperationsPage = () => {
         /* ================== ACTIVITIES TAB ================== */
         <div>
           {/* Activity Filters */}
-          <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
+          <div className="d-flex flex-nowrap overflow-x-auto align-items-center gap-2 mb-3 pb-1 no-scrollbar">
             {[
               { id: 'all', label: 'All Operations' },
               { id: 'irrigation', label: 'Irrigation' },
@@ -606,7 +606,7 @@ const OperationsPage = () => {
               <button
                 key={f.id}
                 type="button"
-                className={`btn btn-sm ${activityTypeFilter === f.id ? 'btn-dark' : 'btn-outline-secondary'}`}
+                className={`btn btn-sm text-nowrap flex-shrink-0 ${activityTypeFilter === f.id ? 'btn-dark' : 'btn-outline-secondary'}`}
                 onClick={() => setActivityTypeFilter(f.id)}
               >
                 {f.label}
@@ -648,35 +648,35 @@ const OperationsPage = () => {
                 return (
                   <Card key={act._id} className="p-3">
                     <div className="d-flex flex-wrap align-items-center justify-content-between gap-2">
-                      <div className="d-flex align-items-center gap-3">
-                        <span className={`fs-4 ${info.color}`}>
+                      <div className="d-flex align-items-center gap-3" style={{ minWidth: 0, flex: '1 1 200px' }}>
+                        <span className={`fs-4 flex-shrink-0 ${info.color}`}>
                           <i className={`bi ${info.icon}`} />
                         </span>
-                        <div>
-                          <strong className="d-block text-dark">{info.label}</strong>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <strong className="d-block text-dark text-truncate">{info.label}</strong>
                           <div className="d-flex flex-wrap align-items-center gap-2 small text-muted mt-1">
-                            <span>
+                            <span className="text-nowrap">
                               <i className="bi bi-calendar3 me-1" />
                               {new Date(act.date).toLocaleDateString()}
                             </span>
                             {farmObj && (
-                              <span className="badge bg-light text-secondary border">
+                              <span className="badge bg-light text-secondary border text-truncate" style={{ maxWidth: 'min(180px, 45vw)' }}>
                                 {farmObj.name}{fieldObj ? ` • ${fieldObj.name}` : ''}
                               </span>
                             )}
                             {act.cropCycleId && (() => {
                               const cycle = cropCycles.find((c) => String(c._id) === String(act.cropCycleId));
                               return cycle ? (
-                                <span className="badge bg-success-subtle text-success border">
+                                <span className="badge bg-success-subtle text-success border text-truncate" style={{ maxWidth: '140px' }}>
                                   <i className="bi bi-sprout me-1" />{cycle.cropName}
                                 </span>
                               ) : null;
                             })()}
                             {act.performedBy && (
-                              <span><i className="bi bi-person me-1" />{act.performedBy}</span>
+                              <span className="text-nowrap"><i className="bi bi-person me-1" />{act.performedBy}</span>
                             )}
                             {act.cost && (
-                              <span className="fw-semibold text-dark">Cost: ₹{act.cost}</span>
+                              <span className="fw-semibold text-dark text-nowrap">Cost: ₹{act.cost}</span>
                             )}
                           </div>
                         </div>
@@ -684,7 +684,7 @@ const OperationsPage = () => {
 
                       <button
                         type="button"
-                        className="btn btn-outline-danger btn-sm p-1 px-2"
+                        className="btn btn-outline-danger btn-sm p-1 px-2 flex-shrink-0 ms-auto ms-sm-0"
                         title="Delete activity record"
                         disabled={actionLoadingId === act._id}
                         onClick={() => handleDeleteActivity(act._id)}
@@ -712,13 +712,13 @@ const OperationsPage = () => {
           <div className="modal-dialog modal-dialog-centered">
             <div className="modal-content">
               <div className="modal-header">
-                <h5 className="modal-title">Create Operational Task</h5>
+                <h5 className="modal-title">{t('operations.createTaskModalTitle')}</h5>
                 <button type="button" className="btn-close" onClick={() => setShowTaskModal(false)} />
               </div>
               <form onSubmit={handleCreateTask}>
                 <div className="modal-body d-flex flex-column gap-3">
                   <div>
-                    <label className="form-label small fw-semibold">Task Title *</label>
+                    <label className="form-label small fw-semibold">{t('operations.taskTitleLabel')} *</label>
                     <input
                       type="text"
                       className="form-control"
@@ -729,8 +729,8 @@ const OperationsPage = () => {
                     />
                   </div>
                   <div className="row g-2">
-                    <div className="col-6">
-                      <label className="form-label small fw-semibold">Due Date</label>
+                    <div className="col-12 col-sm-6">
+                      <label className="form-label small fw-semibold">{t('operations.dueDateLabel')}</label>
                       <input
                         type="date"
                         className="form-control"
@@ -738,42 +738,42 @@ const OperationsPage = () => {
                         onChange={(e) => setTaskForm({ ...taskForm, dueDate: e.target.value })}
                       />
                     </div>
-                    <div className="col-6">
-                      <label className="form-label small fw-semibold">Priority</label>
+                    <div className="col-12 col-sm-6">
+                      <label className="form-label small fw-semibold">{t('operations.priorityLabel')}</label>
                       <select
                         className="form-select"
                         value={taskForm.priority}
                         onChange={(e) => setTaskForm({ ...taskForm, priority: e.target.value })}
                       >
-                        <option value="low">Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
-                        <option value="urgent">Urgent</option>
+                        <option value="low">{t('common.low')}</option>
+                        <option value="medium">{t('common.medium')}</option>
+                        <option value="high">{t('common.high')}</option>
+                        <option value="urgent">{t('common.urgent')}</option>
                       </select>
                     </div>
                   </div>
                   <div className="row g-2">
-                    <div className="col-6">
-                      <label className="form-label small fw-semibold">Farm</label>
+                    <div className="col-12 col-sm-6">
+                      <label className="form-label small fw-semibold">{t('operations.farmLabel')}</label>
                       <select
                         className="form-select"
                         value={taskForm.farmId}
                         onChange={(e) => setTaskForm({ ...taskForm, farmId: e.target.value, fieldId: '' })}
                       >
-                        <option value="">(Optional - General Farm)</option>
+                        <option value="">{t('operations.optionalGeneralFarm')}</option>
                         {farms.map((f) => (
                           <option key={f._id} value={f._id}>{f.name}</option>
                         ))}
                       </select>
                     </div>
-                    <div className="col-6">
-                      <label className="form-label small fw-semibold">Field / Plot</label>
+                    <div className="col-12 col-sm-6">
+                      <label className="form-label small fw-semibold">{t('operations.fieldPlotLabel')}</label>
                       <select
                         className="form-select"
                         value={taskForm.fieldId}
                         onChange={(e) => setTaskForm({ ...taskForm, fieldId: e.target.value })}
                       >
-                        <option value="">(Optional)</option>
+                        <option value="">{t('common.optional')}</option>
                         {fields
                           .filter((f) => !taskForm.farmId || String(f.farmId) === String(taskForm.farmId))
                           .map((fld) => (
@@ -784,13 +784,13 @@ const OperationsPage = () => {
                   </div>
                   {taskForm.fieldId && (
                     <div>
-                      <label className="form-label small fw-semibold">Associated Crop Cycle</label>
+                      <label className="form-label small fw-semibold">{t('operations.associatedCropCycle')}</label>
                       <select
                         className="form-select"
                         value={taskForm.cropCycleId}
                         onChange={(e) => setTaskForm({ ...taskForm, cropCycleId: e.target.value })}
                       >
-                        <option value="">(Optional - General Field Task)</option>
+                        <option value="">{t('operations.optionalGeneralFieldTask')}</option>
                         {cropCycles
                           .filter((c) => String(c.fieldId) === String(taskForm.fieldId))
                           .map((cycle) => (
@@ -802,7 +802,7 @@ const OperationsPage = () => {
                     </div>
                   )}
                   <div>
-                    <label className="form-label small fw-semibold">Assignee</label>
+                    <label className="form-label small fw-semibold">{t('operations.assigneeLabel')}</label>
                     <input
                       type="text"
                       className="form-control"
@@ -812,7 +812,7 @@ const OperationsPage = () => {
                     />
                   </div>
                   <div>
-                    <label className="form-label small fw-semibold">Notes</label>
+                    <label className="form-label small fw-semibold">{t('operations.notesLabel')}</label>
                     <textarea
                       className="form-control"
                       rows={2}
@@ -842,7 +842,7 @@ const OperationsPage = () => {
           <div className="modal-dialog modal-dialog-centered">
             <div className="modal-content">
               <div className="modal-header">
-                <h5 className="modal-title">Edit Operational Task</h5>
+                <h5 className="modal-title">{t('operations.editTaskModalTitle')}</h5>
                 <button
                   type="button"
                   className="btn-close"
@@ -855,7 +855,7 @@ const OperationsPage = () => {
               <form onSubmit={handleUpdateTask}>
                 <div className="modal-body d-flex flex-column gap-3">
                   <div>
-                    <label className="form-label small fw-semibold">Task Title *</label>
+                    <label className="form-label small fw-semibold">{t('operations.taskTitleLabel')} *</label>
                     <input
                       type="text"
                       className="form-control"
@@ -865,8 +865,8 @@ const OperationsPage = () => {
                     />
                   </div>
                   <div className="row g-2">
-                    <div className="col-6">
-                      <label className="form-label small fw-semibold">Due Date</label>
+                    <div className="col-12 col-sm-6">
+                      <label className="form-label small fw-semibold">{t('operations.dueDateLabel')}</label>
                       <input
                         type="date"
                         className="form-control"
@@ -874,42 +874,42 @@ const OperationsPage = () => {
                         onChange={(e) => setEditTaskForm({ ...editTaskForm, dueDate: e.target.value })}
                       />
                     </div>
-                    <div className="col-6">
-                      <label className="form-label small fw-semibold">Priority</label>
+                    <div className="col-12 col-sm-6">
+                      <label className="form-label small fw-semibold">{t('operations.priorityLabel')}</label>
                       <select
                         className="form-select"
                         value={editTaskForm.priority}
                         onChange={(e) => setEditTaskForm({ ...editTaskForm, priority: e.target.value })}
                       >
-                        <option value="low">Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
-                        <option value="urgent">Urgent</option>
+                        <option value="low">{t('common.low')}</option>
+                        <option value="medium">{t('common.medium')}</option>
+                        <option value="high">{t('common.high')}</option>
+                        <option value="urgent">{t('common.urgent')}</option>
                       </select>
                     </div>
                   </div>
                   <div className="row g-2">
-                    <div className="col-6">
-                      <label className="form-label small fw-semibold">Farm</label>
+                    <div className="col-12 col-sm-6">
+                      <label className="form-label small fw-semibold">{t('operations.farmLabel')}</label>
                       <select
                         className="form-select"
                         value={editTaskForm.farmId}
                         onChange={(e) => setEditTaskForm({ ...editTaskForm, farmId: e.target.value, fieldId: '', cropCycleId: '' })}
                       >
-                        <option value="">(Optional - General Farm)</option>
+                        <option value="">{t('operations.optionalGeneralFarm')}</option>
                         {farms.map((f) => (
                           <option key={f._id} value={f._id}>{f.name}</option>
                         ))}
                       </select>
                     </div>
-                    <div className="col-6">
-                      <label className="form-label small fw-semibold">Field / Plot</label>
+                    <div className="col-12 col-sm-6">
+                      <label className="form-label small fw-semibold">{t('operations.fieldPlotLabel')}</label>
                       <select
                         className="form-select"
                         value={editTaskForm.fieldId}
                         onChange={(e) => setEditTaskForm({ ...editTaskForm, fieldId: e.target.value, cropCycleId: '' })}
                       >
-                        <option value="">(Optional)</option>
+                        <option value="">{t('common.optional')}</option>
                         {fields
                           .filter((f) => !editTaskForm.farmId || String(f.farmId) === String(editTaskForm.farmId))
                           .map((fld) => (
@@ -920,13 +920,13 @@ const OperationsPage = () => {
                   </div>
                   {editTaskForm.fieldId && (
                     <div>
-                      <label className="form-label small fw-semibold">Associated Crop Cycle</label>
+                      <label className="form-label small fw-semibold">{t('operations.associatedCropCycle')}</label>
                       <select
                         className="form-select"
                         value={editTaskForm.cropCycleId}
                         onChange={(e) => setEditTaskForm({ ...editTaskForm, cropCycleId: e.target.value })}
                       >
-                        <option value="">(Optional - General Field Task)</option>
+                        <option value="">{t('operations.optionalGeneralFieldTask')}</option>
                         {cropCycles
                           .filter((c) => String(c.fieldId) === String(editTaskForm.fieldId))
                           .map((cycle) => (
@@ -938,7 +938,7 @@ const OperationsPage = () => {
                     </div>
                   )}
                   <div>
-                    <label className="form-label small fw-semibold">Assignee</label>
+                    <label className="form-label small fw-semibold">{t('operations.assigneeLabel')}</label>
                     <input
                       type="text"
                       className="form-control"
@@ -948,7 +948,7 @@ const OperationsPage = () => {
                     />
                   </div>
                   <div>
-                    <label className="form-label small fw-semibold">Notes</label>
+                    <label className="form-label small fw-semibold">{t('operations.notesLabel')}</label>
                     <textarea
                       className="form-control"
                       rows={2}
@@ -985,30 +985,30 @@ const OperationsPage = () => {
           <div className="modal-dialog modal-dialog-centered">
             <div className="modal-content">
               <div className="modal-header">
-                <h5 className="modal-title">Log Field Activity</h5>
+                <h5 className="modal-title">{t('operations.logActivityModalTitle')}</h5>
                 <button type="button" className="btn-close" onClick={() => setShowActivityModal(false)} />
               </div>
               <form onSubmit={handleCreateActivity}>
                 <div className="modal-body d-flex flex-column gap-3">
                   <div className="row g-2">
-                    <div className="col-6">
-                      <label className="form-label small fw-semibold">Activity Type *</label>
+                    <div className="col-12 col-sm-6">
+                      <label className="form-label small fw-semibold">{t('operations.activityTypeLabel')} *</label>
                       <select
                         className="form-select"
                         value={activityForm.type}
                         onChange={(e) => setActivityForm({ ...activityForm, type: e.target.value })}
                       >
-                        <option value="irrigation">Irrigation</option>
-                        <option value="fertilizer">Fertilizer Application</option>
-                        <option value="treatment">Treatment / Spraying</option>
-                        <option value="pest_observation">Pest Observation</option>
-                        <option value="inspection">Field Inspection</option>
-                        <option value="labor">Labor / Weeding</option>
-                        <option value="harvesting">Harvesting</option>
+                        <option value="irrigation">{t('operations.optIrrigation')}</option>
+                        <option value="fertilizer">{t('operations.optFertilizer')}</option>
+                        <option value="treatment">{t('operations.optTreatment')}</option>
+                        <option value="pest_observation">{t('operations.optPestObs')}</option>
+                        <option value="inspection">{t('operations.optInspection')}</option>
+                        <option value="labor">{t('operations.optLabor')}</option>
+                        <option value="harvesting">{t('operations.optHarvesting')}</option>
                       </select>
                     </div>
-                    <div className="col-6">
-                      <label className="form-label small fw-semibold">Date *</label>
+                    <div className="col-12 col-sm-6">
+                      <label className="form-label small fw-semibold">{t('common.date')} *</label>
                       <input
                         type="date"
                         className="form-control"
@@ -1019,28 +1019,28 @@ const OperationsPage = () => {
                     </div>
                   </div>
                   <div className="row g-2">
-                    <div className="col-6">
-                      <label className="form-label small fw-semibold">Farm *</label>
+                    <div className="col-12 col-sm-6">
+                      <label className="form-label small fw-semibold">{t('operations.farmLabel')} *</label>
                       <select
                         className="form-select"
                         required
                         value={activityForm.farmId}
                         onChange={(e) => setActivityForm({ ...activityForm, farmId: e.target.value, fieldId: '', cropCycleId: '' })}
                       >
-                        <option value="">Select farm...</option>
+                        <option value="">{t('operations.selectFarmPlaceholder')}</option>
                         {farms.map((f) => (
                           <option key={f._id} value={f._id}>{f.name}</option>
                         ))}
                       </select>
                     </div>
-                    <div className="col-6">
-                      <label className="form-label small fw-semibold">Field / Plot</label>
+                    <div className="col-12 col-sm-6">
+                      <label className="form-label small fw-semibold">{t('operations.fieldPlotLabel')}</label>
                       <select
                         className="form-select"
                         value={activityForm.fieldId}
                         onChange={(e) => setActivityForm({ ...activityForm, fieldId: e.target.value, cropCycleId: '' })}
                       >
-                        <option value="">(Optional - Whole Farm)</option>
+                        <option value="">{t('operations.optionalWholeFarm')}</option>
                         {fields
                           .filter((f) => !activityForm.farmId || String(f.farmId) === String(activityForm.farmId))
                           .map((fld) => (
@@ -1051,13 +1051,13 @@ const OperationsPage = () => {
                   </div>
                   {activityForm.fieldId && (
                     <div>
-                      <label className="form-label small fw-semibold">Associated Crop Cycle</label>
+                      <label className="form-label small fw-semibold">{t('operations.associatedCropCycle')}</label>
                       <select
                         className="form-select"
                         value={activityForm.cropCycleId}
                         onChange={(e) => setActivityForm({ ...activityForm, cropCycleId: e.target.value })}
                       >
-                        <option value="">(Optional - General Field Activity)</option>
+                        <option value="">{t('operations.optionalGeneralFieldAct')}</option>
                         {cropCycles
                           .filter((c) => String(c.fieldId) === String(activityForm.fieldId))
                           .map((cycle) => (
@@ -1069,8 +1069,8 @@ const OperationsPage = () => {
                     </div>
                   )}
                   <div className="row g-2">
-                    <div className="col-6">
-                      <label className="form-label small fw-semibold">Performed By</label>
+                    <div className="col-12 col-sm-6">
+                      <label className="form-label small fw-semibold">{t('operations.performedByLabel')}</label>
                       <input
                         type="text"
                         className="form-control"
@@ -1079,20 +1079,22 @@ const OperationsPage = () => {
                         onChange={(e) => setActivityForm({ ...activityForm, performedBy: e.target.value })}
                       />
                     </div>
-                    <div className="col-6">
-                      <label className="form-label small fw-semibold">Cost (₹)</label>
+                    <div className="col-12 col-sm-6">
+                      <label className="form-label small fw-semibold">{t('operations.costLabel')}</label>
                       <input
                         type="number"
                         min="0"
+                        step="any"
+                        inputMode="decimal"
                         className="form-control"
-                        placeholder="0"
+                        placeholder="0.00"
                         value={activityForm.cost}
                         onChange={(e) => setActivityForm({ ...activityForm, cost: e.target.value })}
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="form-label small fw-semibold">Notes / Details</label>
+                    <label className="form-label small fw-semibold">{t('operations.notesLabel')} / {t('common.details')}</label>
                     <textarea
                       className="form-control"
                       rows={2}

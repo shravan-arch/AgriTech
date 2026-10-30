@@ -442,7 +442,11 @@ export default function MonitoringPage() {
       await apiRequest(`/sensors/${selectedSensor._id}/readings`, {
         method: 'POST',
         token,
-        body: ingestForm,
+        body: {
+          ...ingestForm,
+          value: Number(ingestForm.value),
+          batteryLevel: ingestForm.batteryLevel === '' ? undefined : Number(ingestForm.batteryLevel),
+        },
       });
       setShowIngestModal(false);
       setActionNotice(`Telemetry packet recorded for "${selectedSensor.name}".`);
@@ -477,8 +481,8 @@ export default function MonitoringPage() {
             {farms.length > 0 && (
               <select
                 id="monitoring-farm-select"
-                className="form-select form-select-sm"
-                style={{ width: 'auto', minWidth: '180px' }}
+                className="form-select form-select-sm flex-grow-1 flex-sm-grow-0"
+                style={{ width: 'auto', minWidth: '140px', maxWidth: '100%' }}
                 value={selectedFarmId}
                 onChange={(e) => handleFarmChange(e.target.value)}
               >
@@ -489,7 +493,7 @@ export default function MonitoringPage() {
                 ))}
               </select>
             )}
-            <Button variant="primary" className="btn-sm" onClick={handleOpenRegister}>
+            <Button variant="primary" className="btn-sm flex-grow-1 flex-sm-grow-0" onClick={handleOpenRegister}>
               <i className="bi bi-plus-lg me-1" /> {t('monitoring.registerSensor')}
             </Button>
           </div>
@@ -529,7 +533,7 @@ export default function MonitoringPage() {
                   <i className="bi bi-broadcast me-1" /> LIVE
                 </span>
               ) : (
-                <span className="badge bg-secondary-subtle text-secondary">OFFLINE</span>
+                <span className="badge bg-secondary-subtle text-secondary">{t('monitoring.offline')}</span>
               )}
             </div>
             <div className="d-flex align-items-baseline gap-2 mb-1">
@@ -570,7 +574,7 @@ export default function MonitoringPage() {
             </div>
             <div className="d-flex align-items-baseline gap-2 mb-1">
               <span className="display-6 fw-bold text-dark">{sensors.length}</span>
-              <span className="text-muted fs-6">Gateways & Probes</span>
+              <span className="text-muted fs-6">{t('monitoring.gatewaysProbes')}</span>
             </div>
             <div className="text-muted small d-flex justify-content-between mt-2 pt-2 border-top">
               <span>
@@ -604,14 +608,14 @@ export default function MonitoringPage() {
                   <i className="bi bi-exclamation-triangle-fill me-1" /> ATTENTION
                 </span>
               ) : (
-                <span className="badge bg-success-subtle text-success">NOMINAL</span>
+                <span className="badge bg-success-subtle text-success">{t('monitoring.nominal')}</span>
               )}
             </div>
             <div className="d-flex align-items-baseline gap-2 mb-1">
               <span className={`display-6 fw-bold ${activeAlerts.length > 0 ? 'text-danger' : 'text-success'}`}>
                 {activeAlerts.length}
               </span>
-              <span className="text-muted fs-6">Unacknowledged</span>
+              <span className="text-muted fs-6">{t('monitoring.unacknowledged')}</span>
             </div>
             <div className="text-muted small d-flex justify-content-between mt-2 pt-2 border-top">
               <span>
@@ -657,7 +661,7 @@ export default function MonitoringPage() {
 
         {weatherLoading ? (
           <Card className="p-4">
-            <LoadingState>Retrieving meteorological observations from Open-Meteo…</LoadingState>
+            <LoadingState>{t('monitoring.retrievingMeteo')}</LoadingState>
           </Card>
         ) : weather?.connected ? (
           <Card className="p-4 border-0 shadow-sm">
@@ -769,11 +773,11 @@ export default function MonitoringPage() {
                   <i className="bi bi-calendar-week me-1 text-success" />
                   {t('monitoring.sevenDayForecast')}
                 </span>
-                <div className="row g-2">
+                <div className="d-flex flex-nowrap overflow-x-auto gap-2 pb-2 no-scrollbar">
                   {weather.dailyForecast.map((day, idx) => {
                     const dayName = new Date(day.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
                     return (
-                      <div key={idx} className="col-6 col-md-3 col-lg">
+                      <div key={idx} className="flex-grow-1 flex-shrink-0" style={{ minWidth: '95px' }}>
                         <div className="p-2 border rounded text-center h-100 bg-light">
                           <small className="fw-bold d-block text-secondary">{dayName}</small>
                           <div className="my-1">
@@ -801,7 +805,7 @@ export default function MonitoringPage() {
             <div className="d-flex align-items-center gap-3">
               <i className="bi bi-geo-alt-fill fs-2 text-warning" />
               <div>
-                <strong className="d-block">Weather Geolocation Notice</strong>
+                <strong className="d-block">{t('monitoring.weatherGeoNotice')}</strong>
                 <p className="mb-0 text-muted small">
                   {weather?.message ||
                     'Coordinates are unconfigured for this farm. Edit farm details to provide latitude and longitude coordinates for genuine live local meteorological data.'}
@@ -816,8 +820,8 @@ export default function MonitoringPage() {
       <div className="mb-4">
         <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
           <div>
-            <span className="eyebrow">Persisted Historical Analytics</span>
-            <h2 className="h5 mb-0">Environmental & Soil Telemetry Trends</h2>
+            <span className="eyebrow">{t('monitoring.persistedAnalyticsEyebrow')}</span>
+            <h2 className="h5 mb-0">{t('monitoring.soilTelemetryTrendsTitle')}</h2>
           </div>
 
           <div className="d-flex gap-2 align-items-center flex-wrap">
@@ -825,8 +829,8 @@ export default function MonitoringPage() {
             {fields.length > 0 && (
               <select
                 id="monitoring-field-filter"
-                className="form-select form-select-sm"
-                style={{ width: 'auto' }}
+                className="form-select form-select-sm flex-grow-1 flex-sm-grow-0"
+                style={{ width: 'auto', minWidth: '130px', maxWidth: '100%' }}
                 value={selectedFieldId}
                 onChange={(e) => setSelectedFieldId(e.target.value)}
               >
@@ -840,7 +844,7 @@ export default function MonitoringPage() {
             )}
 
             {/* Time Range Tabs */}
-            <div className="btn-group btn-group-sm" role="group" aria-label="Time range selector">
+            <div className="btn-group btn-group-sm flex-shrink-0" role="group" aria-label="Time range selector">
               <button
                 type="button"
                 className={`btn ${timeRange === '24h' ? 'btn-success' : 'btn-outline-secondary'}`}
@@ -875,7 +879,7 @@ export default function MonitoringPage() {
                   <i className="bi bi-graph-up text-warning" />
                   {t('monitoring.weatherHistory')}
                 </strong>
-                <span className="badge bg-light text-secondary border">Open-Meteo Snapshots</span>
+                <span className="badge bg-light text-secondary border">{t('monitoring.openMeteoSnapshots')}</span>
               </div>
               <WeatherHistoryChart data={weatherHistory} timeRange={timeRange} />
             </Card>
@@ -889,7 +893,7 @@ export default function MonitoringPage() {
                   <i className="bi bi-activity text-success" />
                   {t('monitoring.sensorHistory')}
                 </strong>
-                <span className="badge bg-light text-secondary border">Telemetry Stream</span>
+                <span className="badge bg-light text-secondary border">{t('monitoring.telemetryStream')}</span>
               </div>
               <SoilTelemetryChart readings={chartReadings} sensors={sensors} timeRange={timeRange} />
             </Card>
@@ -984,7 +988,7 @@ export default function MonitoringPage() {
               {/* Live simulator activity feed */}
               {simulatorLogs.length > 0 && (
                 <div className="mt-3 pt-3 border-top">
-                  <span className="small text-muted fw-bold d-block mb-1">Recent Simulator Activity:</span>
+                  <span className="small text-muted fw-bold d-block mb-1">{t('monitoring.recentSimulatorActivity')}</span>
                   <div className="d-flex gap-2 flex-wrap">
                     {simulatorLogs.map((log) => (
                       <span
@@ -1009,8 +1013,8 @@ export default function MonitoringPage() {
       <div className="mb-4">
         <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
           <div>
-            <span className="eyebrow">Anomaly Detection & Safeguards</span>
-            <h2 className="h5 mb-0">{t('monitoring.alertsTitle')} ({activeAlerts.length} Active)</h2>
+            <span className="eyebrow">{t('monitoring.anomalyDetectionEyebrow')}</span>
+            <h2 className="h5 mb-0">{t('monitoring.alertsTitle')} ({activeAlerts.length} {t('common.active')})</h2>
           </div>
 
           <div className="btn-group btn-group-sm" role="group">
@@ -1019,14 +1023,14 @@ export default function MonitoringPage() {
               className={`btn ${alertsFilter === 'all' ? 'btn-secondary' : 'btn-outline-secondary'}`}
               onClick={() => setAlertsFilter('all')}
             >
-              All Alerts ({alerts.length})
+              {t('monitoring.allAlertsFilter')} ({alerts.length})
             </button>
             <button
               type="button"
               className={`btn ${alertsFilter === 'unacknowledged' ? 'btn-danger' : 'btn-outline-danger'}`}
               onClick={() => setAlertsFilter('unacknowledged')}
             >
-              Active / Unacknowledged ({activeAlerts.length})
+              {t('monitoring.unacknowledgedFilter')} ({activeAlerts.length})
             </button>
           </div>
         </div>
@@ -1036,7 +1040,7 @@ export default function MonitoringPage() {
             <i className="bi bi-shield-check fs-2 text-success mb-2 d-block" />
             <strong>{t('monitoring.noAlerts')}</strong>
             <p className="text-muted small mb-0 mt-1">
-              Threshold violations (e.g. soil moisture deficit below 25%) will automatically trigger alerts here.
+              {t('monitoring.noAlertsHint')}
             </p>
           </Card>
         ) : (
@@ -1115,7 +1119,7 @@ export default function MonitoringPage() {
       <div className="mb-4">
         <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
           <div>
-            <span className="eyebrow">Physical & Simulated IoT Hardware</span>
+            <span className="eyebrow">{t('monitoring.iotHardwareEyebrow')}</span>
             <h2 className="h5 mb-0">Registered Field Sensors ({sensors.length})</h2>
           </div>
           <Button variant="outline-success" className="btn-sm" onClick={handleOpenRegister}>
@@ -1124,7 +1128,7 @@ export default function MonitoringPage() {
         </div>
 
         {loading ? (
-          <LoadingState>Loading sensor devices…</LoadingState>
+          <LoadingState>{t('monitoring.loadingSensors')}</LoadingState>
         ) : sensors.length === 0 ? (
           <Card className="p-4 border-0 shadow-sm">
             <EmptyState
@@ -1179,21 +1183,21 @@ export default function MonitoringPage() {
 
                     <div className="bg-light p-2 rounded small mb-3">
                       <div className="d-flex justify-content-between mb-1">
-                        <span className="text-muted">Device UID:</span>
+                        <span className="text-muted">{t('monitoring.deviceUidLabel')}</span>
                         <code>{sensor.deviceUid}</code>
                       </div>
                       <div className="d-flex justify-content-between mb-1">
-                        <span className="text-muted">Farm / Field:</span>
+                        <span className="text-muted">{t('monitoring.farmFieldLabel')}</span>
                         <span>{farmObj?.name || 'Farm'}{fieldObj ? ` / ${fieldObj.name}` : ''}</span>
                       </div>
                       <div className="d-flex justify-content-between mb-1">
-                        <span className="text-muted">Thresholds:</span>
+                        <span className="text-muted">{t('monitoring.thresholdsLabel')}</span>
                         <span>
                           {sensor.thresholds?.min ?? '—'} - {sensor.thresholds?.max ?? '—'} {sensor.thresholds?.unit}
                         </span>
                       </div>
                       <div className="d-flex justify-content-between">
-                        <span className="text-muted">Last Transmission:</span>
+                        <span className="text-muted">{t('monitoring.lastTransmissionLabel')}</span>
                         <span>
                           {sensor.lastReadingAt
                             ? new Date(sensor.lastReadingAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -1245,32 +1249,32 @@ export default function MonitoringPage() {
         <Card className="p-4 mb-4 border-0 shadow-sm">
           <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
             <div>
-              <span className="eyebrow">Telemetry Data Stream</span>
-              <h3 className="h5 mb-0">Recent Readings for: {selectedSensor.name}</h3>
+              <span className="eyebrow">{t('monitoring.telemetryStreamEyebrow')}</span>
+              <h3 className="h5 mb-0">{t('monitoring.recentReadingsFor')}: {selectedSensor.name}</h3>
               <small className="text-muted">UID: {selectedSensor.deviceUid}</small>
             </div>
             <div className="d-flex gap-2">
               <Button variant="outline-success" className="btn-sm" onClick={() => handleOpenIngest(selectedSensor)}>
-                <i className="bi bi-send me-1" /> Send Test Reading
+                <i className="bi bi-send me-1" /> {t('monitoring.sendTestReading')}
               </Button>
               <Button variant="outline-secondary" className="btn-sm" onClick={() => setSelectedSensor(null)}>
-                Close Panel
+                {t('common.close')}
               </Button>
             </div>
           </div>
 
           {readingsLoading ? (
-            <LoadingState>Loading sensor telemetry time-series…</LoadingState>
+            <LoadingState>{t('monitoring.loadingTelemetry')}</LoadingState>
           ) : sensorReadings.length === 0 ? (
             <div className="p-4 text-center text-muted bg-light rounded">
               <i className="bi bi-broadcast fs-2 mb-2 d-block text-secondary" />
-              <strong>No readings recorded yet for this sensor.</strong>
-              <p className="small mb-2">Use the "Send Test Reading" button or transmit genuine LoRaWAN payload to:</p>
+              <strong>{t('monitoring.noReadingsRecorded')}</strong>
+              <p className="small mb-2">{t('monitoring.sendTestReadingHint')}</p>
               <code>POST /api/sensors/{selectedSensor._id}/readings</code>
             </div>
           ) : (
             <DataTable
-              headers={['Timestamp', 'Value Recorded', 'Unit', 'Source', 'Threshold Status']}
+              headers={[t('common.date') || 'Timestamp', t('monitoring.readingLabel') || 'Value Recorded', t('farms.unitLabel') || 'Unit', t('monitoring.sourceLabel') || 'Source', t('monitoring.thresholdsLabel') || 'Threshold Status']}
               label="Sensor readings log"
             >
               {sensorReadings.map((r) => {
@@ -1295,10 +1299,10 @@ export default function MonitoringPage() {
                     <td>
                       {isOutOfRange ? (
                         <Badge tone="amber">
-                          <i className="bi bi-exclamation-triangle-fill me-1" /> Anomaly / Threshold Exceeded
+                          <i className="bi bi-exclamation-triangle-fill me-1" /> {t('monitoring.thresholdAnomaly')}
                         </Badge>
                       ) : (
-                        <Badge tone="green">Normal Range</Badge>
+                        <Badge tone="green">{t('monitoring.normalRange')}</Badge>
                       )}
                     </td>
                   </tr>
@@ -1317,12 +1321,12 @@ export default function MonitoringPage() {
               <div className="modal-header">
                 <h5 className="modal-title">
                   <i className="bi bi-broadcast me-2" />
-                  Register Telemetry Device / Gateway
+                  {t('monitoring.registerDeviceTitle')}
                 </h5>
                 <button
                   type="button"
                   className="btn-close"
-                  aria-label="Close"
+                  aria-label={t('common.close')}
                   onClick={() => setShowRegisterModal(false)}
                 />
               </div>
@@ -1333,7 +1337,7 @@ export default function MonitoringPage() {
                   <div className="row g-2 mb-3">
                     <div className="col-6">
                       <label className="form-label" htmlFor="sns-farm">
-                        Farm *
+                        {t('farms.title')} *
                       </label>
                       <select
                         id="sns-farm"
@@ -1355,7 +1359,7 @@ export default function MonitoringPage() {
                     </div>
                     <div className="col-6">
                       <label className="form-label" htmlFor="sns-field">
-                        Field (Optional)
+                        {t('farms.totalFields')} ({t('common.optional')})
                       </label>
                       <select
                         id="sns-field"
@@ -1363,7 +1367,7 @@ export default function MonitoringPage() {
                         value={sensorForm.fieldId}
                         onChange={(e) => setSensorForm({ ...sensorForm, fieldId: e.target.value })}
                       >
-                        <option value="">Farm General</option>
+                        <option value="">{t('analytics.farmGeneral')}</option>
                         {fields.map((fld) => (
                           <option key={fld._id} value={fld._id}>
                             {fld.name}
@@ -1375,7 +1379,7 @@ export default function MonitoringPage() {
 
                   <div className="mb-3">
                     <label className="form-label" htmlFor="sns-name">
-                      Sensor / Station Name *
+                      {t('monitoring.sensorStationNameLabel')} *
                     </label>
                     <input
                       id="sns-name"
@@ -1391,7 +1395,7 @@ export default function MonitoringPage() {
                   <div className="row g-2 mb-3">
                     <div className="col-6">
                       <label className="form-label" htmlFor="sns-type">
-                        Telemetry Type *
+                        {t('monitoring.telemetryTypeLabel')} *
                       </label>
                       <select
                         id="sns-type"
@@ -1417,7 +1421,7 @@ export default function MonitoringPage() {
                     </div>
                     <div className="col-6">
                       <label className="form-label" htmlFor="sns-uid">
-                        Device UID / Serial *
+                        {t('monitoring.deviceUidSerialLabel')} *
                       </label>
                       <input
                         id="sns-uid"
@@ -1434,12 +1438,13 @@ export default function MonitoringPage() {
                   <div className="row g-2 mb-3">
                     <div className="col-4">
                       <label className="form-label" htmlFor="sns-min">
-                        Min Threshold
+                        {t('monitoring.minThresholdLabel')}
                       </label>
                       <input
                         id="sns-min"
                         type="number"
                         step="any"
+                        inputMode="decimal"
                         className="form-control"
                         value={sensorForm.thresholdMin}
                         onChange={(e) => setSensorForm({ ...sensorForm, thresholdMin: e.target.value })}
@@ -1447,12 +1452,13 @@ export default function MonitoringPage() {
                     </div>
                     <div className="col-4">
                       <label className="form-label" htmlFor="sns-max">
-                        Max Threshold
+                        {t('monitoring.maxThresholdLabel')}
                       </label>
                       <input
                         id="sns-max"
                         type="number"
                         step="any"
+                        inputMode="decimal"
                         className="form-control"
                         value={sensorForm.thresholdMax}
                         onChange={(e) => setSensorForm({ ...sensorForm, thresholdMax: e.target.value })}
@@ -1460,7 +1466,7 @@ export default function MonitoringPage() {
                     </div>
                     <div className="col-4">
                       <label className="form-label" htmlFor="sns-unit">
-                        Unit
+                        {t('farms.unitLabel')}
                       </label>
                       <input
                         id="sns-unit"
@@ -1474,10 +1480,10 @@ export default function MonitoringPage() {
                 </div>
                 <div className="modal-footer">
                   <Button variant="outline-secondary" onClick={() => setShowRegisterModal(false)}>
-                    Cancel
+                    {t('common.cancel')}
                   </Button>
                   <Button variant="primary" type="submit" disabled={submitting}>
-                    {submitting ? 'Registering…' : 'Save Sensor'}
+                    {submitting ? t('monitoring.registering') : t('monitoring.saveSensorBtn')}
                   </Button>
                 </div>
               </form>
@@ -1494,12 +1500,12 @@ export default function MonitoringPage() {
               <div className="modal-header">
                 <h5 className="modal-title">
                   <i className="bi bi-send-check me-2" />
-                  Transmit Telemetry Packet
+                  {t('monitoring.transmitTelemetryTitle')}
                 </h5>
                 <button
                   type="button"
                   className="btn-close"
-                  aria-label="Close"
+                  aria-label={t('common.close')}
                   onClick={() => setShowIngestModal(false)}
                 />
               </div>
@@ -1507,49 +1513,51 @@ export default function MonitoringPage() {
                 <div className="modal-body">
                   {modalError && <div className="alert alert-danger py-2 small">{modalError}</div>}
                   <div className="alert alert-light border small mb-3">
-                    Target Sensor: <strong>{selectedSensor.name}</strong> ({selectedSensor.deviceUid})
+                    {t('monitoring.targetSensorLabel')}: <strong>{selectedSensor.name}</strong> ({selectedSensor.deviceUid})
                   </div>
 
                   <div className="mb-3">
                     <label className="form-label" htmlFor="ingest-val">
-                      Value Recorded ({ingestForm.unit}) *
+                      {t('monitoring.readingLabel')} ({ingestForm.unit}) *
                     </label>
                     <input
                       id="ingest-val"
                       type="number"
                       step="any"
+                      inputMode="decimal"
                       className="form-control"
                       value={ingestForm.value}
                       required
-                      onChange={(e) => setIngestForm({ ...ingestForm, value: Number(e.target.value) })}
+                      onChange={(e) => setIngestForm({ ...ingestForm, value: e.target.value })}
                     />
                     <small className="text-muted">
-                      Threshold guidelines: Min {selectedSensor.thresholds?.min ?? '—'} / Max{' '}
+                      {t('monitoring.thresholdGuidelines')}: Min {selectedSensor.thresholds?.min ?? '—'} / Max{' '}
                       {selectedSensor.thresholds?.max ?? '—'}
                     </small>
                   </div>
 
                   <div className="mb-3">
                     <label className="form-label" htmlFor="ingest-batt">
-                      Battery Level (%)
+                      {t('monitoring.batteryLevelLabel')}
                     </label>
                     <input
                       id="ingest-batt"
                       type="number"
                       min="1"
                       max="100"
+                      inputMode="numeric"
                       className="form-control"
                       value={ingestForm.batteryLevel}
-                      onChange={(e) => setIngestForm({ ...ingestForm, batteryLevel: Number(e.target.value) })}
+                      onChange={(e) => setIngestForm({ ...ingestForm, batteryLevel: e.target.value })}
                     />
                   </div>
                 </div>
                 <div className="modal-footer">
                   <Button variant="outline-secondary" onClick={() => setShowIngestModal(false)}>
-                    Cancel
+                    {t('common.cancel')}
                   </Button>
                   <Button variant="success" type="submit" disabled={submitting}>
-                    {submitting ? 'Recording…' : 'Record Telemetry'}
+                    {submitting ? t('monitoring.recording') : t('monitoring.recordTelemetryBtn')}
                   </Button>
                 </div>
               </form>

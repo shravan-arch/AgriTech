@@ -227,7 +227,7 @@ const ProfilePage = () => {
 
               <div className="d-flex justify-content-center flex-wrap gap-2 mb-3">
                 <span className={`badge ${user?.role === 'admin' ? 'bg-primary' : 'bg-secondary'} text-uppercase`} style={{ fontSize: '0.72rem' }}>
-                  {user?.role === 'admin' ? 'Administrator' : 'Farmer / User'}
+                  {user?.role === 'admin' ? t('profile.administrator') : t('profile.farmerUser')}
                 </span>
                 <span className={`badge ${user?.status === 'suspended' ? 'bg-danger text-white' : 'bg-success-subtle text-success border border-success-subtle'}`} style={{ fontSize: '0.72rem' }}>
                   {user?.status === 'suspended' ? t('profile.suspended') : t('profile.active')}
@@ -253,18 +253,18 @@ const ProfilePage = () => {
                   <span className="fw-semibold">{formattedDate}</span>
                 </div>
                 <div className="d-flex justify-content-between py-1">
-                  <span className="text-muted">Login provider:</span>
+                  <span className="text-muted">{t('profile.loginProvider')}</span>
                   <span className="fw-semibold">
                     {user?.googleId ? (
                       <span className="text-primary"><i className="bi bi-google me-1" /> Google</span>
                     ) : (
-                      'Email & Password'
+                      t('profile.emailAndPassword')
                     )}
                   </span>
                 </div>
                 {user?.farmName && (
                   <div className="d-flex justify-content-between py-1">
-                    <span className="text-muted">Primary Farm:</span>
+                    <span className="text-muted">{t('profile.primaryFarm')}</span>
                     <span className="fw-semibold text-truncate ms-2" style={{ maxWidth: '160px' }}>
                       {user.farmName}
                     </span>
@@ -340,7 +340,7 @@ const ProfilePage = () => {
                     disabled={resending || cooldown > 0}
                   >
                     {resending ? (
-                      <><span className="spinner-border spinner-border-sm" aria-hidden="true" /> Sending Email…</>
+                      <><span className="spinner-border spinner-border-sm" aria-hidden="true" /> {t('auth.sending')}</>
                     ) : cooldown > 0 ? (
                       t('profile.resendCooldown', { seconds: cooldown })
                     ) : (
@@ -406,9 +406,9 @@ const ProfilePage = () => {
                 <div className="alert alert-info border-0 rounded-3 shadow-sm d-flex align-items-start gap-3 p-3 mb-4" role="alert">
                   <i className="bi bi-shield-lock-fill text-primary fs-4 flex-shrink-0 mt-1" />
                   <div>
-                    <h4 className="h6 fw-bold mb-1 text-primary">Administrator Profile Governance Notice</h4>
+                    <h4 className="h6 fw-bold mb-1 text-primary">{t('profile.adminGovernanceNotice')}</h4>
                     <p className="small mb-0 text-secondary">
-                      In accordance with platform security policy, Administrators are prohibited from modifying their own user profile, credentials, or agricultural parameters. Your account data can only be monitored by you; any profile updates must be conducted by another authorized Administrator via the Admin Console.
+                      {t('profile.selfModificationRestricted')}
                     </p>
                   </div>
                 </div>
@@ -521,6 +521,7 @@ const ProfilePage = () => {
                         type="number"
                         step="0.01"
                         min="0"
+                        inputMode="decimal"
                         className="form-control"
                         placeholder="e.g. 15.5"
                         value={form.farmSizeHectares}
@@ -556,7 +557,7 @@ const ProfilePage = () => {
                       name="address"
                       rows={3}
                       className="form-control"
-                      placeholder="Enter street, village, district, state, and postal code"
+                      placeholder={t('profile.addressPlaceholder')}
                       value={form.address}
                       onChange={handleChange}
                       maxLength={200}
@@ -571,10 +572,10 @@ const ProfilePage = () => {
                       type="button"
                       className="btn btn-secondary px-4 fw-semibold"
                       disabled
-                      title="Self-modification is restricted for Administrators"
+                      title={t('profile.selfModificationRestricted')}
                     >
                       <i className="bi bi-lock me-1" />
-                      Profile Locked (Admin Protected)
+                      {t('profile.profileLockedAdmin')}
                     </button>
                   ) : (
                     <button
@@ -602,40 +603,40 @@ const ProfilePage = () => {
             <div className="card-header bg-danger bg-opacity-10 border-danger border-opacity-25 py-3 px-4 d-flex align-items-center justify-content-between flex-wrap gap-2">
               <div className="d-flex align-items-center gap-2 text-danger">
                 <i className="bi bi-exclamation-triangle-fill fs-5" />
-                <h3 className="h6 fw-bold mb-0 text-danger">Danger Zone: Permanent Account Deletion</h3>
+                <h3 className="h6 fw-bold mb-0 text-danger">{t('profile.dangerZoneTitle')}</h3>
               </div>
               <span className="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
-                Irreversible Action
+                {t('profile.irreversibleAction')}
               </span>
             </div>
             <div className="card-body p-4">
               <p className="text-secondary small mb-3">
-                Deleting your account is permanent and cannot be undone. When you confirm deletion, your account and <strong>all associated data</strong> will be permanently wiped immediately:
+                {t('profile.deleteWarningIntro')}
               </p>
               <ul className="text-muted small mb-4 ps-3">
-                <li>Your user profile, settings, and authentication credentials.</li>
-                <li>All registered farms, field boundary maps, and soil records.</li>
-                <li>Crop cycles, growth telemetry, and agricultural tasks.</li>
-                <li>All uploaded field photographs from local and cloud storage.</li>
-                <li>Active sessions, tokens, financial transactions, and support queries.</li>
+                <li>{t('profile.deleteBulletProfile')}</li>
+                <li>{t('profile.deleteBulletFarms')}</li>
+                <li>{t('profile.deleteBulletCrops')}</li>
+                <li>{t('profile.deleteBulletPhotos')}</li>
+                <li>{t('profile.deleteBulletSessions')}</li>
               </ul>
 
               {isAdmin && adminCount !== null && adminCount <= 1 ? (
                 <div className="alert alert-warning border-0 rounded-3 d-flex align-items-start gap-3 p-3">
                   <i className="bi bi-shield-lock-fill text-warning fs-4 flex-shrink-0 mt-1" />
                   <div>
-                    <h4 className="h6 fw-bold text-dark mb-1">Sole Administrator Protection Active</h4>
+                    <h4 className="h6 fw-bold text-dark mb-1">{t('profile.soleAdminTitle')}</h4>
                     <p className="small text-secondary mb-0">
-                      You are currently the only active administrator on the platform. System governance prevents deleting the last active administrator to avoid platform lockout. Another administrator must be appointed before this account can be deleted.
+                      {t('profile.soleAdminDesc')}
                     </p>
                   </div>
                 </div>
               ) : !showDeleteConfirm ? (
                 <div className="d-flex align-items-center justify-content-between flex-wrap gap-3 pt-2 border-top">
                   <div>
-                    <div className="fw-semibold text-danger small">Delete this account permanently</div>
+                    <div className="fw-semibold text-danger small">{t('profile.deletePermanently')}</div>
                     <div className="text-muted" style={{ fontSize: '0.78rem' }}>
-                      Once deleted, you can register again in the future as a brand-new user.
+                      {t('profile.deleteBrandNewHint')}
                     </div>
                   </div>
                   <button
@@ -647,17 +648,17 @@ const ProfilePage = () => {
                     }}
                   >
                     <i className="bi bi-trash3-fill" />
-                    Delete Account Permanently
+                    {t('profile.deletePermanentlyBtn')}
                   </button>
                 </div>
               ) : (
                 <div className="p-3 bg-danger bg-opacity-10 border border-danger border-opacity-25 rounded-3">
                   <h4 className="h6 fw-bold text-danger mb-2 d-flex align-items-center gap-2">
                     <i className="bi bi-shield-exclamation" />
-                    Security Reauthentication &amp; Confirmation
+                    {t('profile.deleteConfirmTitle')}
                   </h4>
                   <p className="small text-dark mb-3">
-                    To prevent accidental or unauthorized deletion, please verify your identity and confirm this action.
+                    {t('profile.deleteConfirmDesc')}
                   </p>
 
                   {deleteError && (
@@ -671,13 +672,13 @@ const ProfilePage = () => {
                     {!isGoogleOnly ? (
                       <div className="mb-3">
                         <label className="form-label small fw-semibold text-dark" htmlFor="delete-account-password">
-                          Current Account Password <span className="text-danger">*</span>
+                          {t('profile.currentPasswordLabel')} <span className="text-danger">*</span>
                         </label>
                         <input
                           id="delete-account-password"
                           type="password"
                           className="form-control form-control-sm"
-                          placeholder="Enter your current password"
+                          placeholder={t('profile.currentPasswordPlaceholder')}
                           value={deletePassword}
                           onChange={(e) => setDeletePassword(e.target.value)}
                           required
@@ -687,7 +688,7 @@ const ProfilePage = () => {
                     ) : (
                       <div className="mb-3">
                         <label className="form-label small fw-semibold text-dark" htmlFor="delete-account-email">
-                          Confirm Google Account Email (<span className="text-primary">{user?.email}</span>) <span className="text-danger">*</span>
+                          {t('profile.confirmGoogleEmail')} (<span className="text-primary">{user?.email}</span>) <span className="text-danger">*</span>
                         </label>
                         <input
                           id="delete-account-email"
@@ -704,7 +705,7 @@ const ProfilePage = () => {
 
                     <div className="mb-3">
                       <label className="form-label small fw-semibold text-dark" htmlFor="delete-confirm-phrase">
-                        Type <span className="badge bg-danger text-white font-monospace">DELETE</span> to confirm permanent erasure: <span className="text-danger">*</span>
+                        {t('profile.typeDeleteToConfirm')} <span className="text-danger">*</span>
                       </label>
                       <input
                         id="delete-confirm-phrase"
@@ -731,7 +732,7 @@ const ProfilePage = () => {
                         }}
                         disabled={deleting}
                       >
-                        Cancel
+                        {t('common.cancel')}
                       </button>
                       <button
                         type="submit"
@@ -751,7 +752,7 @@ const ProfilePage = () => {
                         ) : (
                           <>
                             <i className="bi bi-trash3-fill me-1" />
-                            Permanently Delete My Account &amp; Data
+                            {t('profile.permanentlyDeleteEverything')}
                           </>
                         )}
                       </button>

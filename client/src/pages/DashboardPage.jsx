@@ -148,7 +148,7 @@ const DashboardPage = () => {
 
   const formatMetric = (value, suffix = '') =>
     value === null
-      ? 'Unavailable'
+      ? t('common.unavailable')
       : `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(value)}${suffix}`;
 
   const retryDashboard = () => {
@@ -272,7 +272,7 @@ const DashboardPage = () => {
           <div className="d-flex align-items-center gap-3">
             <i className="bi bi-shield-lock-fill fs-3 text-primary flex-shrink-0" />
             <div>
-              <h4 className="h6 fw-bold mb-1 text-primary">Administrator Platform Workspace</h4>
+              <h4 className="h6 fw-bold mb-1 text-primary">{t('dashboard.adminWorkspaceNotice')}</h4>
               <p className="small mb-0 text-secondary">
                 You are authenticated with Administrator governance privileges. Administrators manage platform settings, user profiles, and security audit logs, and do not maintain a personal farm workspace.
               </p>
@@ -292,7 +292,7 @@ const DashboardPage = () => {
           <div className="alert-banner-content">
             <i className="bi bi-exclamation-triangle-fill alert-banner-icon" aria-hidden="true" />
             <div>
-              <strong>Action required:</strong> You have {overdueTasks.length} overdue task{overdueTasks.length > 1 ? 's' : ''} past due date.
+              {t('dashboard.overdueTasksAlert', { count: overdueTasks.length })}
             </div>
           </div>
           <button
@@ -310,7 +310,7 @@ const DashboardPage = () => {
           <div className="alert-banner-content">
             <i className="bi bi-clock-fill alert-banner-icon" aria-hidden="true" />
             <div>
-              <strong>Scheduled today:</strong> You have {dueTodayTasks.length} task{dueTodayTasks.length > 1 ? 's' : ''} due today.
+              {t('dashboard.dueTodayTasksAlert', { count: dueTodayTasks.length })}
             </div>
           </div>
           <button
@@ -329,7 +329,7 @@ const DashboardPage = () => {
           <div className="alert-banner-content">
             <i className="bi bi-box-seam alert-banner-icon" aria-hidden="true" />
             <div>
-              <strong>Low Inventory Notice:</strong> {summaryData.inventory.lowStockCount} supply item{summaryData.inventory.lowStockCount > 1 ? 's are' : ' is'} at or below minimum threshold.
+              {t('dashboard.lowInventoryNotice', { count: summaryData.inventory.lowStockCount })}
             </div>
           </div>
           <Link className="btn btn-sm btn-outline-danger" to="/inventory">
@@ -562,7 +562,7 @@ const DashboardPage = () => {
             </div>
           )}
 
-          {loading && <LoadingState>Loading operational tasks…</LoadingState>}
+          {loading && <LoadingState>{t('dashboard.loadingTasks')}</LoadingState>}
 
           {!loading && !error && visibleTasks.length === 0 && (
             <div className="p-4 text-center text-muted">
@@ -642,7 +642,7 @@ const DashboardPage = () => {
                         </div>
                       </div>
                     </div>
-                    <div className="d-flex align-items-center gap-2">
+                    <div className="d-flex align-items-center gap-2 flex-grow-1 flex-sm-grow-0">
                       <button
                         type="button"
                         className={`btn btn-sm ${isCompleted ? 'btn-outline-secondary' : 'btn-outline-success'}`}
@@ -665,16 +665,16 @@ const DashboardPage = () => {
         <Card className="p-4">
           <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
             <div>
-              <span className="eyebrow">Field operations</span>
-              <h2 className="h4 mb-0">Field status overview</h2>
+              <span className="eyebrow">{t('dashboard.fieldOperationsEyebrow')}</span>
+              <h2 className="h4 mb-0">{t('dashboard.fieldStatusOverviewTitle')}</h2>
             </div>
             {farms.length > 1 && (
-              <div className="d-flex align-items-center gap-2">
-                <label htmlFor="farm-filter" className="small text-muted fw-semibold">Filter farm:</label>
+              <div className="d-flex align-items-center gap-2 flex-grow-1 flex-sm-grow-0">
+                <label htmlFor="farm-filter" className="small text-muted fw-semibold text-nowrap mb-0">{t('dashboard.filterFarmLabel')}</label>
                 <select
                   id="farm-filter"
-                  className="form-select form-select-sm"
-                  style={{ width: 'auto' }}
+                  className="form-select form-select-sm flex-grow-1"
+                  style={{ minWidth: '140px', maxWidth: '280px' }}
                   value={selectedFarmId}
                   onChange={(e) => setSelectedFarmId(e.target.value)}
                 >
@@ -687,7 +687,7 @@ const DashboardPage = () => {
             )}
           </div>
 
-          {loading && <LoadingState>Loading field operational statuses…</LoadingState>}
+          {loading && <LoadingState>{t('dashboard.loadingFieldStatuses')}</LoadingState>}
 
           {!loading && !error && filteredFields.length === 0 && (
             <div className="p-4 text-center text-muted">
@@ -745,19 +745,19 @@ const DashboardPage = () => {
                         <div>
                           <div className="field-status-crop-info text-muted small">
                             <i className="bi bi-circle" />
-                            <span>No active crop</span>
+                            <span>{t('dashboard.noActiveCrop')}</span>
                           </div>
-                          <span className="small text-secondary">Fallow / Available for planting</span>
+                          <span className="small text-secondary">{t('dashboard.fallowAvailable')}</span>
                         </div>
                       )}
                     </div>
 
                     <div className="field-status-bottom">
                       <span className="small text-muted">
-                        {field.soilType || 'Soil not specified'}
+                        {field.soilType || t('dashboard.notSpecified')}
                       </span>
                       <Link className="text-link small" to={`/farms/${field.farmId}`}>
-                        Open field <i className="bi bi-arrow-right ms-1" />
+                        {t('common.view')} <i className="bi bi-arrow-right ms-1" />
                       </Link>
                     </div>
                   </div>
@@ -782,12 +782,12 @@ const DashboardPage = () => {
               </Link>
             </div>
 
-            {loading && <LoadingState>Loading activity log…</LoadingState>}
+            {loading && <LoadingState>{t('dashboard.loadingActivityLog')}</LoadingState>}
 
             {!loading && !error && recentActivities.length === 0 && (
               <div className="p-4 text-center text-muted">
                 <i className="bi bi-activity fs-2 mb-2 d-block" aria-hidden="true" />
-                No actual field activities logged yet. Log irrigation, fertilizers, or treatments directly on your fields.
+                {t('dashboard.noActivities')}
               </div>
             )}
 
@@ -824,7 +824,7 @@ const DashboardPage = () => {
                               {farmObj.name}{fieldObj ? ` • ${fieldObj.name}` : ''}
                             </Link>
                           )}
-                          {act.performedBy && <span>• By {act.performedBy}</span>}
+                          {act.performedBy && <span>• {t('operations.performedByLabel')}: {act.performedBy}</span>}
                           {act.cost !== undefined && act.cost !== null && (
                             <span className="ms-2 badge bg-light text-dark border">
                               ${Number(act.cost).toFixed(2)}
@@ -862,17 +862,17 @@ const DashboardPage = () => {
                 {t('common.view')} {t('common.all')} <i className="bi bi-arrow-right ms-1" aria-hidden="true" />
               </Link>
             </div>
-            {loading && <LoadingState>Loading your farm records…</LoadingState>}
+            {loading && <LoadingState>{t('dashboard.loadingFarmRecords')}</LoadingState>}
             {!loading && !error && !farms.length && (
               <EmptyState
                 icon="bi-map"
-                title="Your workspace starts here"
-                description="Add your first farm to keep its location and fields in one place."
-                action={<Link className="btn btn-primary" to="/farms#add-farm">Create your first farm</Link>}
+                title={t('farms.noFarmsYet')}
+                description={t('farms.startAdding')}
+                action={<Link className="btn btn-primary" to="/farms#add-farm">{t('dashboard.createFirstFarm')}</Link>}
               />
             )}
             {!loading && !error && farms.length > 0 && (
-              <DataTable headers={['Farm', 'Location', 'Fields']} label="Your recent farms">
+              <DataTable headers={[t('farms.title'), t('farms.editLocation'), t('farms.totalFields')]} label={t('farms.title')}>
                 {farms.slice(0, 5).map((farm) => (
                   <tr key={farm._id}>
                     <th scope="row">
@@ -880,12 +880,12 @@ const DashboardPage = () => {
                     </th>
                     <td>
                       {[farm.location?.region, farm.location?.country].filter(Boolean).join(', ') || (
-                        <span className="text-muted">Not specified</span>
+                        <span className="text-muted">{t('dashboard.notSpecified')}</span>
                       )}
                     </td>
                     <td>
                       <Badge tone={fieldCounts[farm._id] === undefined ? 'neutral' : 'green'}>
-                        {fieldCounts[farm._id] === undefined ? 'Unavailable' : fieldCounts[farm._id]}
+                        {fieldCounts[farm._id] === undefined ? t('common.unavailable') : fieldCounts[farm._id]}
                       </Badge>
                     </td>
                   </tr>

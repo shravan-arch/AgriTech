@@ -1,3 +1,5 @@
+import { useLanguage } from '../context/useLanguage.js';
+
 export const Button = ({ variant = 'primary', className = '', children, ...props }) => (
   <button className={`btn btn-${variant} ${className}`.trim()} {...props}>{children}</button>
 );
@@ -21,14 +23,18 @@ export const Badge = ({ children, tone = 'green' }) => (
   <span className={`status-badge status-badge-${tone}`}>{children}</span>
 );
 
-export const FormField = ({ id, label, optional = false, ...props }) => (
-  <div className="form-field">
-    <label className="form-label" htmlFor={id}>
-      {label}{optional && <> <span className="optional-label">Optional</span></>}
-    </label>
-    <input id={id} className="form-control" {...props} />
-  </div>
-);
+export const FormField = ({ id, label, optional = false, type = 'text', inputMode, ...props }) => {
+  const { t } = useLanguage();
+  const effectiveInputMode = inputMode || (type === 'number' ? 'decimal' : undefined);
+  return (
+    <div className="form-field">
+      <label className="form-label" htmlFor={id}>
+        {label}{optional && <> <span className="optional-label">{t('common.optional') || 'Optional'}</span></>}
+      </label>
+      <input id={id} type={type} inputMode={effectiveInputMode} className="form-control" {...props} />
+    </div>
+  );
+};
 
 export const EmptyState = ({ icon, title, description, action }) => (
   <div className="empty-state">
@@ -39,23 +45,29 @@ export const EmptyState = ({ icon, title, description, action }) => (
   </div>
 );
 
-export const LoadingState = ({ children = 'Loading…' }) => (
-  <div className="loading-panel" role="status" aria-live="polite">
-    <span className="spinner-border text-success" aria-hidden="true" />
-    <span>{children}</span>
-  </div>
-);
+export const LoadingState = ({ children }) => {
+  const { t } = useLanguage();
+  return (
+    <div className="loading-panel" role="status" aria-live="polite">
+      <span className="spinner-border text-success" aria-hidden="true" />
+      <span>{children || t('common.loading') || 'Loading…'}</span>
+    </div>
+  );
+};
 
-export const ErrorState = ({ message, onRetry, retrying = false }) => (
-  <div className="alert alert-danger error-state" role="alert">
-    <span>{message}</span>
-    {onRetry && (
-      <Button variant="outline-danger" className="btn-sm" type="button" disabled={retrying} onClick={onRetry}>
-        {retrying ? 'Retrying…' : 'Try again'}
-      </Button>
-    )}
-  </div>
-);
+export const ErrorState = ({ message, onRetry, retrying = false }) => {
+  const { t } = useLanguage();
+  return (
+    <div className="alert alert-danger error-state" role="alert">
+      <span>{message}</span>
+      {onRetry && (
+        <Button variant="outline-danger" className="btn-sm" type="button" disabled={retrying} onClick={onRetry}>
+          {retrying ? (t('common.saving') || 'Retrying…') : (t('common.retry') || 'Try again')}
+        </Button>
+      )}
+    </div>
+  );
+};
 
 export const DataTable = ({ headers, children, label }) => (
   <div className="data-table-wrap">

@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
+import { useLanguage } from '../../context/useLanguage.js';
 
 export function WeatherHistoryChart({ data = [], timeRange = '24h' }) {
+  const { t } = useLanguage();
   const [hoveredIdx, setHoveredIdx] = useState(null);
 
   if (!data || data.length === 0) {
     return (
       <div className="p-4 text-center text-muted bg-light rounded border border-dashed">
         <i className="bi bi-cloud-sun fs-2 d-block mb-2 text-secondary" />
-        <strong>No historical weather snapshots recorded yet.</strong>
+        <strong>{t('monitoring.noHistoricalWeather')}</strong>
         <p className="small mb-0 mt-1">
-          Click <strong>"Refresh Weather"</strong> or allow the automatic scheduler to populate snapshots for this farm.
+          {t('monitoring.refreshWeatherHint')}
         </p>
       </div>
     );
@@ -49,11 +51,11 @@ export function WeatherHistoryChart({ data = [], timeRange = '24h' }) {
         <div className="d-flex align-items-center gap-3 small">
           <span className="d-flex align-items-center gap-1">
             <span style={{ width: 12, height: 4, background: '#f59e0b', borderRadius: 2 }} />
-            <strong className="text-secondary">Temperature (°C)</strong>
+            <strong className="text-secondary">{t('monitoring.tempLegend')}</strong>
           </span>
           <span className="d-flex align-items-center gap-1">
             <span style={{ width: 10, height: 10, background: '#3b82f6', borderRadius: 2 }} />
-            <strong className="text-secondary">Rainfall (mm)</strong>
+            <strong className="text-secondary">{t('monitoring.rainLegend')}</strong>
           </span>
         </div>
         <span className="badge bg-light text-secondary border">
@@ -66,7 +68,7 @@ export function WeatherHistoryChart({ data = [], timeRange = '24h' }) {
           className="chart-svg"
           viewBox={`0 0 ${width} ${height}`}
           role="img"
-          aria-label="Historical weather temperature and rainfall line chart"
+          aria-label={t('monitoring.weatherChartAria')}
         >
           <defs>
             <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
@@ -207,15 +209,15 @@ export function WeatherHistoryChart({ data = [], timeRange = '24h' }) {
             {new Date(data[hoveredIdx].timestamp).toLocaleString()}
           </div>
           <div className="d-flex justify-content-between text-warning fw-semibold">
-            <span>Temp:</span>
+            <span>{t('monitoring.tempLabel')}</span>
             <span>{data[hoveredIdx].temperature}°C</span>
           </div>
           <div className="d-flex justify-content-between text-primary">
-            <span>Rain:</span>
+            <span>{t('monitoring.rainLabel')}</span>
             <span>{data[hoveredIdx].rain || data[hoveredIdx].precipitation || 0} mm</span>
           </div>
           <div className="d-flex justify-content-between text-muted" style={{ fontSize: '0.75rem' }}>
-            <span>Condition:</span>
+            <span>{t('monitoring.conditionLabel')}</span>
             <span>{data[hoveredIdx].condition || 'Clear'}</span>
           </div>
         </div>
@@ -225,15 +227,16 @@ export function WeatherHistoryChart({ data = [], timeRange = '24h' }) {
 }
 
 export function SoilTelemetryChart({ readings = [], sensors = [], timeRange = '24h' }) {
+  const { t } = useLanguage();
   const [hoveredIdx, setHoveredIdx] = useState(null);
 
   if (!readings || readings.length === 0) {
     return (
       <div className="p-4 text-center text-muted bg-light rounded border border-dashed">
         <i className="bi bi-moisture fs-2 d-block mb-2 text-secondary" />
-        <strong>No soil telemetry readings recorded for this filter.</strong>
+        <strong>{t('monitoring.noSoilReadings')}</strong>
         <p className="small mb-0 mt-1">
-          Use the <strong>"Developer Sensor Simulator"</strong> below to generate simulated telemetry packets.
+          {t('monitoring.developerSimulatorHint')}
         </p>
       </div>
     );
@@ -283,15 +286,15 @@ export function SoilTelemetryChart({ readings = [], sensors = [], timeRange = '2
         <div className="d-flex align-items-center gap-3 small">
           <span className="d-flex align-items-center gap-1">
             <span style={{ width: 12, height: 4, background: '#10b981', borderRadius: 2 }} />
-            <strong className="text-secondary">Soil Moisture (%)</strong>
+            <strong className="text-secondary">{t('monitoring.soilMoistureLegend')}</strong>
           </span>
           <span className="d-flex align-items-center gap-1">
             <span style={{ width: 12, height: 4, background: '#f97316', borderRadius: 2 }} />
-            <strong className="text-secondary">Soil Temp (°C)</strong>
+            <strong className="text-secondary">{t('monitoring.soilTempLegend')}</strong>
           </span>
           <span className="d-flex align-items-center gap-1">
             <span style={{ width: 14, height: 0, borderTop: '2px dashed #ef4444' }} />
-            <span className="text-muted" style={{ fontSize: '0.75rem' }}>Thresholds (25% / 70%)</span>
+            <span className="text-muted" style={{ fontSize: '0.75rem' }}>{t('monitoring.thresholds2570')}</span>
           </span>
         </div>
 
@@ -313,7 +316,7 @@ export function SoilTelemetryChart({ readings = [], sensors = [], timeRange = '2
           className="chart-svg"
           viewBox={`0 0 ${width} ${height}`}
           role="img"
-          aria-label="Soil telemetry line chart showing moisture and temperature over time"
+          aria-label={t('monitoring.soilTelemetryChartAria')}
         >
           {/* Reference Threshold Lines */}
           {/* Min moisture threshold (25%) */}
@@ -460,13 +463,13 @@ export function SoilTelemetryChart({ readings = [], sensors = [], timeRange = '2
             {new Date(readings[hoveredIdx].timestamp).toLocaleString()}
           </div>
           <div className="d-flex justify-content-between">
-            <span className="text-muted">Reading:</span>
+            <span className="text-muted">{t('monitoring.readingLabel')}</span>
             <strong>
               {readings[hoveredIdx].value} {readings[hoveredIdx].unit}
             </strong>
           </div>
           <div className="d-flex justify-content-between mt-1">
-            <span className="text-muted">Source:</span>
+            <span className="text-muted">{t('monitoring.sourceLabel')}</span>
             <span
               className={`badge ${
                 readings[hoveredIdx].isSimulated || readings[hoveredIdx].source === 'simulated'

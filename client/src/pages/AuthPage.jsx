@@ -269,13 +269,11 @@ const AuthPage = ({ mode }) => {
             <i className="bi bi-envelope-check" style={{ fontSize: '2rem' }} aria-hidden="true" />
           </div>
 
-          <h1 className="h3 fw-bold mb-2">Verify Your Email Address</h1>
+          <h1 className="h3 fw-bold mb-2">{t('auth.verifyEmailTitle')}</h1>
           <p className="text-secondary small mb-3">
             We have sent a verification link to <strong className="text-dark">{verificationPendingEmail}</strong>.
             Please verify your email before logging in.
           </p>
-
-
 
           {verifySuccess && (
             <div className="alert alert-success d-flex align-items-center gap-2 small mb-3" role="alert">
@@ -307,7 +305,7 @@ const AuthPage = ({ mode }) => {
                 id="manual-token-input"
                 type="text"
                 className="form-control form-control-sm"
-                placeholder="Paste token from email"
+                placeholder={t('auth.pasteTokenPlaceholder')}
                 value={manualToken}
                 onChange={(e) => setManualToken(e.target.value)}
                 disabled={verifyingToken}
@@ -320,7 +318,7 @@ const AuthPage = ({ mode }) => {
                 {verifyingToken ? (
                   <span className="spinner-border spinner-border-sm" aria-hidden="true" />
                 ) : (
-                  'Confirm'
+                  t('common.confirm')
                 )}
               </button>
             </form>
@@ -328,7 +326,7 @@ const AuthPage = ({ mode }) => {
 
           <div className="card bg-light border-0 p-3 mb-4 text-start small">
             <div className="d-flex align-items-center justify-content-between mb-2">
-              <span className="fw-semibold text-dark">Didn&apos;t get the email?</span>
+              <span className="fw-semibold text-dark">{t('auth.didntGetEmail')}</span>
               {cooldown > 0 && (
                 <span className="badge bg-secondary text-white">{t('auth.cooldown')}: {cooldown}s</span>
               )}
@@ -340,7 +338,7 @@ const AuthPage = ({ mode }) => {
               disabled={resending || cooldown > 0}
             >
               {resending ? (
-                <><span className="spinner-border spinner-border-sm me-2" aria-hidden="true" />Sending…</>
+                <><span className="spinner-border spinner-border-sm me-2" aria-hidden="true" />{t('auth.sending')}</>
               ) : cooldown > 0 ? (
                 `Resend in ${cooldown}s`
               ) : (
@@ -411,8 +409,8 @@ const AuthPage = ({ mode }) => {
           <div className="floating-badge auth-floating-pill">
             <span className="live-pulse-dot" />
             <div>
-              <div className="floating-badge-title">Telemetry Sensor Node</div>
-              <div className="floating-badge-val">99.8% Reliability • Live</div>
+              <div className="floating-badge-title">{t('auth.telemetrySensorNode')}</div>
+              <div className="floating-badge-val">{t('auth.reliabilityLive')}</div>
             </div>
           </div>
         </div>
@@ -439,7 +437,7 @@ const AuthPage = ({ mode }) => {
 
             {/* Login Options: Login as Farmer/User vs Login as Admin */}
             {!isRegister ? (
-              <div className="auth-portal-selector mb-3" role="tablist" aria-label="Login Options">
+              <div className="auth-portal-selector mb-3" role="tablist" aria-label={t('auth.loginOptions')}>
                 <button
                   type="button"
                   className={`auth-portal-tab ${authPortal === 'user' ? 'active' : ''}`}
@@ -451,7 +449,7 @@ const AuthPage = ({ mode }) => {
                   }}
                 >
                   <i className="bi bi-person-fill" />
-                  <span>Login as Farmer/User</span>
+                  <span>{t('auth.loginAsFarmer')}</span>
                 </button>
                 <button
                   type="button"
@@ -464,7 +462,7 @@ const AuthPage = ({ mode }) => {
                   }}
                 >
                   <i className="bi bi-shield-lock-fill" />
-                  <span>Login as Admin</span>
+                  <span>{t('auth.loginAsAdmin')}</span>
                 </button>
               </div>
             ) : null}
@@ -473,9 +471,9 @@ const AuthPage = ({ mode }) => {
               <div className="admin-portal-banner d-flex align-items-center gap-2 small mb-3">
                 <i className="bi bi-shield-shaded text-primary fs-5 flex-shrink-0" />
                 <div>
-                  <strong className="text-dark d-block">Enterprise Governance Gateway</strong>
+                  <strong className="text-dark d-block">{t('auth.adminPortalTitle')}</strong>
                   <span className="text-secondary" style={{ fontSize: '0.78rem' }}>
-                    Restricted administrative suite. Only approved, active administrators may access this gateway.
+                    {t('auth.adminPortalDesc')}
                   </span>
                 </div>
               </div>
@@ -514,15 +512,15 @@ const AuthPage = ({ mode }) => {
                 {isRegister
                   ? t('auth.createAccount')
                   : authPortal === 'admin'
-                  ? 'Login as Admin'
-                  : 'Login as Farmer/User'}
+                  ? t('auth.loginAsAdmin')
+                  : t('auth.loginAsFarmer')}
               </h1>
               <p className="text-secondary small mb-0">
                 {isRegister
-                  ? 'Register your details to create your AgriTech farm workspace.'
+                  ? t('auth.registerSubtitle')
                   : authPortal === 'admin'
-                  ? 'Enter your authorized administrator credentials to access platform governance.'
-                  : 'Enter your credentials to access your farm operations, crops, and telemetry.'}
+                  ? t('auth.loginAdminSubtitle')
+                  : t('auth.loginFarmerSubtitle')}
               </p>
             </div>
 
@@ -537,10 +535,10 @@ const AuthPage = ({ mode }) => {
               <div className="alert alert-warning border-warning border-opacity-25 mb-3 text-start" role="alert">
                 <div className="d-flex align-items-center gap-2 mb-2">
                   <i className="bi bi-exclamation-triangle-fill text-warning flex-shrink-0" />
-                  <strong className="text-dark">Email Verification Required</strong>
+                  <strong className="text-dark">{t('auth.emailVerificationRequired')}</strong>
                 </div>
                 <p className="small mb-2 text-dark">
-                  Please verify your email address before logging in. We sent a verification link to <strong>{unverifiedLoginEmail}</strong>.
+                  {t('auth.emailVerificationRequiredDesc', { email: unverifiedLoginEmail })}
                 </p>
                 {verifySuccess && (
                   <div className="alert alert-success py-1 px-2 small mb-2">{verifySuccess}</div>
@@ -553,7 +551,7 @@ const AuthPage = ({ mode }) => {
                     <input
                       type="text"
                       className="form-control"
-                      placeholder="Paste verification token from email"
+                      placeholder={t('auth.pasteTokenPlaceholder')}
                       value={manualToken}
                       onChange={(e) => setManualToken(e.target.value)}
                       disabled={verifyingToken}
@@ -564,7 +562,7 @@ const AuthPage = ({ mode }) => {
                       onClick={handleTokenSubmit}
                       disabled={verifyingToken || !manualToken.trim()}
                     >
-                      {verifyingToken ? '…' : 'Verify'}
+                      {verifyingToken ? '…' : t('auth.verifyBtn')}
                     </button>
                   </div>
                 </div>
@@ -575,9 +573,9 @@ const AuthPage = ({ mode }) => {
                   disabled={resending || cooldown > 0}
                 >
                   {resending ? (
-                    <><span className="spinner-border spinner-border-sm me-1" aria-hidden="true" />Sending link…</>
+                    <><span className="spinner-border spinner-border-sm me-1" aria-hidden="true" />{t('auth.submitting')}</>
                   ) : cooldown > 0 ? (
-                    `Resend available in ${cooldown}s`
+                    t('auth.cooldown', { seconds: cooldown })
                   ) : (
                     <>
                       <i className="bi bi-send me-1" aria-hidden="true" />
@@ -597,10 +595,10 @@ const AuthPage = ({ mode }) => {
                 disabled={submitting}
                 text={
                   isRegister
-                    ? 'Register with Google'
+                    ? t('auth.registerWithGoogle')
                     : authPortal === 'admin'
-                    ? 'Login with Google (Admin)'
-                    : 'Login with Google (Farmer/User)'
+                    ? t('auth.loginWithGoogleAdmin')
+                    : t('auth.loginWithGoogleFarmer')
                 }
               />
             </div>
@@ -621,7 +619,7 @@ const AuthPage = ({ mode }) => {
                       id="name"
                       name="name"
                       className="form-control border-start-0 ps-1"
-                      placeholder="e.g. Gurpreet Singh"
+                      placeholder={t('auth.namePlaceholder')}
                       value={form.name}
                       onChange={update}
                       autoComplete="name"
@@ -719,12 +717,12 @@ const AuthPage = ({ mode }) => {
                   </>
                 ) : authPortal === 'admin' ? (
                   <>
-                    <span>Login as Admin</span>
+                    <span>{t('auth.loginAsAdmin')}</span>
                     <i className="bi bi-shield-lock ms-2" />
                   </>
                 ) : (
                   <>
-                    <span>Login as Farmer/User</span>
+                    <span>{t('auth.loginAsFarmer')}</span>
                     <i className="bi bi-box-arrow-in-right ms-2" />
                   </>
                 )}

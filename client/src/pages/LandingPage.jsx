@@ -162,9 +162,9 @@ export default function LandingPage() {
 
           <nav className="landing-nav-links d-none d-md-flex align-items-center gap-4" aria-label="Page Sections">
             <a href="#features" className="landing-nav-link">{t('landing.explorePlatform')}</a>
-            <Link to="/features" className="landing-nav-link">Features Guide</Link>
-            <a href="#intelligence" className="landing-nav-link">Intelligence</a>
-            <a href="#metrics" className="landing-nav-link">Impact</a>
+            <Link to="/features" className="landing-nav-link">{t('landing.featuresGuide')}</Link>
+            <a href="#intelligence" className="landing-nav-link">{t('landing.intelligenceNav')}</a>
+            <a href="#metrics" className="landing-nav-link">{t('landing.impactNav')}</a>
             <span className="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1 rounded-pill small">
               v2.5 Live
             </span>
@@ -175,7 +175,7 @@ export default function LandingPage() {
             <Link to="/login" className="btn btn-outline-success btn-sm landing-btn-login px-3">
               {t('landing.signIn')}
             </Link>
-            <Link to="/register" className="btn btn-primary btn-sm landing-btn-cta px-3 shadow-sm">
+            <Link to="/register" className="btn btn-primary btn-sm landing-btn-cta px-3 shadow-sm d-none d-sm-inline-flex">
               <span>{t('landing.getStarted')}</span>
               <i className="bi bi-arrow-right ms-1" aria-hidden="true" />
             </Link>
@@ -224,11 +224,11 @@ export default function LandingPage() {
                 </div>
                 <div className="landing-perk-item">
                   <i className="bi bi-check-circle-fill text-success me-1" />
-                  <span>Real-time IoT Telemetry</span>
+                  <span>{t('landing.realtimeTelemetryPill')}</span>
                 </div>
                 <div className="landing-perk-item">
                   <i className="bi bi-check-circle-fill text-success me-1" />
-                  <span>English &amp; हिंदी Ready</span>
+                  <span>{t('landing.multiLanguageReadyPill')}</span>
                 </div>
               </div>
             </div>
@@ -286,15 +286,15 @@ export default function LandingPage() {
                 <div className="floating-badge badge-top-left">
                   <span className="live-pulse-dot" />
                   <div>
-                    <div className="floating-badge-title">Soil Moisture</div>
-                    <div className="floating-badge-val">68% • Optimal</div>
+                    <div className="floating-badge-title">{t('landing.soilMoisture')}</div>
+                    <div className="floating-badge-val">68% • {t('landing.optimal')}</div>
                   </div>
                 </div>
 
                 <div className="floating-badge badge-bottom-right">
                   <i className="bi bi-graph-up-arrow text-warning floating-badge-icon" />
                   <div>
-                    <div className="floating-badge-title">Projected Yield</div>
+                    <div className="floating-badge-title">{t('landing.projectedYield')}</div>
                     <div className="floating-badge-val text-success">+24% vs Regional</div>
                   </div>
                 </div>
@@ -302,7 +302,7 @@ export default function LandingPage() {
                 <div className="floating-badge badge-top-right d-none d-sm-flex">
                   <i className="bi bi-sun-fill text-warning floating-badge-icon" />
                   <div>
-                    <div className="floating-badge-title">Field Weather</div>
+                    <div className="floating-badge-title">{t('landing.fieldWeather')}</div>
                     <div className="floating-badge-val">26°C Clear Skies</div>
                   </div>
                 </div>
@@ -380,8 +380,8 @@ export default function LandingPage() {
       <section className="landing-features-section" id="features">
         <div className="landing-container">
           <div className="section-header text-center mb-5">
-            <span className="section-eyebrow">Enterprise Agricultural Architecture</span>
-            <h2 className="section-title">Engineered for Every Acre, Crop, and Condition</h2>
+            <span className="section-eyebrow">{t('landing.enterpriseArchitectureEyebrow')}</span>
+            <h2 className="section-title">{t('landing.enterpriseArchitectureTitle')}</h2>
             <p className="section-subtitle">
               Combine precision spatial mapping, automated IoT telemetry, and growth cycle intelligence into one high-performance dashboard.
             </p>
@@ -408,7 +408,7 @@ export default function LandingPage() {
                     to={`/features/${feature.slug}`}
                     className="text-decoration-none small fw-semibold text-success d-inline-flex align-items-center mt-2"
                   >
-                    <span>Explore capability</span>
+                    <span>{t('landing.exploreCapability')}</span>
                     <i className="bi bi-chevron-right ms-1 small" />
                   </Link>
                   <div className="feature-card-hover-indicator" style={{ backgroundColor: feature.color }} />
@@ -427,9 +427,9 @@ export default function LandingPage() {
               <div className="col-12 col-lg-4 preview-sidebar-col p-4 p-md-5">
                 <div className="preview-badge mb-3">
                   <i className="bi bi-lightning-charge-fill me-1" />
-                  <span>Real-Time Intelligence Hub</span>
+                  <span>{t('landing.intelligenceHubEyebrow')}</span>
                 </div>
-                <h3 className="preview-heading mb-3">Actionable Data from Soil to Satellite</h3>
+                <h3 className="preview-heading mb-3">{t('landing.intelligenceHubTitle')}</h3>
                 <p className="preview-text mb-4">
                   Experience seamless operational oversight with automated soil monitoring, crop stage timeline tracking, and live weather telemetry.
                 </p>
@@ -441,7 +441,7 @@ export default function LandingPage() {
                     onClick={() => setActiveTab('telemetry')}
                   >
                     <i className="bi bi-broadcast me-2" />
-                    <span>IoT Sensor Telemetry</span>
+                    <span>{t('landing.iotSensorTelemetryTab')}</span>
                   </button>
                   <button
                     type="button"
@@ -449,7 +449,7 @@ export default function LandingPage() {
                     onClick={() => setActiveTab('crops')}
                   >
                     <i className="bi bi-flower2 me-2" />
-                    <span>Crop Cycle Tracking</span>
+                    <span>{t('landing.cropCycleTrackingTab')}</span>
                   </button>
                   <button
                     type="button"
@@ -457,12 +457,12 @@ export default function LandingPage() {
                     onClick={() => setActiveTab('finances')}
                   >
                     <i className="bi bi-cash-stack me-2" />
-                    <span>Financial Benchmarks</span>
+                    <span>{t('landing.financialBenchmarksTab')}</span>
                   </button>
                 </div>
 
                 <Link to="/register" className="btn btn-outline-success w-100">
-                  <span>Open Full Dashboard</span>
+                  <span>{t('landing.openFullDashboard')}</span>
                   <i className="bi bi-arrow-right ms-2" />
                 </Link>
               </div>
@@ -472,7 +472,7 @@ export default function LandingPage() {
                   <div className="preview-screen-box animate-fadeIn">
                     <div className="d-flex align-items-center justify-content-between mb-4">
                       <div>
-                        <h4 className="mb-0 fw-bold">Field Alpha - Moisture &amp; Temperature Array</h4>
+                        <h4 className="mb-0 fw-bold">{t('landing.fieldAlphaTitle')}</h4>
                         <small className="text-secondary">Node #SN-7489 • Updated 12 seconds ago</small>
                       </div>
                       <span className="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1">
@@ -483,30 +483,30 @@ export default function LandingPage() {
                     <div className="row g-3 mb-4">
                       <div className="col-6 col-sm-3">
                         <div className="telemetry-stat-card">
-                          <small className="text-muted">Soil Moisture</small>
+                          <small className="text-muted">{t('landing.soilMoisture')}</small>
                           <div className="fw-bold fs-4 text-success">68.2%</div>
-                          <span className="badge bg-success bg-opacity-15 text-success small">Optimal</span>
+                          <span className="badge bg-success bg-opacity-15 text-success small">{t('landing.optimal')}</span>
                         </div>
                       </div>
                       <div className="col-6 col-sm-3">
                         <div className="telemetry-stat-card">
-                          <small className="text-muted">Soil Temp</small>
+                          <small className="text-muted">{t('farms.ambient')}</small>
                           <div className="fw-bold fs-4 text-primary">22.4°C</div>
-                          <span className="badge bg-primary bg-opacity-15 text-primary small">Normal</span>
+                          <span className="badge bg-primary bg-opacity-15 text-primary small">{t('landing.normal')}</span>
                         </div>
                       </div>
                       <div className="col-6 col-sm-3">
                         <div className="telemetry-stat-card">
                           <small className="text-muted">Nitrogen (N)</small>
                           <div className="fw-bold fs-4 text-warning">48 mg/kg</div>
-                          <span className="badge bg-warning bg-opacity-15 text-dark small">Good</span>
+                          <span className="badge bg-warning bg-opacity-15 text-dark small">{t('landing.good')}</span>
                         </div>
                       </div>
                       <div className="col-6 col-sm-3">
                         <div className="telemetry-stat-card">
                           <small className="text-muted">Soil pH</small>
                           <div className="fw-bold fs-4 text-dark">6.7</div>
-                          <span className="badge bg-secondary bg-opacity-15 text-secondary small">Balanced</span>
+                          <span className="badge bg-secondary bg-opacity-15 text-secondary small">{t('landing.balanced')}</span>
                         </div>
                       </div>
                     </div>
@@ -514,7 +514,7 @@ export default function LandingPage() {
                     {/* Progress bars demonstrating animated bars */}
                     <div className="mb-3">
                       <div className="d-flex justify-content-between small mb-1">
-                        <span className="fw-semibold">Soil Moisture Zone Target (40% - 80%)</span>
+                        <span className="fw-semibold">{t('landing.soilMoistureTarget')}</span>
                         <span className="text-success fw-bold">68.2%</span>
                       </div>
                       <div className="progress progress-animated-custom" style={{ height: '10px' }}>
@@ -524,7 +524,7 @@ export default function LandingPage() {
 
                     <div>
                       <div className="d-flex justify-content-between small mb-1">
-                        <span className="fw-semibold">Nutrient Absorption Capacity</span>
+                        <span className="fw-semibold">{t('landing.nutrientAbsorptionCapacity')}</span>
                         <span className="text-primary fw-bold">84%</span>
                       </div>
                       <div className="progress progress-animated-custom" style={{ height: '10px' }}>
@@ -538,8 +538,8 @@ export default function LandingPage() {
                   <div className="preview-screen-box animate-fadeIn">
                     <div className="d-flex align-items-center justify-content-between mb-4">
                       <div>
-                        <h4 className="mb-0 fw-bold">Wheat Cycle 2026 (Field C - North Ridge)</h4>
-                        <small className="text-secondary">Stage: Heading &amp; Grain Filling • 65 days since sowing</small>
+                        <h4 className="mb-0 fw-bold">{t('landing.wheatCycleTitle')}</h4>
+                        <small className="text-secondary">{t('landing.stageHeadingGrainFilling')}</small>
                       </div>
                       <span className="badge bg-warning bg-opacity-10 text-dark border border-warning border-opacity-25 px-2 py-1">
                         Harvest in 38 Days 🌾
@@ -549,30 +549,30 @@ export default function LandingPage() {
                     <div className="crop-timeline-steps d-flex justify-content-between position-relative mb-4">
                       <div className="timeline-step completed">
                         <div className="step-circle"><i className="bi bi-check" /></div>
-                        <span className="step-label">Sowing</span>
+                        <span className="step-label">{t('landing.stepSowing')}</span>
                       </div>
                       <div className="timeline-step completed">
                         <div className="step-circle"><i className="bi bi-check" /></div>
-                        <span className="step-label">Vegetative</span>
+                        <span className="step-label">{t('landing.stepVegetative')}</span>
                       </div>
                       <div className="timeline-step active">
                         <div className="step-circle"><i className="bi bi-brightness-high" /></div>
-                        <span className="step-label">Grain Filling</span>
+                        <span className="step-label">{t('landing.stepGrainFilling')}</span>
                       </div>
                       <div className="timeline-step">
                         <div className="step-circle"><i className="bi bi-clock" /></div>
-                        <span className="step-label">Maturity</span>
+                        <span className="step-label">{t('landing.stepMaturity')}</span>
                       </div>
                       <div className="timeline-step">
                         <div className="step-circle"><i className="bi bi-basket" /></div>
-                        <span className="step-label">Harvest</span>
+                        <span className="step-label">{t('landing.stepHarvest')}</span>
                       </div>
                     </div>
 
                     <div className="alert alert-success border-0 bg-success bg-opacity-10 mb-0 d-flex align-items-center gap-2">
                       <i className="bi bi-info-circle-fill text-success" />
                       <span className="small">
-                        Optimal NDVI canopy reflectance detected. Expected yield: <strong>4.8 tonnes/hectare</strong> (+18% above regional baseline).
+                        {t('landing.canopyReflectanceNote')}
                       </span>
                     </div>
                   </div>
@@ -582,8 +582,8 @@ export default function LandingPage() {
                   <div className="preview-screen-box animate-fadeIn">
                     <div className="d-flex align-items-center justify-content-between mb-4">
                       <div>
-                        <h4 className="mb-0 fw-bold">Seasonal Farm Profit &amp; MSP Benchmark</h4>
-                        <small className="text-secondary">Financial Overview • Currency: INR (₹)</small>
+                        <h4 className="mb-0 fw-bold">{t('landing.seasonalProfitTitle')}</h4>
+                        <small className="text-secondary">{t('landing.financialOverviewSubtitle')}</small>
                       </div>
                       <span className="badge bg-info bg-opacity-10 text-primary border border-info border-opacity-25 px-2 py-1">
                         +32.4% Net Margin
@@ -591,21 +591,21 @@ export default function LandingPage() {
                     </div>
 
                     <div className="row g-3 mb-4">
-                      <div className="col-4">
+                      <div className="col-12 col-sm-4">
                         <div className="telemetry-stat-card">
-                          <small className="text-muted">Total Revenue</small>
+                          <small className="text-muted">{t('landing.totalRevenue')}</small>
                           <div className="fw-bold fs-5 text-success">₹ 14,80,000</div>
                         </div>
                       </div>
-                      <div className="col-4">
+                      <div className="col-12 col-sm-4">
                         <div className="telemetry-stat-card">
-                          <small className="text-muted">Operating Costs</small>
+                          <small className="text-muted">{t('landing.operatingCosts')}</small>
                           <div className="fw-bold fs-5 text-danger">₹ 5,20,000</div>
                         </div>
                       </div>
-                      <div className="col-4">
+                      <div className="col-12 col-sm-4">
                         <div className="telemetry-stat-card">
-                          <small className="text-muted">Net Farm Profit</small>
+                          <small className="text-muted">{t('landing.netFarmProfit')}</small>
                           <div className="fw-bold fs-5 text-primary">₹ 9,60,000</div>
                         </div>
                       </div>
@@ -613,8 +613,8 @@ export default function LandingPage() {
 
                     <div>
                       <div className="d-flex justify-content-between small mb-1">
-                        <span className="fw-semibold">Official MSP Wheat Benchmark Target (₹ 2,275 / qtl)</span>
-                        <span className="text-success fw-bold">Achieved: ₹ 2,420 / qtl</span>
+                        <span className="fw-semibold">{t('landing.officialMspTarget')}</span>
+                        <span className="text-success fw-bold">{t('landing.achievedMspPrice')}</span>
                       </div>
                       <div className="progress progress-animated-custom" style={{ height: '10px' }}>
                         <div className="progress-bar progress-bar-shimmer bg-success" style={{ width: '106%' }} />
@@ -662,38 +662,38 @@ export default function LandingPage() {
               </p>
               <div className="d-flex align-items-center gap-2 text-secondary small">
                 <span className="live-pulse-dot" style={{ width: '8px', height: '8px' }} />
-                <span>All Systems Operational • v2.5</span>
+                <span>{t('landing.allSystemsOperational')}</span>
               </div>
             </div>
 
-            <div className="col-6 col-md-4">
-              <div className="fw-bold text-dark mb-3 small text-uppercase">Platform Capabilities</div>
+            <div className="col-12 col-sm-6 col-md-4">
+              <div className="fw-bold text-dark mb-3 small text-uppercase">{t('landing.platformCapabilities')}</div>
               <ul className="list-unstyled d-flex flex-column gap-2 small">
-                <li><Link to="/features/farm-management" className="text-decoration-none text-muted">Multi-Farm &amp; Parcel Management</Link></li>
-                <li><Link to="/features/field-mapping" className="text-decoration-none text-muted">GPS Field Mapping &amp; Area</Link></li>
-                <li><Link to="/features/crop-operations" className="text-decoration-none text-muted">Crop Cycles &amp; Field Operations</Link></li>
-                <li><Link to="/features/weather-monitoring" className="text-decoration-none text-muted">Weather Forecasts &amp; IoT Sensors</Link></li>
-                <li><Link to="/features/resource-inventory" className="text-decoration-none text-muted">Agricultural Supplies &amp; Inputs</Link></li>
+                <li><Link to="/features/farm-management" className="text-decoration-none text-muted">{t('landing.multiFarmCapability')}</Link></li>
+                <li><Link to="/features/field-mapping" className="text-decoration-none text-muted">{t('landing.gpsMappingCapability')}</Link></li>
+                <li><Link to="/features/crop-operations" className="text-decoration-none text-muted">{t('landing.cropOperationsCapability')}</Link></li>
+                <li><Link to="/features/weather-monitoring" className="text-decoration-none text-muted">{t('landing.weatherMonitoringCapability')}</Link></li>
+                <li><Link to="/features/resource-inventory" className="text-decoration-none text-muted">{t('landing.suppliesCapability')}</Link></li>
               </ul>
             </div>
 
-            <div className="col-6 col-md-4">
-              <div className="fw-bold text-dark mb-3 small text-uppercase">Farm Portal</div>
+            <div className="col-12 col-sm-6 col-md-4">
+              <div className="fw-bold text-dark mb-3 small text-uppercase">{t('landing.farmPortal')}</div>
               <ul className="list-unstyled d-flex flex-column gap-2 small">
-                <li><Link to="/features" className="text-decoration-none text-muted">Features Guide</Link></li>
-                <li><Link to="/login" className="text-decoration-none text-muted">Farmer Sign In</Link></li>
-                <li><Link to="/register" className="text-decoration-none text-muted">Create Free Workspace</Link></li>
-                <li><Link to="/" className="text-decoration-none text-muted">AgriTech Home</Link></li>
+                <li><Link to="/features" className="text-decoration-none text-muted">{t('landing.featuresGuide')}</Link></li>
+                <li><Link to="/login" className="text-decoration-none text-muted">{t('landing.farmerSignIn')}</Link></li>
+                <li><Link to="/register" className="text-decoration-none text-muted">{t('landing.createFreeWorkspace')}</Link></li>
+                <li><Link to="/" className="text-decoration-none text-muted">AgriTech</Link></li>
               </ul>
             </div>
           </div>
 
           <div className="d-flex flex-column flex-md-row align-items-center justify-content-between gap-3 pt-4 border-top text-secondary small">
             <div>&copy; {new Date().getFullYear()} AgriTech. Precision Agriculture &amp; Farm Operations.</div>
-            <div className="d-flex align-items-center gap-3">
-              <span>Owner-Isolated Farm Vault</span>
+            <div className="d-flex flex-wrap align-items-center gap-2 gap-sm-3">
+              <span>{t('landing.ownerIsolatedVault')}</span>
               <span>•</span>
-              <span>English &amp; Indian Regional Languages</span>
+              <span>{t('landing.panIndiaLanguages')}</span>
             </div>
           </div>
         </div>

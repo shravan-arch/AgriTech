@@ -530,7 +530,7 @@ const FarmsPage = () => {
               </span>
             </div>
             <div className="h3 fw-bold text-dark mb-0">{metrics.totalFarmsCount}</div>
-            <div className="text-muted small mt-1">Active Agricultural Estates</div>
+            <div className="text-muted small mt-1">{t('farms.activeEstates')}</div>
           </div>
         </div>
 
@@ -545,7 +545,7 @@ const FarmsPage = () => {
             <div className="h3 fw-bold text-dark mb-0">
               {metrics.totalAreaHa} <span className="fs-6 fw-normal text-muted">ha</span>
             </div>
-            <div className="text-muted small mt-1">~{metrics.totalAcres} Acres Cultivated</div>
+            <div className="text-muted small mt-1">~{metrics.totalAcres} {t('farms.acres')}</div>
           </div>
         </div>
 
@@ -558,14 +558,14 @@ const FarmsPage = () => {
               </span>
             </div>
             <div className="h3 fw-bold text-dark mb-0">{metrics.totalFieldsCount}</div>
-            <div className="text-muted small mt-1">Plots &amp; Soil Parcels</div>
+            <div className="text-muted small mt-1">{t('farms.plotsSoilParcels')}</div>
           </div>
         </div>
 
         <div className="col-6 col-lg-3">
           <div className="card shadow-sm border-0 rounded-4 p-3 h-100 bg-white metric-kpi-card">
             <div className="d-flex align-items-center justify-content-between mb-2">
-              <span className="text-muted small fw-semibold text-uppercase">GPS &amp; Weather</span>
+              <span className="text-muted small fw-semibold text-uppercase">{t('farms.gpsAndWeather')}</span>
               <span className="badge bg-info-subtle text-info p-2 rounded-3">
                 <i className="bi bi-broadcast-pin fs-6" aria-hidden="true" />
               </span>
@@ -573,7 +573,7 @@ const FarmsPage = () => {
             <div className="h3 fw-bold text-dark mb-0">
               {metrics.weatherActiveCount} / {metrics.totalFarmsCount}
             </div>
-            <div className="text-muted small mt-1">Farms with Live Open-Meteo</div>
+            <div className="text-muted small mt-1">{t('farms.farmsWithLiveWeather')}</div>
           </div>
         </div>
       </div>
@@ -772,7 +772,7 @@ const FarmsPage = () => {
                               <i className="bi bi-sun text-warning fs-5" />
                               <div>
                                 <span className="fw-bold text-dark">{weather.temperature_2m}°C</span>
-                                <span className="text-muted ms-1">Ambient</span>
+                                <span className="text-muted ms-1">{t('farms.ambient')}</span>
                               </div>
                             </div>
                             <div className="text-muted small">
@@ -814,7 +814,7 @@ const FarmsPage = () => {
                             {t('farms.viewFields')} <i className="bi bi-arrow-right ms-1" aria-hidden="true" />
                           </Link>
 
-                          <div className="d-flex align-items-center gap-1">
+                          <div className="d-flex flex-wrap align-items-center gap-1">
                             <button
                               type="button"
                               className="btn btn-outline-primary btn-sm"
@@ -822,14 +822,14 @@ const FarmsPage = () => {
                               title={t('farms.quickAddField')}
                             >
                               <i className="bi bi-plus-circle me-1" />
-                              {t('farms.quickAddField')}
+                              <span className="d-none d-sm-inline">{t('farms.quickAddField')}</span>
                             </button>
 
                             <button
                               type="button"
                               className="btn btn-outline-secondary btn-sm"
                               onClick={() => openLocationModal(farm)}
-                              title="Edit GPS & Location"
+                              title={t('farms.editLocation')}
                             >
                               <i className="bi bi-geo-alt" />
                             </button>
@@ -837,7 +837,7 @@ const FarmsPage = () => {
                             <Link
                               to={`/mapping?farmId=${farm._id}`}
                               className="btn btn-outline-success btn-sm"
-                              title="Field Satellite Mapping"
+                              title={t('features.fieldMapping')}
                             >
                               <i className="bi bi-map me-1" />
                               Map
@@ -853,7 +853,7 @@ const FarmsPage = () => {
                                     setEditName(farm.name);
                                     setEditingId(farm._id);
                                   }}
-                                  title="Rename"
+                                  title={t('farms.rename')}
                                 >
                                   <i className="bi bi-pencil" />
                                 </button>
@@ -862,7 +862,7 @@ const FarmsPage = () => {
                                   className="btn btn-outline-danger btn-sm"
                                   onClick={() => deleteFarm(farm)}
                                   disabled={busyId === farm._id}
-                                  title="Delete"
+                                  title={t('common.delete')}
                                 >
                                   <i className="bi bi-trash3" />
                                 </button>
@@ -899,8 +899,8 @@ const FarmsPage = () => {
               <div className="d-flex align-items-center gap-2 mb-3">
                 <i className="bi bi-shield-shaded text-primary fs-3" />
                 <div>
-                  <h3 className="h6 fw-bold mb-0 text-primary">Administrator Agricultural Restriction</h3>
-                  <small className="text-secondary">Platform Governance Protocol</small>
+                  <h3 className="h6 fw-bold mb-0 text-primary">{t('farms.adminAgriRestriction')}</h3>
+                  <small className="text-secondary">{t('farms.platformGovernanceProtocol')}</small>
                 </div>
               </div>
               <p className="small text-secondary mb-3">
@@ -917,7 +917,7 @@ const FarmsPage = () => {
                 <span className="badge bg-success-subtle text-success rounded-pill px-2-5 py-1 small fw-semibold">
                   {t('farms.quickAddTitle')}
                 </span>
-                <span className="text-muted small">India Hub</span>
+                <span className="text-muted small">{t('farms.indiaHub')}</span>
               </div>
 
               <h2 className="h5 fw-bold text-dark mb-1">{t('farms.quickAddTitle')}</h2>
@@ -944,7 +944,7 @@ const FarmsPage = () => {
 
               {/* State & District */}
               <div className="row g-2 mb-3">
-                <div className="col-6">
+                <div className="col-12 col-sm-6">
                   <label className="form-label small fw-semibold text-dark" htmlFor="farm-region">
                     {t('farms.stateRegionLabel')}
                   </label>
@@ -964,7 +964,7 @@ const FarmsPage = () => {
                   </datalist>
                 </div>
 
-                <div className="col-6">
+                <div className="col-12 col-sm-6">
                   <label className="form-label small fw-semibold text-dark" htmlFor="farm-city">
                     {t('farms.cityDistrictLabel')}
                   </label>
@@ -1003,7 +1003,7 @@ const FarmsPage = () => {
                 </div>
 
                 <div className="row g-2 mb-2">
-                  <div className="col-6">
+                  <div className="col-12 col-sm-6">
                     <label className="form-label small text-muted mb-1" htmlFor="farm-lat">
                       {t('farms.latitudeLabel')}
                     </label>
@@ -1013,13 +1013,14 @@ const FarmsPage = () => {
                       step="any"
                       min="-90"
                       max="90"
+                      inputMode="decimal"
                       className="form-control form-control-sm bg-white"
                       placeholder="e.g. 30.9010"
                       value={form.latitude}
                       onChange={(e) => setForm((prev) => ({ ...prev, latitude: e.target.value }))}
                     />
                   </div>
-                  <div className="col-6">
+                  <div className="col-12 col-sm-6">
                     <label className="form-label small text-muted mb-1" htmlFor="farm-lng">
                       {t('farms.longitudeLabel')}
                     </label>
@@ -1029,6 +1030,7 @@ const FarmsPage = () => {
                       step="any"
                       min="-180"
                       max="180"
+                      inputMode="decimal"
                       className="form-control form-control-sm bg-white"
                       placeholder="e.g. 75.8573"
                       value={form.longitude}
@@ -1087,7 +1089,7 @@ const FarmsPage = () => {
       {/* Quick Add Field Modal */}
       {fieldModalFarm && (
         <div className="custom-modal-backdrop" role="dialog" aria-modal="true">
-          <div className="custom-modal-card card shadow-lg border-0 rounded-4 p-4">
+          <div className="custom-modal-card card shadow-lg border-0 rounded-4 p-3 p-sm-4">
             <div className="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
               <div className="d-flex align-items-center gap-2">
                 <span className="badge bg-success-subtle text-success p-2 rounded-3">
@@ -1097,7 +1099,7 @@ const FarmsPage = () => {
                   <h3 className="h6 fw-bold mb-0">
                     {t('farms.addFieldModalTitle', { farmName: fieldModalFarm.name })}
                   </h3>
-                  <small className="text-muted">Create parcel and configure soil type</small>
+                  <small className="text-muted">{t('farms.createParcelSoilHelp')}</small>
                 </div>
               </div>
               <button
@@ -1138,6 +1140,7 @@ const FarmsPage = () => {
                     step="0.01"
                     min="0.01"
                     max="1000000"
+                    inputMode="decimal"
                     className="form-control"
                     placeholder="e.g. 2.5"
                     value={fieldForm.areaHectares}
@@ -1206,14 +1209,14 @@ const FarmsPage = () => {
       {/* Edit Location / GPS Modal */}
       {locationModalFarm && (
         <div className="custom-modal-backdrop" role="dialog" aria-modal="true">
-          <div className="custom-modal-card card shadow-lg border-0 rounded-4 p-4">
+          <div className="custom-modal-card card shadow-lg border-0 rounded-4 p-3 p-sm-4">
             <div className="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
               <div className="d-flex align-items-center gap-2">
                 <span className="badge bg-info-subtle text-info p-2 rounded-3">
                   <i className="bi bi-pin-map fs-5" />
                 </span>
                 <div>
-                  <h3 className="h6 fw-bold mb-0">Configure GPS &amp; Coordinates</h3>
+                  <h3 className="h6 fw-bold mb-0">{t('farms.configureGpsTitle')}</h3>
                   <small className="text-muted">{locationModalFarm.name}</small>
                 </div>
               </div>
@@ -1227,9 +1230,9 @@ const FarmsPage = () => {
 
             <form onSubmit={handleSaveLocation}>
               <div className="row g-2 mb-3">
-                <div className="col-6">
+                <div className="col-12 col-sm-6">
                   <label className="form-label small fw-semibold" htmlFor="modal-region">
-                    State / Region
+                    {t('farms.stateRegionLabel')}
                   </label>
                   <input
                     id="modal-region"
@@ -1238,9 +1241,9 @@ const FarmsPage = () => {
                     onChange={(e) => setLocationForm((p) => ({ ...p, region: e.target.value }))}
                   />
                 </div>
-                <div className="col-6">
+                <div className="col-12 col-sm-6">
                   <label className="form-label small fw-semibold" htmlFor="modal-city">
-                    District / City
+                    {t('farms.cityDistrictLabel')}
                   </label>
                   <input
                     id="modal-city"
@@ -1253,7 +1256,7 @@ const FarmsPage = () => {
 
               <div className="card bg-light border-0 rounded-3 p-3 mb-3">
                 <div className="d-flex align-items-center justify-content-between mb-2">
-                  <span className="small fw-bold">GPS Coordinates</span>
+                  <span className="small fw-bold">{t('farms.gpsCoordinatesLabel')}</span>
                   <button
                     type="button"
                     className="btn btn-outline-success btn-sm py-0 px-2 rounded-pill small"
@@ -1265,7 +1268,7 @@ const FarmsPage = () => {
                 </div>
 
                 <div className="row g-2 mb-2">
-                  <div className="col-6">
+                  <div className="col-12 col-sm-6">
                     <label className="form-label small text-muted mb-1" htmlFor="modal-lat">
                       Latitude
                     </label>
@@ -1275,12 +1278,13 @@ const FarmsPage = () => {
                       step="any"
                       min="-90"
                       max="90"
+                      inputMode="decimal"
                       className="form-control form-control-sm bg-white"
                       value={locationForm.latitude}
                       onChange={(e) => setLocationForm((p) => ({ ...p, latitude: e.target.value }))}
                     />
                   </div>
-                  <div className="col-6">
+                  <div className="col-12 col-sm-6">
                     <label className="form-label small text-muted mb-1" htmlFor="modal-lng">
                       Longitude
                     </label>
@@ -1290,6 +1294,7 @@ const FarmsPage = () => {
                       step="any"
                       min="-180"
                       max="180"
+                      inputMode="decimal"
                       className="form-control form-control-sm bg-white"
                       value={locationForm.longitude}
                       onChange={(e) => setLocationForm((p) => ({ ...p, longitude: e.target.value }))}

@@ -45,7 +45,7 @@ export const ForgotPasswordPage = () => {
         <span className="eyebrow">{t('auth.appName')}</span>
         <h1>{t('auth.forgotPassword')}</h1>
         <p className="text-secondary">
-          Enter the email associated with your account and we’ll send you a password reset link.
+          {t('auth.forgotPasswordInstruction')}
         </p>
 
         {error && <div className="alert alert-danger" role="alert">{error}</div>}
@@ -57,7 +57,7 @@ export const ForgotPasswordPage = () => {
             </div>
             <h2 className="h5 fw-bold mb-2">{t('auth.checkEmail')}</h2>
             <p className="text-muted small mb-4">
-              If an account with <strong>{email}</strong> exists, a password reset link has been dispatched. The link expires in 1 hour.
+              {t('auth.forgotPasswordSent', { email })}
             </p>
             <Link to="/login" className="btn btn-primary w-100">
               {t('auth.signInBtn')}
@@ -86,7 +86,7 @@ export const ForgotPasswordPage = () => {
               {submitting ? (
                 <><span className="spinner-border spinner-border-sm me-2" aria-hidden="true" />{t('auth.submitting')}</>
               ) : (
-                'Send reset link'
+                t('auth.sendResetLink')
               )}
             </button>
           </form>

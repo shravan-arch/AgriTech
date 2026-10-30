@@ -3,7 +3,7 @@ import { useLanguage } from '../context/useLanguage.js';
 import { INDIAN_LANGUAGES } from '../lib/translations.js';
 
 const LanguageToggle = ({ className = '', id = 'global-language-selector' }) => {
-  const { language, setLanguage } = useLanguage();
+  const { language, setLanguage, t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -41,7 +41,7 @@ const LanguageToggle = ({ className = '', id = 'global-language-selector' }) => 
       <button
         id={id}
         type="button"
-        className="btn btn-sm lang-trigger-btn d-inline-flex align-items-center gap-2 px-3 py-1-5 shadow-sm"
+        className="btn btn-sm lang-trigger-btn d-inline-flex align-items-center gap-1 gap-sm-2 px-2 px-sm-3 py-1-5 shadow-sm"
         onClick={() => setIsOpen((prev) => !prev)}
         aria-haspopup="true"
         aria-expanded={isOpen}
@@ -71,18 +71,19 @@ const LanguageToggle = ({ className = '', id = 'global-language-selector' }) => 
           aria-labelledby={id}
           style={{
             zIndex: 1060,
-            minWidth: '280px',
+            width: 'min(320px, calc(100vw - 24px))',
+            minWidth: '240px',
             maxWidth: '340px',
             animation: 'fadeInDown 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
           }}
         >
           <div className="px-3 py-2 border-bottom mb-1">
             <div className="d-flex align-items-center justify-content-between">
-              <span className="fw-bold text-dark small">Regional Languages</span>
+              <span className="fw-bold text-dark small">{t('common.regionalLanguages') || 'Regional Languages'}</span>
               <span className="badge bg-light text-secondary border small">India Hub</span>
             </div>
             <p className="text-muted mb-0" style={{ fontSize: '0.75rem', lineHeight: '1.3' }}>
-              Select language of your agricultural region
+              {t('common.selectLanguage') || 'Select language of your agricultural region'}
             </p>
           </div>
 

@@ -14,12 +14,12 @@ import {
 } from '../components/ui.jsx';
 
 const PRODUCT_CATEGORIES = [
-  { id: 'all', label: 'All Categories', icon: 'bi-grid' },
-  { id: 'seeds', label: 'Seeds', icon: 'bi-flower2' },
-  { id: 'fertilizer', label: 'Fertilizers', icon: 'bi-droplet-half' },
-  { id: 'pesticide', label: 'Crop Protection', icon: 'bi-shield-shaded' },
-  { id: 'equipment', label: 'Tools & Sprayers', icon: 'bi-tools' },
-  { id: 'irrigation', label: 'Drip & Irrigation', icon: 'bi-moisture' },
+  { id: 'all', labelKey: 'buyResources.categoryAll', label: 'All Categories', icon: 'bi-grid' },
+  { id: 'seeds', labelKey: 'buyResources.categorySeeds', label: 'Seeds', icon: 'bi-flower2' },
+  { id: 'fertilizer', labelKey: 'buyResources.categoryFertilizer', label: 'Fertilizers', icon: 'bi-droplet-half' },
+  { id: 'pesticide', labelKey: 'buyResources.categoryPesticide', label: 'Crop Protection', icon: 'bi-shield-shaded' },
+  { id: 'equipment', labelKey: 'buyResources.categoryEquipment', label: 'Tools & Sprayers', icon: 'bi-tools' },
+  { id: 'irrigation', labelKey: 'buyResources.categoryIrrigation', label: 'Drip & Irrigation', icon: 'bi-moisture' },
 ];
 
 /**
@@ -173,9 +173,9 @@ export default function BuyResourcesPage() {
   return (
     <div className="container-fluid py-4 px-3 px-md-4">
       <PageHeader
-        eyebrow="SUPPLY CHAIN & PRODUCT DISCOVERY"
-        title={t('nav.buyResources') || 'Buy Agricultural Resources'}
-        description="Discover authentic seeds, fertilizers, and crop protection with verified direct product links and authentic supplier imagery."
+        eyebrow={t('buyResources.eyebrow')}
+        title={t('buyResources.title')}
+        description={t('buyResources.description')}
         actions={
           <div className="d-flex align-items-center gap-2">
             {comparedProductIds.length > 0 && (
@@ -194,7 +194,7 @@ export default function BuyResourcesPage() {
               onClick={() => navigate('/purchases')}
             >
               <i className="bi bi-receipt-cutoff" />
-              <span>Purchase History & Invoices</span>
+              <span>{t('purchases.title')}</span>
             </Button>
           </div>
         }
@@ -207,14 +207,14 @@ export default function BuyResourcesPage() {
           className={`btn btn-sm ${activeTab === 'browse' ? 'btn-success' : 'btn-light'}`}
           onClick={() => setActiveTab('browse')}
         >
-          <i className="bi bi-shop me-1" /> Browse Catalogue ({filteredProducts.length})
+          <i className="bi bi-shop me-1" /> {t('buyResources.tabBrowse')} ({filteredProducts.length})
         </button>
         <button
           type="button"
           className={`btn btn-sm ${activeTab === 'matrix' ? 'btn-success' : 'btn-light'}`}
           onClick={() => setActiveTab('matrix')}
         >
-          <i className="bi bi-shield-check me-1" /> Supplier Capability Matrix
+          <i className="bi bi-shield-check me-1" /> {t('buyResources.tabMatrix')}
         </button>
       </div>
 
@@ -222,9 +222,9 @@ export default function BuyResourcesPage() {
       <div className="alert alert-light border rounded-3 p-3 mb-4 d-flex align-items-start gap-3 shadow-2xs">
         <i className="bi bi-shield-check text-success fs-4 mt-0.5" />
         <div className="small">
-          <strong className="d-block text-dark mb-1">Curated Verified Agricultural Catalogue</strong>
+          <strong className="d-block text-dark mb-1">{t('buyResources.curatedCatalogueTitle')}</strong>
           <span className="text-secondary">
-            Only products with verified live destination URLs and genuine supplier imagery are displayed. All purchases are completed directly on the supplier’s official website. AgriTech does <strong>not</strong> collect payment or simulate local orders. Listed prices are <strong>indicative</strong>.
+            {t('buyResources.curatedCatalogueNotice')}
           </span>
         </div>
       </div>
@@ -232,19 +232,19 @@ export default function BuyResourcesPage() {
       {error && <ErrorState message={error} onRetry={loadData} />}
 
       {loading ? (
-        <LoadingState>Loading verified agricultural products with authorized imagery…</LoadingState>
+        <LoadingState>{t('buyResources.loadingProducts')}</LoadingState>
       ) : activeTab === 'matrix' ? (
         /* Supplier Capability Matrix Tab */
         <Card className="p-4 mb-4">
           <div className="d-flex align-items-center justify-content-between mb-3">
             <div>
-              <h3 className="h5 mb-1 text-dark fw-bold">Supplier Integration Status</h3>
+              <h3 className="h5 mb-1 text-dark fw-bold">{t('buyResources.supplierIntegrationStatus')}</h3>
               <p className="small text-muted mb-0">
-                Transparent capability breakdown for agricultural input suppliers in India.
+                {t('buyResources.supplierIntegrationDesc')}
               </p>
             </div>
             <span className="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-2 rounded-pill">
-              Verified Links Only
+              {t('buyResources.verifiedLinksOnly')}
             </span>
           </div>
 
@@ -252,12 +252,12 @@ export default function BuyResourcesPage() {
             <table className="table table-hover align-middle mb-0">
               <thead className="table-light">
                 <tr className="small text-secondary text-uppercase">
-                  <th>Supplier / Network</th>
-                  <th>Integration Status</th>
-                  <th>Destination Verification</th>
-                  <th>Purchasing Flow</th>
-                  <th>Catalogue Policy</th>
-                  <th>Status</th>
+                  <th>{t('buyResources.thSupplier')}</th>
+                  <th>{t('buyResources.thIntegration')}</th>
+                  <th>{t('buyResources.thVerification')}</th>
+                  <th>{t('buyResources.thPurchasingFlow')}</th>
+                  <th>{t('buyResources.thPolicy')}</th>
+                  <th>{t('common.status')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -270,11 +270,11 @@ export default function BuyResourcesPage() {
                     <td>
                       {s.id === 'bighaat' ? (
                         <span className="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-2 py-1">
-                          Active External Handoff
+                          {t('buyResources.activeExternalHandoff')}
                         </span>
                       ) : (
                         <span className="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 rounded-pill px-2 py-1">
-                          App / Retail Only
+                          {t('buyResources.appRetailOnly')}
                         </span>
                       )}
                     </td>
@@ -282,29 +282,29 @@ export default function BuyResourcesPage() {
                       {s.id === 'bighaat' ? (
                         <span className="text-success fw-semibold">
                           <i className="bi bi-check-circle-fill me-1" />
-                          Verified Live Product URLs
+                          {t('buyResources.verifiedLiveUrls')}
                         </span>
                       ) : (
-                        <span className="text-muted">Unverified direct web links</span>
+                        <span className="text-muted">{t('buyResources.unverifiedDirectLinks')}</span>
                       )}
                     </td>
                     <td className="small">
                       {s.id === 'bighaat' ? (
-                        <span>Verified product-detail redirection</span>
+                        <span>{t('buyResources.verifiedRedirection')}</span>
                       ) : (
-                        <span className="text-muted">Direct web checkout disabled</span>
+                        <span className="text-muted">{t('buyResources.directCheckoutDisabled')}</span>
                       )}
                     </td>
                     <td className="small">
                       {s.id === 'bighaat' ? (
-                        <span className="text-success">Purchasable products active</span>
+                        <span className="text-success">{t('buyResources.purchasableActive')}</span>
                       ) : (
                         <span className="text-muted">Hidden from purchasable catalogue</span>
                       )}
                     </td>
                     <td>
                       {s.enabled ? (
-                        <span className="badge bg-success text-white">Active</span>
+                        <span className="badge bg-success text-white">{t('common.active')}</span>
                       ) : (
                         <span className="badge bg-secondary">Disabled</span>
                       )}
@@ -329,7 +329,7 @@ export default function BuyResourcesPage() {
                   <input
                     type="text"
                     className="form-control border-start-0"
-                    placeholder="Search by crop, brand, product name, or SKU…"
+                    placeholder={t('buyResources.searchPlaceholder')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
@@ -351,7 +351,7 @@ export default function BuyResourcesPage() {
                   value={selectedSupplier}
                   onChange={(e) => setSelectedSupplier(e.target.value)}
                 >
-                  <option value="all">All Verified Suppliers</option>
+                  <option value="all">{t('common.all') || 'All Verified Suppliers'}</option>
                   {suppliers
                     .filter((s) => s.id === 'bighaat')
                     .map((s) => (
@@ -366,7 +366,7 @@ export default function BuyResourcesPage() {
                 <input
                   type="number"
                   className="form-control"
-                  placeholder="Max Indicative Price (₹)"
+                  placeholder={t('buyResources.maxIndicativePrice')}
                   value={maxPriceFilter}
                   onChange={(e) => setMaxPriceFilter(e.target.value)}
                 />
@@ -393,7 +393,7 @@ export default function BuyResourcesPage() {
                     onClick={() => setSelectedCategory(cat.id)}
                   >
                     <i className={`bi ${cat.icon}`} />
-                    <span>{cat.label}</span>
+                    <span>{t(cat.labelKey) || cat.label}</span>
                   </button>
                 );
               })}
@@ -404,7 +404,7 @@ export default function BuyResourcesPage() {
           {filteredProducts.length === 0 ? (
             <EmptyState
               icon="bi-basket3"
-              title="No verified agricultural supplies match your filter"
+              title={t('buyResources.noProductsMatchFilter')}
               description="Try adjusting your search keyword, category, or maximum price filter."
               action={
                 <Button
@@ -493,7 +493,7 @@ export default function BuyResourcesPage() {
 
                         {/* Indicative Price Display */}
                         <div className="mb-3">
-                          <div className="d-flex align-items-baseline gap-2">
+                          <div className="d-flex align-items-baseline flex-wrap gap-2">
                             <span className="h4 fw-bold text-success mb-0">
                               ₹{(product.unitPriceINR || product.indicativePriceINR || 0).toLocaleString('en-IN')}
                             </span>
@@ -514,7 +514,7 @@ export default function BuyResourcesPage() {
                               type="button"
                               className={`btn btn-sm ${isCompared ? 'btn-primary' : 'btn-outline-secondary'}`}
                               onClick={() => toggleCompare(product.id)}
-                              title="Add to side-by-side comparison"
+                              title={t('buyResources.addToCompare')}
                             >
                               <i className="bi bi-arrow-left-right" />
                             </button>
@@ -526,7 +526,7 @@ export default function BuyResourcesPage() {
                               disabled={handoffLoading}
                             >
                               <i className="bi bi-box-arrow-up-right" />
-                              <span>Buy on {product.supplierName.split(' ')[0]}</span>
+                              <span>{t('buyResources.buyNow')} ({product.supplierName.split(' ')[0]})</span>
                             </Button>
                           </div>
                         </div>

@@ -329,9 +329,9 @@ export default function PurchaseHistoryPage() {
   return (
     <div className="page-shell">
       <PageHeader
-        eyebrow="FINANCIAL AUDIT & PROCUREMENT LOG"
-        title={t('nav.purchases') || 'Purchase History & Invoices'}
-        description="Persistent procurement logs and official invoice storage for seeds, fertilizers, and crop inputs."
+        eyebrow={t('purchases.eyebrow')}
+        title={t('purchases.title')}
+        description={t('purchases.description')}
         actions={
           <div className="d-flex align-items-center flex-wrap gap-2">
             <Button
@@ -340,7 +340,7 @@ export default function PurchaseHistoryPage() {
               onClick={() => navigate('/resources')}
             >
               <i className="bi bi-shop" />
-              <span>Browse Products</span>
+              <span>{t('purchases.browseSupplies')}</span>
             </Button>
             <Button
               variant="outline-primary"
@@ -358,7 +358,7 @@ export default function PurchaseHistoryPage() {
               onClick={() => setRecordModalOpen(true)}
             >
               <i className="bi bi-plus-lg" />
-              <span>Record Purchase / Add Invoice</span>
+              <span>{t('purchases.recordPurchaseAddInvoice')}</span>
             </Button>
           </div>
         }
@@ -368,9 +368,9 @@ export default function PurchaseHistoryPage() {
       <div className="alert alert-light border rounded-3 p-3 mb-4 d-flex align-items-start gap-3 shadow-2xs">
         <i className="bi bi-info-circle-fill text-success fs-5 mt-0.5" />
         <div className="small">
-          <strong className="d-block text-dark mb-0.5">Official Invoices vs. AgriTech Expense Summaries</strong>
+          <strong className="d-block text-dark mb-0.5">{t('purchases.invoicesVsSummariesTitle')}</strong>
           <span className="text-secondary">
-            AgriTech purchase records are internal farmer-reported logs for expense tracking and yield cost calculations. Official GST tax invoices are issued exclusively by the respective suppliers (e.g. BigHaat). You can upload and securely store your authentic supplier invoices below for tax and subsidy audits.
+            {t('purchases.auditProofNotice')}
           </span>
         </div>
       </div>
@@ -386,7 +386,7 @@ export default function PurchaseHistoryPage() {
                 <i className="bi bi-receipt fs-4" />
               </div>
               <div>
-                <span className="small text-muted d-block">Total Purchase Records</span>
+                <span className="small text-muted d-block">{t('purchases.statTotal')}</span>
                 <strong className="fs-4 text-dark">{stats.totalPurchases}</strong>
               </div>
             </div>
@@ -400,7 +400,7 @@ export default function PurchaseHistoryPage() {
                 <i className="bi bi-currency-rupee fs-4" />
               </div>
               <div>
-                <span className="small text-muted d-block">Total Paid Expenses</span>
+                <span className="small text-muted d-block">{t('purchases.statSpent')}</span>
                 <strong className="fs-4 text-dark">₹{stats.totalSpentINR.toLocaleString('en-IN')}</strong>
               </div>
             </div>
@@ -414,7 +414,7 @@ export default function PurchaseHistoryPage() {
                 <i className="bi bi-truck fs-4" />
               </div>
               <div>
-                <span className="small text-muted d-block">Pending & In-Transit</span>
+                <span className="small text-muted d-block">{t('purchases.statPending')}</span>
                 <strong className="fs-4 text-dark">{stats.pendingOrders}</strong>
               </div>
             </div>
@@ -428,7 +428,7 @@ export default function PurchaseHistoryPage() {
                 <i className="bi bi-building-check fs-4" />
               </div>
               <div>
-                <span className="small text-muted d-block">Integrated Suppliers</span>
+                <span className="small text-muted d-block">{t('admin.resources.suppliersCount')}</span>
                 <strong className="fs-4 text-dark">{stats.supplierCount || 1}</strong>
               </div>
             </div>
@@ -447,7 +447,7 @@ export default function PurchaseHistoryPage() {
               <input
                 type="text"
                 className="form-control border-start-0"
-                placeholder="Search by order ID, item name, or supplier…"
+                placeholder={t('purchases.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -456,25 +456,25 @@ export default function PurchaseHistoryPage() {
 
           <div className="col-12 col-md-4">
             <div className="d-flex align-items-center gap-2">
-              <span className="small text-muted text-nowrap">Filter Status:</span>
+              <span className="small text-muted text-nowrap">{t('purchases.filterStatus')}</span>
               <select
                 className="form-select form-select-sm"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
-                <option value="all">All Orders</option>
-                <option value="confirmed">Confirmed</option>
-                <option value="processing">Processing</option>
-                <option value="shipped">In-Transit / Shipped</option>
-                <option value="delivered">Delivered</option>
-                <option value="initiated">Pending Initiation</option>
+                <option value="all">{t('purchases.filterAll')}</option>
+                <option value="confirmed">{t('purchases.filterConfirmed')}</option>
+                <option value="processing">{t('purchases.filterProcessing')}</option>
+                <option value="shipped">{t('purchases.filterShipped')}</option>
+                <option value="delivered">{t('purchases.filterDelivered')}</option>
+                <option value="initiated">{t('purchases.filterInitiated')}</option>
               </select>
             </div>
           </div>
 
           <div className="col-12 col-md-2 text-md-end">
             <span className="small text-muted">
-              Showing <strong>{filteredPurchases.length}</strong> records
+              {t('common.total')}: <strong>{filteredPurchases.length}</strong>
             </span>
           </div>
         </div>
@@ -482,15 +482,15 @@ export default function PurchaseHistoryPage() {
 
       {/* Records Table */}
       {loading ? (
-        <LoadingState>Loading your persistent purchase records…</LoadingState>
+        <LoadingState>{t('purchases.loadingRecords')}</LoadingState>
       ) : filteredPurchases.length === 0 ? (
         <EmptyState
           icon="bi-receipt"
-          title="No purchase records found"
-          description="You haven't recorded any agricultural input purchases yet. Buy resources online or import invoices from external suppliers."
+          title={t('purchases.noPurchasesFound')}
+          description={t('purchases.noPurchasesYet')}
           action={
             <Button variant="success" onClick={() => setRecordModalOpen(true)}>
-              Record Your First Purchase
+              {t('purchases.recordPurchaseAddInvoice')}
             </Button>
           }
         />
@@ -499,14 +499,14 @@ export default function PurchaseHistoryPage() {
           <table className="table table-hover align-middle mb-0">
             <thead className="table-light">
               <tr className="small text-secondary text-uppercase">
-                <th>Order Ref / Date</th>
-                <th>Supplier / Source</th>
-                <th>Items Purchased</th>
-                <th>Total Confirmed</th>
-                <th>Payment</th>
-                <th>Fulfillment</th>
-                <th>Official Invoice</th>
-                <th className="text-end">Actions</th>
+                <th>{t('purchases.thOrder')}</th>
+                <th>{t('purchases.thSupplier')}</th>
+                <th>{t('purchases.thProduct')}</th>
+                <th>{t('purchases.thAmount')}</th>
+                <th>{t('purchases.thPayment')}</th>
+                <th>{t('purchases.thStatus')}</th>
+                <th>{t('purchases.thInvoice')}</th>
+                <th className="text-end">{t('admin.users.thActions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -602,7 +602,7 @@ export default function PurchaseHistoryPage() {
                             title="Download official supplier PDF/Image invoice"
                           >
                             <i className="bi bi-file-earmark-pdf-fill" />
-                            <span>Official Invoice</span>
+                            <span>{t('purchases.officialInvoice')}</span>
                           </button>
                           {purchase.invoice?.invoiceNumber && (
                             <span className="text-muted small d-block" style={{ fontSize: '0.72rem' }}>
@@ -613,7 +613,7 @@ export default function PurchaseHistoryPage() {
                       ) : (
                         <div>
                           <span className="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 rounded-pill px-2 py-0.5 mb-1 d-inline-block" style={{ fontSize: '0.7rem' }}>
-                            Pending Invoice
+                            {t('purchases.statusPending')}
                           </span>
                           <button
                             type="button"
@@ -623,7 +623,7 @@ export default function PurchaseHistoryPage() {
                             style={{ fontSize: '0.75rem' }}
                           >
                             <i className="bi bi-upload" />
-                            <span>Attach Invoice</span>
+                            <span>{t('purchases.attachInvoice')}</span>
                           </button>
                         </div>
                       )}
@@ -658,7 +658,7 @@ export default function PurchaseHistoryPage() {
                 <div className="modal-header border-bottom">
                   <h5 className="modal-title fw-bold text-dark d-flex align-items-center gap-2">
                     <i className="bi bi-file-earmark-arrow-up text-success" />
-                    <span>Attach Official Supplier Invoice</span>
+                    <span>{t('purchases.attachOfficialInvoice')}</span>
                   </h5>
                   <button
                     type="button"
@@ -669,7 +669,7 @@ export default function PurchaseHistoryPage() {
 
                 <div className="modal-body p-4">
                   <div className="p-3 bg-light rounded-3 mb-3 small">
-                    <span className="d-block text-muted">Purchase Order:</span>
+                    <span className="d-block text-muted">{t('purchases.purchaseOrder')}</span>
                     <strong className="text-dark">
                       {selectedPurchaseForUpload.supplierName} &bull; Order #
                       {selectedPurchaseForUpload.externalOrderId || selectedPurchaseForUpload._id}
@@ -694,7 +694,7 @@ export default function PurchaseHistoryPage() {
 
                   <div className="row g-2 mb-3">
                     <div className="col-6">
-                      <label className="form-label small fw-semibold">Invoice Number</label>
+                      <label className="form-label small fw-semibold">{t('purchases.invoiceNumber')}</label>
                       <input
                         type="text"
                         className="form-control"
@@ -704,7 +704,7 @@ export default function PurchaseHistoryPage() {
                       />
                     </div>
                     <div className="col-6">
-                      <label className="form-label small fw-semibold">Supplier GSTIN / Tax ID</label>
+                      <label className="form-label small fw-semibold">{t('purchases.supplierGstin')}</label>
                       <input
                         type="text"
                         className="form-control"
@@ -753,7 +753,7 @@ export default function PurchaseHistoryPage() {
                 <div className="modal-header border-bottom">
                   <h5 className="modal-title fw-bold text-dark d-flex align-items-center gap-2">
                     <i className="bi bi-pencil-square text-success" />
-                    <span>Record Agricultural Purchase & Import Invoice</span>
+                    <span>{t('purchases.recordPurchaseModalTitle')}</span>
                   </h5>
                   <button
                     type="button"
@@ -765,13 +765,13 @@ export default function PurchaseHistoryPage() {
                 <div className="modal-body p-4" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
                   <div className="alert alert-success bg-opacity-10 border border-success border-opacity-25 small mb-3">
                     <i className="bi bi-shield-check me-2" />
-                    <strong>Audit-Proof Financial Records:</strong> Keep your input costs, tax invoices, and supplier details organized for farm budgeting and compliance.
+                    {t('purchases.auditProofNotice')}
                   </div>
 
                   {/* Supplier & Reference */}
                   <div className="row g-3 mb-3">
                     <div className="col-12 col-md-6">
-                      <label className="form-label small fw-semibold">Supplier / Merchant Name *</label>
+                      <label className="form-label small fw-semibold">{t('purchases.supplierMerchantName')} *</label>
                       <input
                         type="text"
                         className="form-control"
@@ -782,7 +782,7 @@ export default function PurchaseHistoryPage() {
                       />
                     </div>
                     <div className="col-12 col-md-6">
-                      <label className="form-label small fw-semibold">Order ID / Bill Number</label>
+                      <label className="form-label small fw-semibold">{t('purchases.orderIdBillNumber')}</label>
                       <input
                         type="text"
                         className="form-control"
@@ -796,7 +796,7 @@ export default function PurchaseHistoryPage() {
                   {/* Dates & Status */}
                   <div className="row g-3 mb-3">
                     <div className="col-6 col-md-4">
-                      <label className="form-label small fw-semibold">Purchase Date</label>
+                      <label className="form-label small fw-semibold">{t('purchases.purchaseDate')}</label>
                       <input
                         type="date"
                         className="form-control"
@@ -805,28 +805,28 @@ export default function PurchaseHistoryPage() {
                       />
                     </div>
                     <div className="col-6 col-md-4">
-                      <label className="form-label small fw-semibold">Payment Status</label>
+                      <label className="form-label small fw-semibold">{t('purchases.paymentStatus')}</label>
                       <select
                         className="form-select"
                         value={newPaymentStatus}
                         onChange={(e) => setNewPaymentStatus(e.target.value)}
                       >
-                        <option value="paid">Paid (Confirmed)</option>
-                        <option value="pending">Pending Payment</option>
-                        <option value="authorized">Authorized</option>
+                        <option value="paid">{t('purchases.paidConfirmed')}</option>
+                        <option value="pending">{t('purchases.pendingPayment')}</option>
+                        <option value="authorized">{t('purchases.authorized')}</option>
                       </select>
                     </div>
                     <div className="col-12 col-md-4">
-                      <label className="form-label small fw-semibold">Order / Delivery Status</label>
+                      <label className="form-label small fw-semibold">{t('purchases.orderDeliveryStatus')}</label>
                       <select
                         className="form-select"
                         value={newOrderStatus}
                         onChange={(e) => setNewOrderStatus(e.target.value)}
                       >
-                        <option value="delivered">Delivered / In Possession</option>
-                        <option value="shipped">Shipped / In Transit</option>
-                        <option value="confirmed">Confirmed</option>
-                        <option value="initiated">Initiated</option>
+                        <option value="delivered">{t('purchases.deliveredPossession')}</option>
+                        <option value="shipped">{t('purchases.shippedTransit')}</option>
+                        <option value="confirmed">{t('common.confirmed')}</option>
+                        <option value="initiated">{t('purchases.filterInitiated')}</option>
                       </select>
                     </div>
                   </div>
@@ -834,7 +834,7 @@ export default function PurchaseHistoryPage() {
                   {/* Items List */}
                   <div className="mb-3">
                     <div className="d-flex align-items-center justify-content-between mb-2">
-                      <label className="form-label small fw-semibold mb-0">Purchased Items *</label>
+                      <label className="form-label small fw-semibold mb-0">{t('purchases.purchasedItems')} *</label>
                       <button
                         type="button"
                         className="btn btn-sm btn-outline-success py-0.5 px-2 small"
@@ -863,12 +863,12 @@ export default function PurchaseHistoryPage() {
                               value={item.category}
                               onChange={(e) => handleUpdateItem(idx, 'category', e.target.value)}
                             >
-                              <option value="seeds">Seeds</option>
-                              <option value="fertilizer">Fertilizer</option>
-                              <option value="pesticide">Pesticide</option>
-                              <option value="equipment">Equipment</option>
-                              <option value="irrigation">Irrigation</option>
-                              <option value="other">Other</option>
+                              <option value="seeds">{t('inventory.catSeeds')}</option>
+                              <option value="fertilizer">{t('inventory.catFertilizers')}</option>
+                              <option value="pesticide">{t('inventory.catPesticides')}</option>
+                              <option value="equipment">{t('inventory.catTools')}</option>
+                              <option value="irrigation">{t('inventory.catIrrigation')}</option>
+                              <option value="other">{t('inventory.catOther')}</option>
                             </select>
                           </div>
                           <div className="col-6 col-md-2">
@@ -884,6 +884,8 @@ export default function PurchaseHistoryPage() {
                             <input
                               type="number"
                               min="1"
+                              step="any"
+                              inputMode="decimal"
                               className="form-control form-control-sm"
                               placeholder="Qty"
                               value={item.quantity}
@@ -894,6 +896,8 @@ export default function PurchaseHistoryPage() {
                             <input
                               type="number"
                               min="0"
+                              step="0.01"
+                              inputMode="decimal"
                               className="form-control form-control-sm"
                               placeholder="Price ₹"
                               value={item.unitPriceINR}
@@ -919,20 +923,24 @@ export default function PurchaseHistoryPage() {
                   {/* Financial Breakdown */}
                   <div className="row g-2 mb-3">
                     <div className="col-6">
-                      <label className="form-label small fw-semibold">GST / Tax Amount (₹)</label>
+                      <label className="form-label small fw-semibold">{t('purchases.gstTaxAmount')}</label>
                       <input
                         type="number"
                         min="0"
+                        step="0.01"
+                        inputMode="decimal"
                         className="form-control"
                         value={newTaxINR}
                         onChange={(e) => setNewTaxINR(e.target.value)}
                       />
                     </div>
                     <div className="col-6">
-                      <label className="form-label small fw-semibold">Delivery / Transport (₹)</label>
+                      <label className="form-label small fw-semibold">{t('purchases.deliveryTransport')}</label>
                       <input
                         type="number"
                         min="0"
+                        step="0.01"
+                        inputMode="decimal"
                         className="form-control"
                         value={newDeliveryINR}
                         onChange={(e) => setNewDeliveryINR(e.target.value)}
@@ -941,13 +949,13 @@ export default function PurchaseHistoryPage() {
                   </div>
 
                   <div className="p-3 bg-light rounded-3 d-flex justify-content-between align-items-center mb-3">
-                    <span className="fw-semibold text-secondary">Calculated Total (INR):</span>
+                    <span className="fw-semibold text-secondary">{t('purchases.calculatedTotal')}</span>
                     <strong className="fs-5 text-success">₹{calculatedTotal.toLocaleString('en-IN')}</strong>
                   </div>
 
                   {/* Optional File Upload */}
                   <div className="mb-3">
-                    <label className="form-label small fw-semibold">Attach Official Bill / Tax Invoice (Optional)</label>
+                    <label className="form-label small fw-semibold">{t('purchases.attachBillTaxInvoice')}</label>
                     <input
                       type="file"
                       className="form-control"
@@ -960,7 +968,7 @@ export default function PurchaseHistoryPage() {
                   </div>
 
                   <div className="mb-2">
-                    <label className="form-label small fw-semibold">Notes / Farm Allocation</label>
+                    <label className="form-label small fw-semibold">{t('purchases.notesFarmAllocation')}</label>
                     <textarea
                       className="form-control"
                       rows="2"
