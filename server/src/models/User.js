@@ -16,7 +16,7 @@ const userSchema = new mongoose.Schema(
       trim: true,
       lowercase: true,
       match: [
-        /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
+        /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/,
         'Please provide a valid email address'
       ]
     },
@@ -142,6 +142,11 @@ userSchema.methods.toJSON = function () {
   delete obj.emailVerificationExpires;
   return obj;
 };
+
+// Indexes for performant token authentication, verification, and role filtering
+userSchema.index({ resetPasswordToken: 1 }, { sparse: true });
+userSchema.index({ emailVerificationToken: 1 }, { sparse: true });
+userSchema.index({ role: 1, status: 1 });
 
 // Prevent model overwrite in development reload
 const User = mongoose.models.User || mongoose.model('User', userSchema);

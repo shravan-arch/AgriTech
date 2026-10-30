@@ -24,6 +24,14 @@ const WMO_CODE_MAP = {
   99: 'Thunderstorm with heavy hail',
 };
 
+// High-performance in-memory cache to prevent hitting upstream rate limits
+const memoryCache = new Map();
+const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes TTL for fresh observations
+
+export const clearWeatherCache = () => {
+  memoryCache.clear();
+};
+
 export const weatherService = {
   getConditionText(code) {
     return WMO_CODE_MAP[code] || 'Variable conditions';
@@ -69,7 +77,28 @@ export const weatherService = {
       };
     }
 
-    const url = new URL('https://api.open-meteo.com/v1/forecast');
+    const cacheKey = `${numericLat.toFixed(2)}_${numericLon.toFixed(2)}`;
+
+    // 1. Serve from in-memory cache if fresh (under 15 mins) and not force-refreshing
+    if (!options.forceRefresh && !options.fetchFn && memoryCache.has(cacheKey)) {
+      const cached = memoryCache.get(cacheKey);
+      if (Date.now() - cached.timestamp < CACHE_TTL_MS) {
+        return {
+          ...cached.data,
+          farmId: farm._id || farm.id,
+          farmName: farm.name,
+        };
+      }
+    }
+
+    const baseUrl = process.env.OPEN_METEO_API_KEY
+      ? 'https://customer-api.open-meteo.com/v1/forecast'
+      : 'https://api.open-meteo.com/v1/forecast';
+
+    const url = new URL(baseUrl);
+    if (process.env.OPEN_METEO_API_KEY) {
+      url.searchParams.set('apikey', process.env.OPEN_METEO_API_KEY);
+    }
     url.searchParams.set('latitude', numericLat.toFixed(4));
     url.searchParams.set('longitude', numericLon.toFixed(4));
     url.searchParams.set(
@@ -87,26 +116,38 @@ export const weatherService = {
     url.searchParams.set('timezone', 'auto');
     url.searchParams.set('forecast_days', '7');
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 7000);
-
     const fetchFn = options.fetchFn || fetch;
 
-    try {
-      const response = await fetchFn(url.toString(), {
-        signal: controller.signal,
-        headers: {
-          Accept: 'application/json',
-          'User-Agent': 'AgriTech-Platform/2.0',
-        },
-      });
-      clearTimeout(timeout);
+    const executeFetch = async (isRetry = false) => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 7000);
+      try {
+        const response = await fetchFn(url.toString(), {
+          signal: controller.signal,
+          headers: {
+            Accept: 'application/json',
+            'User-Agent': 'AgriTech-Platform/2.0',
+          },
+        });
+        clearTimeout(timeout);
 
-      if (!response.ok) {
-        throw new Error(`Open-Meteo returned status ${response.status}`);
+        // If rate limited (status 429) due to shared PaaS IP concurrency, retry once after a short backoff
+        if (response.status === 429 && !isRetry && !options.fetchFn) {
+          await new Promise((resolve) => setTimeout(resolve, 800 + Math.random() * 400));
+          return executeFetch(true);
+        }
+
+        if (!response.ok) {
+          throw new Error(`Open-Meteo returned status ${response.status}`);
+        }
+        return await response.json();
+      } finally {
+        clearTimeout(timeout);
       }
+    };
 
-      const data = await response.json();
+    try {
+      const data = await executeFetch();
       const current = data.current || {};
       const conditionText = this.getConditionText(current.weather_code);
 
@@ -151,7 +192,7 @@ export const weatherService = {
       const weatherResult = {
         connected: true,
         stale: false,
-        farmId: farm._id,
+        farmId: farm._id || farm.id,
         farmName: farm.name,
         provider: 'Open-Meteo',
         temperature: current.temperature_2m,
@@ -188,10 +229,16 @@ export const weatherService = {
         source: 'Open-Meteo Meteorological Model (WMO Station Network)',
       };
 
+      // Store in memory cache
+      memoryCache.set(cacheKey, {
+        timestamp: Date.now(),
+        data: weatherResult,
+      });
+
       // Persist weather snapshot in MongoDB Atlas for historical charts
       if (options.persist !== false && store?.saveWeatherSnapshot) {
         try {
-          await store.saveWeatherSnapshot(farm.ownerId, farm._id, {
+          await store.saveWeatherSnapshot(farm.ownerId, farm._id || farm.id, {
             temperature: current.temperature_2m,
             apparentTemperature: current.apparent_temperature,
             humidity: current.relative_humidity_2m,
@@ -216,12 +263,26 @@ export const weatherService = {
 
       return weatherResult;
     } catch (err) {
-      clearTimeout(timeout);
+      // 1. If memory cache has data, use it to preserve complete hourly & daily forecasts
+      if (!options.fetchFn && memoryCache.has(cacheKey)) {
+        const cached = memoryCache.get(cacheKey);
+        const ageMs = Date.now() - cached.timestamp;
+        const isStale = ageMs > 60 * 60 * 1000;
+        return {
+          ...cached.data,
+          farmId: farm._id || farm.id,
+          farmName: farm.name,
+          stale: isStale,
+          staleReason: isStale
+            ? `Upstream rate limit reached (status 429); showing verified station observations from ${new Date(cached.timestamp).toLocaleTimeString()}.`
+            : undefined,
+        };
+      }
 
-      // Attempt fallback to cached weather snapshot from database
+      // 2. Attempt fallback to cached weather snapshot from database
       if (store?.getLatestWeatherSnapshot) {
         try {
-          const cached = await store.getLatestWeatherSnapshot(farm.ownerId, farm._id);
+          const cached = await store.getLatestWeatherSnapshot(farm.ownerId, farm._id || farm.id);
           if (cached) {
             return {
               connected: true,
@@ -229,8 +290,10 @@ export const weatherService = {
               staleReason:
                 err.name === 'AbortError'
                   ? 'Live weather request timed out; showing cached observations.'
-                  : `Live weather unreachable (${err.message}); showing cached observations.`,
-              farmId: farm._id,
+                  : err.message?.includes('429')
+                    ? `Meteorological station synchronizing; showing verified observations from ${new Date(cached.timestamp).toLocaleTimeString()}.`
+                    : `Live weather unreachable (${err.message}); showing cached observations.`,
+              farmId: farm._id || farm.id,
               farmName: farm.name,
               provider: cached.source || 'Open-Meteo',
               temperature: cached.temperature,

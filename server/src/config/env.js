@@ -38,6 +38,10 @@ export const validateProductionEnv = (env = process.env) => {
     throw new Error('JWT_SECRET must be a unique secret of at least 32 characters in production.');
   }
 
+  if (env.SMTP_PORT && (isNaN(parseInt(env.SMTP_PORT, 10)) || parseInt(env.SMTP_PORT, 10) <= 0 || parseInt(env.SMTP_PORT, 10) > 65535)) {
+    throw new Error('SMTP_PORT must be a valid port number between 1 and 65535.');
+  }
+
   try {
     const databaseUrl = new URL(env.MONGODB_URI);
     if (!['mongodb:', 'mongodb+srv:'].includes(databaseUrl.protocol)) {

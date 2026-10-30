@@ -169,6 +169,7 @@ export const userStore = {
       user.resetPasswordToken = undefined;
       user.resetPasswordExpires = undefined;
       user.passwordChangedAt = now;
+      user.tokenVersion = (user.tokenVersion || 0) + 1;
       await user.save();
       return user;
     }
@@ -182,6 +183,7 @@ export const userStore = {
     delete users[index].resetPasswordToken;
     delete users[index].resetPasswordExpires;
     users[index].passwordChangedAt = now.toISOString();
+    users[index].tokenVersion = (users[index].tokenVersion || 0) + 1;
     users[index].updatedAt = now.toISOString();
     writeLocalCollection('users', users);
     return createLocalUser(users[index]);

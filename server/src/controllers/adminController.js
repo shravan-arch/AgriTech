@@ -159,7 +159,11 @@ export const createAdminController = (
         const resetLink = `${clientBase}/reset-password/${result.resetToken}`;
 
         try {
-          await emailService.sendPasswordResetEmail(result.user.email, result.resetToken);
+          await emailService.sendPasswordResetEmail({
+            to: result.user.email,
+            name: result.user.name,
+            resetToken: result.resetToken,
+          });
         } catch {
           // Keep link available for support delivery
         }

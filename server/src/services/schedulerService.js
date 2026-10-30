@@ -34,6 +34,8 @@ class SchedulerService {
         for (const farm of allFarms) {
           if (farm.location?.latitude && farm.location?.longitude) {
             await weatherService.getFarmWeather(farm, { farmStore, persist: true }).catch(() => {});
+            // Pacing delay to strictly prevent bursting requests to Open-Meteo
+            await new Promise((resolve) => setTimeout(resolve, 1500));
           }
         }
       } catch (err) {

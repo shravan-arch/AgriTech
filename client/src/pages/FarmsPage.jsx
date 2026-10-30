@@ -131,19 +131,22 @@ const FarmsPage = () => {
             } catch {
               fieldsMap[farm._id] = [];
             }
-
-            if (farm.location?.latitude && farm.location?.longitude) {
-              try {
-                const weatherRes = await apiRequest(`/weather/farm/${farm._id}`, { token });
-                if (weatherRes.data?.current) {
-                  weatherMap[farm._id] = weatherRes.data.current;
-                }
-              } catch {
-                // Weather is optional
-              }
-            }
           })
         );
+
+        // Fetch weather sequentially to avoid concurrent rate limit collisions
+        for (const farm of loadedFarms) {
+          if (farm.location?.latitude && farm.location?.longitude) {
+            try {
+              const weatherRes = await apiRequest(`/weather/farms/${farm._id}`, { token });
+              if (weatherRes.data?.current) {
+                weatherMap[farm._id] = weatherRes.data.current;
+              }
+            } catch {
+              // Weather is optional
+            }
+          }
+        }
 
         if (active) {
           setFarmFields(fieldsMap);
@@ -322,7 +325,7 @@ const FarmsPage = () => {
       // If coordinates are set, fetch weather
       if (newFarm.location?.latitude && newFarm.location?.longitude) {
         try {
-          const weatherRes = await apiRequest(`/weather/farm/${newFarm._id}`, { token });
+          const weatherRes = await apiRequest(`/weather/farms/${newFarm._id}`, { token });
           if (weatherRes.data?.current) {
             setFarmWeather((prev) => ({ ...prev, [newFarm._id]: weatherRes.data.current }));
           }
@@ -471,7 +474,7 @@ const FarmsPage = () => {
       // Refresh weather for this farm
       if (updated.location?.latitude && updated.location?.longitude) {
         try {
-          const weatherRes = await apiRequest(`/weather/farm/${updated._id}`, { token });
+          const weatherRes = await apiRequest(`/weather/farms/${updated._id}`, { token });
           if (weatherRes.data?.current) {
             setFarmWeather((prev) => ({ ...prev, [updated._id]: weatherRes.data.current }));
           }
