@@ -884,6 +884,8 @@ export default function PurchaseHistoryPage() {
                             <input
                               type="number"
                               min="1"
+                              step="any"
+                              inputMode="decimal"
                               className="form-control form-control-sm"
                               placeholder="Qty"
                               value={item.quantity}
@@ -894,6 +896,8 @@ export default function PurchaseHistoryPage() {
                             <input
                               type="number"
                               min="0"
+                              step="0.01"
+                              inputMode="decimal"
                               className="form-control form-control-sm"
                               placeholder="Price ₹"
                               value={item.unitPriceINR}
@@ -923,6 +927,8 @@ export default function PurchaseHistoryPage() {
                       <input
                         type="number"
                         min="0"
+                        step="0.01"
+                        inputMode="decimal"
                         className="form-control"
                         value={newTaxINR}
                         onChange={(e) => setNewTaxINR(e.target.value)}
@@ -933,6 +939,8 @@ export default function PurchaseHistoryPage() {
                       <input
                         type="number"
                         min="0"
+                        step="0.01"
+                        inputMode="decimal"
                         className="form-control"
                         value={newDeliveryINR}
                         onChange={(e) => setNewDeliveryINR(e.target.value)}

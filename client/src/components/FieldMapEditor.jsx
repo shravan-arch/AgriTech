@@ -60,7 +60,7 @@ export const FieldMapEditor = ({
   initialZoom = DEFAULT_ZOOM,
   onBoundaryChange = () => {},
   readOnly = false,
-  height = '520px',
+  height = 'clamp(360px, 60vh, 580px)',
   activeFieldName = '',
 }) => {
   const { t } = useLanguage();
@@ -469,7 +469,8 @@ export const FieldMapEditor = ({
               title={t('mapping.drawingHint')}
             >
               <i className="bi bi-pencil-fill me-1" />
-              <span>{drawnBoundary ? t('mapping.redrawPolygon') : t('mapping.drawBoundary')}</span>
+              <span className="d-none d-sm-inline">{drawnBoundary ? t('mapping.redrawPolygon') : t('mapping.drawBoundary')}</span>
+              <span className="d-inline d-sm-none">{drawnBoundary ? 'Redraw' : 'Draw'}</span>
             </button>
             <button
               type="button"
@@ -479,7 +480,8 @@ export const FieldMapEditor = ({
               title={t('mapping.editHint')}
             >
               <i className="bi bi-cursor-fill me-1" />
-              <span>{t('mapping.editVertices')}</span>
+              <span className="d-none d-sm-inline">{t('mapping.editVertices')}</span>
+              <span className="d-inline d-sm-none">Edit</span>
             </button>
             <button
               type="button"
@@ -488,7 +490,8 @@ export const FieldMapEditor = ({
               title={t('mapping.panHint')}
             >
               <i className="bi bi-hand-index-thumb me-1" />
-              <span>{t('mapping.panMap')}</span>
+              <span className="d-none d-sm-inline">{t('mapping.panMap')}</span>
+              <span className="d-inline d-sm-none">Pan</span>
             </button>
           </div>
 
@@ -508,8 +511,8 @@ export const FieldMapEditor = ({
         {/* Right: Location Search & Basemap Switcher */}
         <div className="d-flex align-items-center flex-wrap gap-2">
           {/* Quick Search Bar */}
-          <form onSubmit={handleSearchLocation} className="d-flex align-items-center">
-            <div className="input-group input-group-sm" style={{ width: '190px' }}>
+          <form onSubmit={handleSearchLocation} className="d-flex align-items-center flex-grow-1 flex-sm-grow-0">
+            <div className="input-group input-group-sm" style={{ minWidth: '140px', maxWidth: '240px', width: '100%' }}>
               <input
                 type="text"
                 className="form-control form-control-sm bg-dark text-white border-secondary"

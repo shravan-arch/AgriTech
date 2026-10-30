@@ -1035,6 +1035,7 @@ export default function AnalyticsPage() {
                         type="number"
                         step="0.01"
                         min="0.01"
+                        inputMode="decimal"
                         className="form-control"
                         placeholder="e.g. 5000"
                         value={txForm.amount}

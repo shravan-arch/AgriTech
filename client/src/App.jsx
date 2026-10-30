@@ -49,21 +49,50 @@ function App() {
     setMenuOpen(false);
   }, [location.pathname, location.search]);
 
-  // Close mobile drawer on Escape key and prevent background body scrolling while open
+  // Close mobile drawer or active modal on Escape key and prevent background body scrolling while open
   useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
+        const activeModal = document.querySelector('.modal.show, [role="dialog"].show, .modal.d-block');
+        if (activeModal) {
+          const closeBtn = activeModal.querySelector('.btn-close, [aria-label="Close"], button.btn-secondary:not([type="submit"])');
+          if (closeBtn) {
+            closeBtn.click();
+            return;
+          }
+        }
         setMenuOpen(false);
       }
     };
-    if (menuOpen) {
-      window.addEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
+
+    const handleBackdropClick = (event) => {
+      if (event.target && event.target.classList && event.target.classList.contains('modal') && (event.target.classList.contains('show') || event.target.classList.contains('d-block'))) {
+        const closeBtn = event.target.querySelector('.btn-close, [aria-label="Close"]');
+        if (closeBtn) {
+          closeBtn.click();
+        }
+      }
+    };
+
+    const checkModals = () => {
+      const hasModal = document.querySelector('.modal.show, .modal.d-block, [role="dialog"].show');
+      if (hasModal || menuOpen) {
+        document.body.style.overflow = 'hidden';
+      } else {
+        document.body.style.overflow = '';
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('click', handleBackdropClick);
+    const observer = new MutationObserver(checkModals);
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style'] });
+    checkModals();
+
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('click', handleBackdropClick);
+      observer.disconnect();
       document.body.style.overflow = '';
     };
   }, [menuOpen]);
@@ -206,7 +235,7 @@ function App() {
         {/* Admin Main Workspace */}
         <div className="admin-workspace-main">
           <header className="admin-workspace-topbar">
-            <div className="d-flex align-items-center gap-3">
+            <div className="d-flex align-items-center gap-2 gap-sm-3">
               <button
                 className="admin-menu-toggle d-lg-none"
                 type="button"
@@ -221,7 +250,7 @@ function App() {
                 <span>Agri<span className="brand-accent">Tech</span></span>
               </Link>
 
-              <div className="d-none d-md-flex align-items-center gap-2">
+              <div className="d-none d-xl-flex align-items-center gap-2">
                 <span className="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-3 py-1-5 small fw-semibold d-inline-flex align-items-center gap-2">
                   <span className="spinner-grow spinner-grow-sm text-success" style={{ width: '0.5rem', height: '0.5rem' }} role="status" aria-hidden="true" />
                   {t('admin.intelligenceHubAdmin') || 'AgriTech Intelligence Hub • Administrator'}
@@ -232,9 +261,9 @@ function App() {
               </div>
             </div>
 
-            <div className="d-flex align-items-center gap-3">
+            <div className="d-flex align-items-center gap-2 gap-sm-3">
               <LanguageToggle />
-              <div className="d-none d-sm-flex align-items-center gap-2 text-muted small">
+              <div className="d-none d-xxl-flex align-items-center gap-2 text-muted small">
                 <i className="bi bi-shield-lock-fill text-success" />
                 <span>{t('admin.authorizedAdmin') || 'Authorized Admin'}</span>
               </div>
@@ -355,7 +384,7 @@ function App() {
 
         <div className="workspace-main">
           <header className="workspace-topbar">
-            <div className="d-flex align-items-center gap-3">
+            <div className="d-flex align-items-center gap-2 gap-sm-3">
               <button
                 className="icon-button menu-toggle"
                 type="button"
@@ -370,7 +399,7 @@ function App() {
                 <span className="brand-icon"><i className="bi bi-flower1" aria-hidden="true" /></span>
                 <span>Agri<span className="brand-accent">Tech</span></span>
               </Link>
-              <div className="d-none d-md-flex align-items-center gap-2">
+              <div className="d-none d-xl-flex align-items-center gap-2">
                 <span className="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-3 py-1-5 small fw-semibold d-inline-flex align-items-center gap-2">
                   <span className="spinner-grow spinner-grow-sm text-success" style={{ width: '0.5rem', height: '0.5rem' }} role="status" aria-hidden="true" />
                   {t('nav.intelligenceHub') || 'AgriTech Intelligence Hub'}
@@ -378,7 +407,7 @@ function App() {
               </div>
             </div>
 
-            <div className="d-flex align-items-center gap-3">
+            <div className="d-flex align-items-center gap-2 gap-sm-3">
               <LanguageToggle />
               <Link to="/profile" className="avatar avatar-small text-decoration-none" title={t('nav.profile') || 'User Profile'}>
                 {initials || 'F'}

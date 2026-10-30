@@ -279,15 +279,15 @@ const FieldMappingPage = () => {
         {/* Farm Selector Pill */}
         <div className="d-flex align-items-center flex-wrap gap-2">
           {farms.length > 0 && (
-            <div className="d-flex align-items-center gap-2 bg-white px-3 py-1-5 rounded-pill shadow-sm border">
-              <i className="bi bi-houses text-success" />
-              <label htmlFor="farm-select-dropdown" className="small fw-semibold text-muted mb-0">
+            <div className="d-flex align-items-center gap-2 bg-white px-3 py-1-5 rounded-pill shadow-sm border" style={{ maxWidth: '100%', minWidth: 0 }}>
+              <i className="bi bi-houses text-success flex-shrink-0" />
+              <label htmlFor="farm-select-dropdown" className="small fw-semibold text-muted mb-0 text-nowrap">
                 {t('mapping.activeFarm')}:
               </label>
               <select
                 id="farm-select-dropdown"
                 className="form-select form-select-sm border-0 bg-transparent fw-bold text-dark py-0"
-                style={{ width: 'auto', cursor: 'pointer' }}
+                style={{ width: 'auto', maxWidth: 'min(200px, 45vw)', cursor: 'pointer' }}
                 value={selectedFarmId}
                 onChange={(e) => handleSelectFarm(e.target.value)}
               >
@@ -341,7 +341,7 @@ const FieldMappingPage = () => {
               }
               activeFieldName={activeField?.name || 'New Field'}
               onBoundaryChange={handleBoundaryChange}
-              height="580px"
+              height="clamp(360px, 60vh, 580px)"
             />
 
             {/* Quick Action Bar under map */}

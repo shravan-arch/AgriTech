@@ -206,7 +206,7 @@ export default function FeaturesPage() {
             <Link to="/login" className="btn btn-outline-success btn-sm landing-btn-login px-3">
               {t('landing.signIn')}
             </Link>
-            <Link to="/register" className="btn btn-primary btn-sm landing-btn-cta px-3 shadow-sm">
+            <Link to="/register" className="btn btn-primary btn-sm landing-btn-cta px-3 shadow-sm d-none d-sm-inline-flex">
               <span>{t('landing.getStarted')}</span>
               <i className="bi bi-arrow-right ms-1" aria-hidden="true" />
             </Link>

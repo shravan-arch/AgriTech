@@ -818,6 +818,7 @@ const FarmDetailPage = () => {
                                 min="0.01"
                                 max="1000000"
                                 step="0.01"
+                                inputMode="decimal"
                                 value={editForm.areaHectares}
                                 onChange={(event) => setEditForm((current) => ({ ...current, areaHectares: event.target.value }))}
                                 required
@@ -1029,6 +1030,7 @@ const FarmDetailPage = () => {
                                             type="number"
                                             step="any"
                                             min="0"
+                                            inputMode="decimal"
                                             placeholder="e.g. 4200"
                                             className="form-control form-control-sm"
                                             value={harvestYield}
@@ -1302,6 +1304,7 @@ const FarmDetailPage = () => {
                                         type="number"
                                         min="0"
                                         step="0.01"
+                                        inputMode="decimal"
                                         className="form-control form-control-sm"
                                         placeholder="Optional cost"
                                         value={activityForm.cost}
@@ -1337,7 +1340,8 @@ const FarmDetailPage = () => {
                                           <input
                                             type="number"
                                             min="0"
-                                            step="0.1"
+                                            step="any"
+                                            inputMode="decimal"
                                             className="form-control form-control-sm"
                                             placeholder="Qty"
                                             value={inp.quantity}

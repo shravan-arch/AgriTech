@@ -442,7 +442,11 @@ export default function MonitoringPage() {
       await apiRequest(`/sensors/${selectedSensor._id}/readings`, {
         method: 'POST',
         token,
-        body: ingestForm,
+        body: {
+          ...ingestForm,
+          value: Number(ingestForm.value),
+          batteryLevel: ingestForm.batteryLevel === '' ? undefined : Number(ingestForm.batteryLevel),
+        },
       });
       setShowIngestModal(false);
       setActionNotice(`Telemetry packet recorded for "${selectedSensor.name}".`);
@@ -477,8 +481,8 @@ export default function MonitoringPage() {
             {farms.length > 0 && (
               <select
                 id="monitoring-farm-select"
-                className="form-select form-select-sm"
-                style={{ width: 'auto', minWidth: '180px' }}
+                className="form-select form-select-sm flex-grow-1 flex-sm-grow-0"
+                style={{ width: 'auto', minWidth: '140px', maxWidth: '100%' }}
                 value={selectedFarmId}
                 onChange={(e) => handleFarmChange(e.target.value)}
               >
@@ -489,7 +493,7 @@ export default function MonitoringPage() {
                 ))}
               </select>
             )}
-            <Button variant="primary" className="btn-sm" onClick={handleOpenRegister}>
+            <Button variant="primary" className="btn-sm flex-grow-1 flex-sm-grow-0" onClick={handleOpenRegister}>
               <i className="bi bi-plus-lg me-1" /> {t('monitoring.registerSensor')}
             </Button>
           </div>
@@ -769,11 +773,11 @@ export default function MonitoringPage() {
                   <i className="bi bi-calendar-week me-1 text-success" />
                   {t('monitoring.sevenDayForecast')}
                 </span>
-                <div className="row g-2">
+                <div className="d-flex flex-nowrap overflow-x-auto gap-2 pb-2 no-scrollbar">
                   {weather.dailyForecast.map((day, idx) => {
                     const dayName = new Date(day.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
                     return (
-                      <div key={idx} className="col-6 col-md-3 col-lg">
+                      <div key={idx} className="flex-grow-1 flex-shrink-0" style={{ minWidth: '95px' }}>
                         <div className="p-2 border rounded text-center h-100 bg-light">
                           <small className="fw-bold d-block text-secondary">{dayName}</small>
                           <div className="my-1">
@@ -825,8 +829,8 @@ export default function MonitoringPage() {
             {fields.length > 0 && (
               <select
                 id="monitoring-field-filter"
-                className="form-select form-select-sm"
-                style={{ width: 'auto' }}
+                className="form-select form-select-sm flex-grow-1 flex-sm-grow-0"
+                style={{ width: 'auto', minWidth: '130px', maxWidth: '100%' }}
                 value={selectedFieldId}
                 onChange={(e) => setSelectedFieldId(e.target.value)}
               >
@@ -840,7 +844,7 @@ export default function MonitoringPage() {
             )}
 
             {/* Time Range Tabs */}
-            <div className="btn-group btn-group-sm" role="group" aria-label="Time range selector">
+            <div className="btn-group btn-group-sm flex-shrink-0" role="group" aria-label="Time range selector">
               <button
                 type="button"
                 className={`btn ${timeRange === '24h' ? 'btn-success' : 'btn-outline-secondary'}`}
@@ -1440,6 +1444,7 @@ export default function MonitoringPage() {
                         id="sns-min"
                         type="number"
                         step="any"
+                        inputMode="decimal"
                         className="form-control"
                         value={sensorForm.thresholdMin}
                         onChange={(e) => setSensorForm({ ...sensorForm, thresholdMin: e.target.value })}
@@ -1453,6 +1458,7 @@ export default function MonitoringPage() {
                         id="sns-max"
                         type="number"
                         step="any"
+                        inputMode="decimal"
                         className="form-control"
                         value={sensorForm.thresholdMax}
                         onChange={(e) => setSensorForm({ ...sensorForm, thresholdMax: e.target.value })}
@@ -1518,10 +1524,11 @@ export default function MonitoringPage() {
                       id="ingest-val"
                       type="number"
                       step="any"
+                      inputMode="decimal"
                       className="form-control"
                       value={ingestForm.value}
                       required
-                      onChange={(e) => setIngestForm({ ...ingestForm, value: Number(e.target.value) })}
+                      onChange={(e) => setIngestForm({ ...ingestForm, value: e.target.value })}
                     />
                     <small className="text-muted">
                       {t('monitoring.thresholdGuidelines')}: Min {selectedSensor.thresholds?.min ?? '—'} / Max{' '}
@@ -1538,9 +1545,10 @@ export default function MonitoringPage() {
                       type="number"
                       min="1"
                       max="100"
+                      inputMode="numeric"
                       className="form-control"
                       value={ingestForm.batteryLevel}
-                      onChange={(e) => setIngestForm({ ...ingestForm, batteryLevel: Number(e.target.value) })}
+                      onChange={(e) => setIngestForm({ ...ingestForm, batteryLevel: e.target.value })}
                     />
                   </div>
                 </div>

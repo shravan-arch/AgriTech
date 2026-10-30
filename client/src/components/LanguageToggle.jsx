@@ -41,7 +41,7 @@ const LanguageToggle = ({ className = '', id = 'global-language-selector' }) => 
       <button
         id={id}
         type="button"
-        className="btn btn-sm lang-trigger-btn d-inline-flex align-items-center gap-2 px-3 py-1-5 shadow-sm"
+        className="btn btn-sm lang-trigger-btn d-inline-flex align-items-center gap-1 gap-sm-2 px-2 px-sm-3 py-1-5 shadow-sm"
         onClick={() => setIsOpen((prev) => !prev)}
         aria-haspopup="true"
         aria-expanded={isOpen}
@@ -71,7 +71,8 @@ const LanguageToggle = ({ className = '', id = 'global-language-selector' }) => 
           aria-labelledby={id}
           style={{
             zIndex: 1060,
-            minWidth: '280px',
+            width: 'min(320px, calc(100vw - 24px))',
+            minWidth: '240px',
             maxWidth: '340px',
             animation: 'fadeInDown 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
           }}

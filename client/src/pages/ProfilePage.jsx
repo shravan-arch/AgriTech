@@ -521,6 +521,7 @@ const ProfilePage = () => {
                         type="number"
                         step="0.01"
                         min="0"
+                        inputMode="decimal"
                         className="form-control"
                         placeholder="e.g. 15.5"
                         value={form.farmSizeHectares}

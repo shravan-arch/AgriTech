@@ -642,7 +642,7 @@ const DashboardPage = () => {
                         </div>
                       </div>
                     </div>
-                    <div className="d-flex align-items-center gap-2">
+                    <div className="d-flex align-items-center gap-2 flex-grow-1 flex-sm-grow-0">
                       <button
                         type="button"
                         className={`btn btn-sm ${isCompleted ? 'btn-outline-secondary' : 'btn-outline-success'}`}
@@ -669,12 +669,12 @@ const DashboardPage = () => {
               <h2 className="h4 mb-0">{t('dashboard.fieldStatusOverviewTitle')}</h2>
             </div>
             {farms.length > 1 && (
-              <div className="d-flex align-items-center gap-2">
-                <label htmlFor="farm-filter" className="small text-muted fw-semibold">{t('dashboard.filterFarmLabel')}</label>
+              <div className="d-flex align-items-center gap-2 flex-grow-1 flex-sm-grow-0">
+                <label htmlFor="farm-filter" className="small text-muted fw-semibold text-nowrap mb-0">{t('dashboard.filterFarmLabel')}</label>
                 <select
                   id="farm-filter"
-                  className="form-select form-select-sm"
-                  style={{ width: 'auto' }}
+                  className="form-select form-select-sm flex-grow-1"
+                  style={{ minWidth: '140px', maxWidth: '280px' }}
                   value={selectedFarmId}
                   onChange={(e) => setSelectedFarmId(e.target.value)}
                 >

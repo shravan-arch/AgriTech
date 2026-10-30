@@ -562,7 +562,12 @@ const AdminPage = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await createResourceAdmin(resourceForm);
+      await createResourceAdmin({
+        ...resourceForm,
+        currentStock: Number(resourceForm.currentStock) || 0,
+        minThreshold: Number(resourceForm.minThreshold) || 0,
+        unitPriceINR: Number(resourceForm.unitPriceINR) || 0,
+      });
       setActionSuccess('Agricultural product resource added to platform inventory.');
       setResourceCreateModal(false);
       fetchTabData();
@@ -726,7 +731,7 @@ const AdminPage = () => {
       {/* Platform Administration Header */}
       <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4 border-bottom pb-3">
         <div>
-          <div className="d-flex align-items-center gap-2 mb-1">
+          <div className="d-flex flex-wrap align-items-center gap-2 mb-1">
             <span className="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2.5 py-1.5 small fw-bold">
               <i className="bi bi-flower1 me-1" /> {t('admin.governanceActive')}
             </span>
@@ -767,8 +772,8 @@ const AdminPage = () => {
 
       {/* 8 Core Administrative Domain Tabs */}
       <div className="card border-0 shadow-sm rounded-4 mb-4">
-        <div className="card-header bg-white border-0 pt-3 px-3">
-          <ul className="nav nav-pills card-header-pills flex-nowrap overflow-x-auto gap-2 pb-2" role="tablist">
+        <div className="card-header bg-white border-0 pt-3 px-3 overflow-hidden">
+          <ul className="nav nav-pills card-header-pills flex-nowrap overflow-x-auto gap-2 pb-2 no-scrollbar" role="tablist">
             {ADMIN_TABS.map((tab) => {
               const isActive = activeTab === tab.id;
               return (
@@ -787,7 +792,7 @@ const AdminPage = () => {
           </ul>
         </div>
 
-        <div className="card-body p-4">
+        <div className="card-body p-3 p-sm-4">
           {/* =========================================================================
               DOMAIN 0: PLATFORM GOVERNANCE OVERVIEW
              ========================================================================= */}
@@ -817,7 +822,7 @@ const AdminPage = () => {
               {/* KPI Summary Cards */}
               <div className="row g-3 mb-4">
                 {/* 1. Users */}
-                <div className="col-12 col-sm-6 col-xl-3">
+                <div className="col-6 col-xl-3">
                   <div
                     className="card h-100 border rounded-3 p-3 bg-white shadow-sm cursor-pointer"
                     style={{ cursor: 'pointer', transition: 'all 0.15s ease' }}
@@ -839,7 +844,7 @@ const AdminPage = () => {
                 </div>
 
                 {/* 2. Content */}
-                <div className="col-12 col-sm-6 col-xl-3">
+                <div className="col-6 col-xl-3">
                   <div
                     className="card h-100 border rounded-3 p-3 bg-white shadow-sm cursor-pointer"
                     style={{ cursor: 'pointer', transition: 'all 0.15s ease' }}
@@ -861,7 +866,7 @@ const AdminPage = () => {
                 </div>
 
                 {/* 3. Resources */}
-                <div className="col-12 col-sm-6 col-xl-3">
+                <div className="col-6 col-xl-3">
                   <div
                     className="card h-100 border rounded-3 p-3 bg-white shadow-sm cursor-pointer"
                     style={{ cursor: 'pointer', transition: 'all 0.15s ease' }}
@@ -890,7 +895,7 @@ const AdminPage = () => {
                 </div>
 
                 {/* 4. Services */}
-                <div className="col-12 col-sm-6 col-xl-3">
+                <div className="col-6 col-xl-3">
                   <div
                     className="card h-100 border rounded-3 p-3 bg-white shadow-sm cursor-pointer"
                     style={{ cursor: 'pointer', transition: 'all 0.15s ease' }}
@@ -1444,7 +1449,7 @@ const AdminPage = () => {
                     <div className="card h-100 border shadow-sm rounded-3">
                       <div className="card-header bg-white border-bottom p-3 d-flex justify-content-between align-items-start gap-2">
                         <div>
-                          <div className="d-flex align-items-center gap-2 mb-1">
+                          <div className="d-flex flex-wrap align-items-center gap-2 mb-1">
                             <span className="badge bg-success-subtle text-success border border-success-subtle text-uppercase" style={{ fontSize: '0.7rem' }}>
                               {item.category}
                             </span>
@@ -2333,7 +2338,7 @@ const AdminPage = () => {
               </div>
 
               {/* Profile Identity Card */}
-              <div className="card border shadow-sm rounded-4 p-4 mb-4 bg-white">
+              <div className="card border shadow-sm rounded-4 p-3 p-sm-4 mb-4 bg-white">
                 <div className="d-flex flex-wrap align-items-center justify-content-between gap-3">
                   <div className="d-flex align-items-center gap-3">
                     {adminProfileForm.profilePhoto ? (
@@ -2513,7 +2518,7 @@ const AdminPage = () => {
                 {/* Column 2: Account Security, Password & Governance Boundaries */}
                 <div className="col-12 col-lg-6">
                   {/* Password Change Form */}
-                  <div className="card border shadow-sm rounded-4 p-4 mb-4 bg-white">
+                  <div className="card border shadow-sm rounded-4 p-3 p-sm-4 mb-4 bg-white">
                     <h4 className="h6 fw-bold text-dark mb-3 d-flex align-items-center gap-2">
                       <i className="bi bi-key-fill text-success" />
                       {t('admin.profile.accountSecurity')}
@@ -2608,7 +2613,7 @@ const AdminPage = () => {
                     Irreversible Governance Action
                   </span>
                 </div>
-                <div className="card-body p-4">
+                <div className="card-body p-3 p-sm-4">
                   <p className="text-secondary small mb-3">
                     Deleting your administrator account is permanent and cannot be undone. All administrative credentials, personal profile details, active authorization sessions, and personal identifying data will be permanently wiped immediately.
                   </p>
@@ -3066,6 +3071,7 @@ const AdminPage = () => {
                       value={restockQty}
                       onChange={(e) => setRestockQty(e.target.value)}
                       min={1}
+                      inputMode="numeric"
                       required
                     />
                   </div>
@@ -3142,8 +3148,10 @@ const AdminPage = () => {
                         type="number"
                         className="form-control form-control-sm"
                         value={resourceForm.currentStock}
-                        onChange={(e) => setResourceForm((p) => ({ ...p, currentStock: Number(e.target.value) }))}
+                        onChange={(e) => setResourceForm((p) => ({ ...p, currentStock: e.target.value }))}
                         min={0}
+                        step="any"
+                        inputMode="decimal"
                         required
                       />
                     </div>
@@ -3164,8 +3172,10 @@ const AdminPage = () => {
                         type="number"
                         className="form-control form-control-sm"
                         value={resourceForm.minThreshold}
-                        onChange={(e) => setResourceForm((p) => ({ ...p, minThreshold: Number(e.target.value) }))}
+                        onChange={(e) => setResourceForm((p) => ({ ...p, minThreshold: e.target.value }))}
                         min={1}
+                        step="any"
+                        inputMode="decimal"
                         required
                       />
                     </div>
@@ -3175,8 +3185,10 @@ const AdminPage = () => {
                         type="number"
                         className="form-control form-control-sm"
                         value={resourceForm.unitPriceINR}
-                        onChange={(e) => setResourceForm((p) => ({ ...p, unitPriceINR: Number(e.target.value) }))}
+                        onChange={(e) => setResourceForm((p) => ({ ...p, unitPriceINR: e.target.value }))}
                         min={0}
+                        step="0.01"
+                        inputMode="decimal"
                         required
                       />
                     </div>

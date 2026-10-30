@@ -175,7 +175,7 @@ export default function LandingPage() {
             <Link to="/login" className="btn btn-outline-success btn-sm landing-btn-login px-3">
               {t('landing.signIn')}
             </Link>
-            <Link to="/register" className="btn btn-primary btn-sm landing-btn-cta px-3 shadow-sm">
+            <Link to="/register" className="btn btn-primary btn-sm landing-btn-cta px-3 shadow-sm d-none d-sm-inline-flex">
               <span>{t('landing.getStarted')}</span>
               <i className="bi bi-arrow-right ms-1" aria-hidden="true" />
             </Link>
@@ -591,19 +591,19 @@ export default function LandingPage() {
                     </div>
 
                     <div className="row g-3 mb-4">
-                      <div className="col-4">
+                      <div className="col-12 col-sm-4">
                         <div className="telemetry-stat-card">
                           <small className="text-muted">{t('landing.totalRevenue')}</small>
                           <div className="fw-bold fs-5 text-success">₹ 14,80,000</div>
                         </div>
                       </div>
-                      <div className="col-4">
+                      <div className="col-12 col-sm-4">
                         <div className="telemetry-stat-card">
                           <small className="text-muted">{t('landing.operatingCosts')}</small>
                           <div className="fw-bold fs-5 text-danger">₹ 5,20,000</div>
                         </div>
                       </div>
-                      <div className="col-4">
+                      <div className="col-12 col-sm-4">
                         <div className="telemetry-stat-card">
                           <small className="text-muted">{t('landing.netFarmProfit')}</small>
                           <div className="fw-bold fs-5 text-primary">₹ 9,60,000</div>
@@ -666,7 +666,7 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div className="col-6 col-md-4">
+            <div className="col-12 col-sm-6 col-md-4">
               <div className="fw-bold text-dark mb-3 small text-uppercase">{t('landing.platformCapabilities')}</div>
               <ul className="list-unstyled d-flex flex-column gap-2 small">
                 <li><Link to="/features/farm-management" className="text-decoration-none text-muted">{t('landing.multiFarmCapability')}</Link></li>
@@ -677,7 +677,7 @@ export default function LandingPage() {
               </ul>
             </div>
 
-            <div className="col-6 col-md-4">
+            <div className="col-12 col-sm-6 col-md-4">
               <div className="fw-bold text-dark mb-3 small text-uppercase">{t('landing.farmPortal')}</div>
               <ul className="list-unstyled d-flex flex-column gap-2 small">
                 <li><Link to="/features" className="text-decoration-none text-muted">{t('landing.featuresGuide')}</Link></li>
@@ -690,7 +690,7 @@ export default function LandingPage() {
 
           <div className="d-flex flex-column flex-md-row align-items-center justify-content-between gap-3 pt-4 border-top text-secondary small">
             <div>&copy; {new Date().getFullYear()} AgriTech. Precision Agriculture &amp; Farm Operations.</div>
-            <div className="d-flex align-items-center gap-3">
+            <div className="d-flex flex-wrap align-items-center gap-2 gap-sm-3">
               <span>{t('landing.ownerIsolatedVault')}</span>
               <span>•</span>
               <span>{t('landing.panIndiaLanguages')}</span>

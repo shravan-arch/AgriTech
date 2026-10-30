@@ -493,7 +493,7 @@ export default function BuyResourcesPage() {
 
                         {/* Indicative Price Display */}
                         <div className="mb-3">
-                          <div className="d-flex align-items-baseline gap-2">
+                          <div className="d-flex align-items-baseline flex-wrap gap-2">
                             <span className="h4 fw-bold text-success mb-0">
                               ₹{(product.unitPriceINR || product.indicativePriceINR || 0).toLocaleString('en-IN')}
                             </span>

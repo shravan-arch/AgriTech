@@ -127,10 +127,10 @@ export default function InventoryPage() {
       farmId: farms[0]?._id || '',
       name: '',
       category: 'fertilizer',
-      quantity: 0,
+      quantity: '',
       unit: 'kg',
-      minThreshold: 10,
-      costPerUnit: 0,
+      minThreshold: '10',
+      costPerUnit: '',
       location: '',
       notes: '',
     });
@@ -173,18 +173,24 @@ export default function InventoryPage() {
     setFormSubmitting(true);
     setFormError('');
     try {
+      const payload = {
+        ...formData,
+        quantity: formData.quantity === '' ? 0 : Number(formData.quantity),
+        minThreshold: formData.minThreshold === '' ? 0 : Number(formData.minThreshold),
+        costPerUnit: formData.costPerUnit === '' ? 0 : Number(formData.costPerUnit),
+      };
       if (editingItem) {
         await apiRequest(`/inventory/${editingItem._id}`, {
           method: 'PATCH',
           token,
-          body: formData,
+          body: payload,
         });
         setActionNotice(`Supply item "${formData.name}" updated successfully.`);
       } else {
         await apiRequest('/inventory', {
           method: 'POST',
           token,
-          body: formData,
+          body: payload,
         });
         setActionNotice(`Supply item "${formData.name}" added to inventory.`);
       }
@@ -265,15 +271,16 @@ export default function InventoryPage() {
         title={t('inventory.title')}
         description={t('inventory.description')}
         actions={
-          <div className="d-flex gap-2">
+          <div className="d-flex gap-2 flex-wrap flex-grow-1 flex-sm-grow-0">
             <Button
               variant="outline-secondary"
+              className="flex-grow-1 flex-sm-grow-0"
               onClick={() => setActiveTab(activeTab === 'catalog' ? 'movements' : 'catalog')}
             >
               <i className={`bi ${activeTab === 'catalog' ? 'bi-clock-history' : 'bi-boxes'} me-1`} />
               {activeTab === 'catalog' ? t('inventory.movementHistory') : t('inventory.stockCatalog')}
             </Button>
-            <Button variant="primary" onClick={handleOpenAdd}>
+            <Button variant="primary" className="flex-grow-1 flex-sm-grow-0" onClick={handleOpenAdd}>
               <i className="bi bi-plus-lg me-1" /> {t('inventory.addItem')}
             </Button>
           </div>
@@ -400,7 +407,7 @@ export default function InventoryPage() {
               type="search"
               className="form-control form-control-sm"
               placeholder={t('inventory.searchSupplyOrStorage') || 'Search supply or storage…'}
-              style={{ width: '220px' }}
+              style={{ minWidth: '160px', maxWidth: '280px', width: 'auto' }}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -410,12 +417,12 @@ export default function InventoryPage() {
 
       {/* Category Pills (only in catalog mode) */}
       {activeTab === 'catalog' && (
-        <div className="d-flex gap-1 flex-wrap mb-3">
+        <div className="d-flex gap-1 flex-nowrap overflow-x-auto mb-3 pb-1 no-scrollbar">
           {categories.map((c) => (
             <button
               key={c.id}
               type="button"
-              className={`btn btn-sm ${selectedCategory === c.id ? 'btn-success' : 'btn-outline-secondary'}`}
+              className={`btn btn-sm flex-shrink-0 text-nowrap ${selectedCategory === c.id ? 'btn-success' : 'btn-outline-secondary'}`}
               style={{ borderRadius: '20px', padding: '0.25rem 0.75rem', fontSize: '0.8rem' }}
               onClick={() => setSelectedCategory(c.id)}
             >
@@ -714,10 +721,12 @@ export default function InventoryPage() {
                         type="number"
                         step="any"
                         min="0"
+                        inputMode="decimal"
+                        placeholder="0"
                         className="form-control"
                         value={formData.quantity}
                         required
-                        onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
+                        onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
                       />
                     </div>
                     <div className="col-6">
@@ -729,9 +738,11 @@ export default function InventoryPage() {
                         type="number"
                         step="any"
                         min="0"
+                        inputMode="decimal"
+                        placeholder="0"
                         className="form-control"
                         value={formData.minThreshold}
-                        onChange={(e) => setFormData({ ...formData, minThreshold: Number(e.target.value) })}
+                        onChange={(e) => setFormData({ ...formData, minThreshold: e.target.value })}
                       />
                     </div>
                   </div>
@@ -744,11 +755,13 @@ export default function InventoryPage() {
                       <input
                         id="inv-cost"
                         type="number"
-                        step="any"
+                        step="0.01"
                         min="0"
+                        inputMode="decimal"
+                        placeholder="0.00"
                         className="form-control"
                         value={formData.costPerUnit}
-                        onChange={(e) => setFormData({ ...formData, costPerUnit: Number(e.target.value) })}
+                        onChange={(e) => setFormData({ ...formData, costPerUnit: e.target.value })}
                       />
                     </div>
                     <div className="col-6">
@@ -858,6 +871,7 @@ export default function InventoryPage() {
                         type="number"
                         step="any"
                         min="0.001"
+                        inputMode="decimal"
                         max={moveData.type === 'out' ? activeItemForMove.quantity : undefined}
                         className="form-control"
                         value={moveData.quantity}

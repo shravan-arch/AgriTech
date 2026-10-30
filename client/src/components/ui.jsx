@@ -23,14 +23,15 @@ export const Badge = ({ children, tone = 'green' }) => (
   <span className={`status-badge status-badge-${tone}`}>{children}</span>
 );
 
-export const FormField = ({ id, label, optional = false, ...props }) => {
+export const FormField = ({ id, label, optional = false, type = 'text', inputMode, ...props }) => {
   const { t } = useLanguage();
+  const effectiveInputMode = inputMode || (type === 'number' ? 'decimal' : undefined);
   return (
     <div className="form-field">
       <label className="form-label" htmlFor={id}>
         {label}{optional && <> <span className="optional-label">{t('common.optional') || 'Optional'}</span></>}
       </label>
-      <input id={id} className="form-control" {...props} />
+      <input id={id} type={type} inputMode={effectiveInputMode} className="form-control" {...props} />
     </div>
   );
 };
