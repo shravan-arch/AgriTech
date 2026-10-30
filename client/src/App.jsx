@@ -1,28 +1,36 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import AuthPage from './pages/AuthPage.jsx';
-import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
-import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
-import VerifyEmailPage from './pages/VerifyEmailPage.jsx';
-import ProfilePage from './pages/ProfilePage.jsx';
-import DashboardPage from './pages/DashboardPage.jsx';
-import FarmDetailPage from './pages/FarmDetailPage.jsx';
-import FarmsPage from './pages/FarmsPage.jsx';
-import FieldMappingPage from './pages/FieldMappingPage.jsx';
-import OperationsPage from './pages/OperationsPage.jsx';
-import MonitoringPage from './pages/MonitoringPage.jsx';
-import InventoryPage from './pages/InventoryPage.jsx';
-import AnalyticsPage from './pages/AnalyticsPage.jsx';
-import BuyResourcesPage from './pages/BuyResourcesPage.jsx';
-import PurchaseHistoryPage from './pages/PurchaseHistoryPage.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
-import AdminPage from './pages/AdminPage.jsx';
 import LanguageToggle from './components/LanguageToggle.jsx';
 import { useAuth } from './context/useAuth.js';
 import { useLanguage } from './context/useLanguage.js';
-import LandingPage from './pages/LandingPage.jsx';
-import FeaturesPage from './pages/FeaturesPage.jsx';
 import SEO from './components/SEO.jsx';
+
+const AuthPage = lazy(() => import('./pages/AuthPage.jsx'));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage.jsx'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage.jsx'));
+const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage.jsx'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage.jsx'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage.jsx'));
+const FarmDetailPage = lazy(() => import('./pages/FarmDetailPage.jsx'));
+const FarmsPage = lazy(() => import('./pages/FarmsPage.jsx'));
+const FieldMappingPage = lazy(() => import('./pages/FieldMappingPage.jsx'));
+const OperationsPage = lazy(() => import('./pages/OperationsPage.jsx'));
+const MonitoringPage = lazy(() => import('./pages/MonitoringPage.jsx'));
+const InventoryPage = lazy(() => import('./pages/InventoryPage.jsx'));
+const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage.jsx'));
+const BuyResourcesPage = lazy(() => import('./pages/BuyResourcesPage.jsx'));
+const PurchaseHistoryPage = lazy(() => import('./pages/PurchaseHistoryPage.jsx'));
+const AdminPage = lazy(() => import('./pages/AdminPage.jsx'));
+const LandingPage = lazy(() => import('./pages/LandingPage.jsx'));
+const FeaturesPage = lazy(() => import('./pages/FeaturesPage.jsx'));
+
+const PageFallback = () => (
+  <div className="d-flex flex-column align-items-center justify-content-center p-5 w-100" style={{ minHeight: '40vh' }} role="status">
+    <div className="spinner-border text-success mb-3" style={{ width: '2.5rem', height: '2.5rem' }} aria-hidden="true" />
+    <span className="text-secondary small fw-medium">Loading AgriTech module...</span>
+  </div>
+);
 
 const ADMIN_PAGES = [
   { id: 'overview', label: 'Overview', shortDesc: 'Platform KPIs & Activity', icon: 'bi-grid-1x2' },
@@ -279,15 +287,17 @@ function App() {
           </header>
 
           <main className="admin-workspace-content">
-            <Routes>
-              <Route path="/features" element={<FeaturesPage />} />
-              <Route path="/features/:featureSlug" element={<FeaturesPage />} />
-              <Route path="/admin" element={<AdminPage />} />
-              <Route path="/verify-email" element={<VerifyEmailPage />} />
-              <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
-              {/* User features are terminated for admins: redirect all user pages to /admin */}
-              <Route path="*" element={<Navigate to="/admin" replace />} />
-            </Routes>
+            <Suspense fallback={<PageFallback />}>
+              <Routes>
+                <Route path="/features" element={<FeaturesPage />} />
+                <Route path="/features/:featureSlug" element={<FeaturesPage />} />
+                <Route path="/admin" element={<AdminPage />} />
+                <Route path="/verify-email" element={<VerifyEmailPage />} />
+                <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
+                {/* User features are terminated for admins: redirect all user pages to /admin */}
+                <Route path="*" element={<Navigate to="/admin" replace />} />
+              </Routes>
+            </Suspense>
           </main>
         </div>
       </div>
@@ -429,28 +439,30 @@ function App() {
                 </Link>
               </div>
             )}
-            <Routes>
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/features" element={<FeaturesPage />} />
-              <Route path="/features/:featureSlug" element={<FeaturesPage />} />
-              <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-              <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-              <Route path="/farms" element={<ProtectedRoute><FarmsPage /></ProtectedRoute>} />
-              <Route path="/farms/:farmId" element={<ProtectedRoute><FarmDetailPage /></ProtectedRoute>} />
-              <Route path="/mapping" element={<ProtectedRoute><FieldMappingPage /></ProtectedRoute>} />
-              <Route path="/farms/:farmId/mapping" element={<ProtectedRoute><FieldMappingPage /></ProtectedRoute>} />
-              <Route path="/operations" element={<ProtectedRoute><OperationsPage /></ProtectedRoute>} />
-              <Route path="/monitoring" element={<ProtectedRoute><MonitoringPage /></ProtectedRoute>} />
-              <Route path="/inventory" element={<ProtectedRoute><InventoryPage /></ProtectedRoute>} />
-              <Route path="/resources" element={<ProtectedRoute><BuyResourcesPage /></ProtectedRoute>} />
-              <Route path="/purchases" element={<ProtectedRoute><PurchaseHistoryPage /></ProtectedRoute>} />
-              <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
-              {/* Farmers cannot access /admin - redirect to dashboard */}
-              <Route path="/admin" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/verify-email" element={<VerifyEmailPage />} />
-              <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
-              <Route path="*" element={<Navigate to="/dashboard" replace />} />
-            </Routes>
+            <Suspense fallback={<PageFallback />}>
+              <Routes>
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/features" element={<FeaturesPage />} />
+                <Route path="/features/:featureSlug" element={<FeaturesPage />} />
+                <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+                <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+                <Route path="/farms" element={<ProtectedRoute><FarmsPage /></ProtectedRoute>} />
+                <Route path="/farms/:farmId" element={<ProtectedRoute><FarmDetailPage /></ProtectedRoute>} />
+                <Route path="/mapping" element={<ProtectedRoute><FieldMappingPage /></ProtectedRoute>} />
+                <Route path="/farms/:farmId/mapping" element={<ProtectedRoute><FieldMappingPage /></ProtectedRoute>} />
+                <Route path="/operations" element={<ProtectedRoute><OperationsPage /></ProtectedRoute>} />
+                <Route path="/monitoring" element={<ProtectedRoute><MonitoringPage /></ProtectedRoute>} />
+                <Route path="/inventory" element={<ProtectedRoute><InventoryPage /></ProtectedRoute>} />
+                <Route path="/resources" element={<ProtectedRoute><BuyResourcesPage /></ProtectedRoute>} />
+                <Route path="/purchases" element={<ProtectedRoute><PurchaseHistoryPage /></ProtectedRoute>} />
+                <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
+                {/* Farmers cannot access /admin - redirect to dashboard */}
+                <Route path="/admin" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/verify-email" element={<VerifyEmailPage />} />
+                <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
+                <Route path="*" element={<Navigate to="/dashboard" replace />} />
+              </Routes>
+            </Suspense>
           </main>
         </div>
       </div>
@@ -462,29 +474,31 @@ function App() {
   // -------------------------------------------------------------------------
   return (
     <div className="public-app">
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/features" element={<FeaturesPage />} />
-        <Route path="/features/:featureSlug" element={<FeaturesPage />} />
-        <Route path="/dashboard" element={<Navigate to="/login" replace />} />
-        <Route path="/login" element={<AuthPage mode="login" />} />
-        <Route path="/register" element={<AuthPage mode="register" />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
-        <Route path="/verify-email" element={<VerifyEmailPage />} />
-        <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
-        <Route path="/farms/*" element={<Navigate to="/login" replace />} />
-        <Route path="/mapping" element={<Navigate to="/login" replace />} />
-        <Route path="/operations" element={<Navigate to="/login" replace />} />
-        <Route path="/monitoring" element={<Navigate to="/login" replace />} />
-        <Route path="/inventory" element={<Navigate to="/login" replace />} />
-        <Route path="/resources" element={<Navigate to="/login" replace />} />
-        <Route path="/purchases" element={<Navigate to="/login" replace />} />
-        <Route path="/analytics" element={<Navigate to="/login" replace />} />
-        <Route path="/admin" element={<Navigate to="/login" replace />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <Suspense fallback={<PageFallback />}>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/features" element={<FeaturesPage />} />
+          <Route path="/features/:featureSlug" element={<FeaturesPage />} />
+          <Route path="/dashboard" element={<Navigate to="/login" replace />} />
+          <Route path="/login" element={<AuthPage mode="login" />} />
+          <Route path="/register" element={<AuthPage mode="register" />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
+          <Route path="/farms/*" element={<Navigate to="/login" replace />} />
+          <Route path="/mapping" element={<Navigate to="/login" replace />} />
+          <Route path="/operations" element={<Navigate to="/login" replace />} />
+          <Route path="/monitoring" element={<Navigate to="/login" replace />} />
+          <Route path="/inventory" element={<Navigate to="/login" replace />} />
+          <Route path="/resources" element={<Navigate to="/login" replace />} />
+          <Route path="/purchases" element={<Navigate to="/login" replace />} />
+          <Route path="/analytics" element={<Navigate to="/login" replace />} />
+          <Route path="/admin" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
     </div>
   );
 }

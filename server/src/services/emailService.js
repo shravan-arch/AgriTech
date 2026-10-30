@@ -10,6 +10,14 @@ export const setCustomTransporter = (transporter) => {
 };
 
 /**
+ * Checks whether the email service has credentials/host configured.
+ */
+export const isConfigured = () => {
+  if (customTransporter) return true;
+  return Boolean(process.env.SMTP_HOST && process.env.SMTP_HOST.trim());
+};
+
+/**
  * Creates or retrieves the Nodemailer transporter based on environment config.
  */
 export const getTransporter = () => {
@@ -17,10 +25,10 @@ export const getTransporter = () => {
     return customTransporter;
   }
 
-  const host = process.env.SMTP_HOST;
+  const host = process.env.SMTP_HOST?.trim();
   const port = parseInt(process.env.SMTP_PORT || '587', 10);
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
+  const user = process.env.SMTP_USER?.trim();
+  const pass = process.env.SMTP_PASS?.trim();
 
   if (!host) {
     return null;
@@ -31,29 +39,62 @@ export const getTransporter = () => {
     port,
     secure: port === 465,
     auth: user && pass ? { user, pass } : undefined,
+    // Production connection timeouts to prevent hanging sockets
+    connectionTimeout: 8000, // 8s to establish TCP handshake
+    greetingTimeout: 5000,   // 5s to receive SMTP greeting
+    socketTimeout: 10000,    // 10s of socket inactivity
+    tls: {
+      rejectUnauthorized: process.env.NODE_ENV === 'production',
+      minVersion: 'TLSv1.2',
+    },
   });
 };
 
 const getClientUrl = () => {
-  if (process.env.CLIENT_URL) return process.env.CLIENT_URL.replace(/\/+$/, '');
+  if (process.env.CLIENT_URL) return process.env.CLIENT_URL.split(',')[0].trim().replace(/\/+$/, '');
   if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
   return 'http://localhost:5173';
 };
 
 /**
- * Sends a password reset email.
- *
- * @param {object} params
- * @param {string} params.to - Recipient email.
- * @param {string} params.name - User's name.
- * @param {string} params.resetToken - Raw cryptographically secure reset token.
- * @returns {Promise<boolean>} Resolves true on successful dispatch.
- * @throws {Error} Throws if delivery fails or transporter is unconfigured.
+ * Helper to dispatch email with a strict execution timeout.
  */
-export const sendPasswordResetEmail = async ({ to, name, resetToken }) => {
+const sendWithTimeout = async (transporter, mailOptions, timeoutMs = 10000) => {
+  let timer;
+  const timeoutPromise = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      const error = new Error(`Email delivery timed out after ${timeoutMs}ms.`);
+      error.code = 'ETIMEDOUT';
+      reject(error);
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([
+      transporter.sendMail(mailOptions),
+      timeoutPromise,
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
+/**
+ * Sends a password reset email.
+ * Accepts either { to, name, resetToken } or (to, resetToken).
+ */
+export const sendPasswordResetEmail = async (params, maybeResetToken) => {
+  let to, name, resetToken;
+  if (typeof params === 'string') {
+    to = params;
+    resetToken = maybeResetToken;
+  } else if (params && typeof params === 'object') {
+    ({ to, name, resetToken } = params);
+  }
+
   const clientUrl = getClientUrl();
-  const resetUrl = `${clientUrl}/reset-password?token=${encodeURIComponent(resetToken)}`;
+  const resetUrl = `${clientUrl}/reset-password?token=${encodeURIComponent(resetToken || '')}`;
   const from = process.env.EMAIL_FROM || '"AgriTech Security" <no-reply@agritech.local>';
 
   const transporter = getTransporter();
@@ -98,10 +139,11 @@ export const sendPasswordResetEmail = async ({ to, name, resetToken }) => {
   };
 
   try {
-    await transporter.sendMail(mailOptions);
+    await sendWithTimeout(transporter, mailOptions, 10000);
     return true;
   } catch (deliveryError) {
     const error = new Error(`Email delivery failed: ${deliveryError.message}`);
+    error.code = deliveryError.code || 'EMAIL_DELIVERY_FAILED';
     error.cause = deliveryError;
     throw error;
   }
@@ -109,17 +151,19 @@ export const sendPasswordResetEmail = async ({ to, name, resetToken }) => {
 
 /**
  * Sends an email verification link to activate a newly registered account.
- *
- * @param {object} params
- * @param {string} params.to - Recipient email.
- * @param {string} params.name - User's name.
- * @param {string} params.verificationToken - Raw cryptographically secure verification token.
- * @returns {Promise<boolean>} Resolves true on successful dispatch.
- * @throws {Error} Throws if delivery fails or transporter is unconfigured.
+ * Accepts either { to, name, verificationToken } or (to, verificationToken).
  */
-export const sendVerificationEmail = async ({ to, name, verificationToken }) => {
+export const sendVerificationEmail = async (params, maybeToken) => {
+  let to, name, verificationToken;
+  if (typeof params === 'string') {
+    to = params;
+    verificationToken = maybeToken;
+  } else if (params && typeof params === 'object') {
+    ({ to, name, verificationToken } = params);
+  }
+
   const clientUrl = getClientUrl();
-  const verificationUrl = `${clientUrl}/verify-email?token=${encodeURIComponent(verificationToken)}`;
+  const verificationUrl = `${clientUrl}/verify-email?token=${encodeURIComponent(verificationToken || '')}`;
   const from = process.env.EMAIL_FROM || '"AgriTech Security" <no-reply@agritech.local>';
 
   const transporter = getTransporter();
@@ -164,10 +208,11 @@ export const sendVerificationEmail = async ({ to, name, verificationToken }) => 
   };
 
   try {
-    await transporter.sendMail(mailOptions);
+    await sendWithTimeout(transporter, mailOptions, 10000);
     return true;
   } catch (deliveryError) {
     const error = new Error(`Email delivery failed: ${deliveryError.message}`);
+    error.code = deliveryError.code || 'EMAIL_DELIVERY_FAILED';
     error.cause = deliveryError;
     throw error;
   }
@@ -176,6 +221,7 @@ export const sendVerificationEmail = async ({ to, name, verificationToken }) => 
 export default {
   getTransporter,
   setCustomTransporter,
+  isConfigured,
   sendPasswordResetEmail,
   sendVerificationEmail,
 };

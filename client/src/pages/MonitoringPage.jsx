@@ -665,12 +665,29 @@ export default function MonitoringPage() {
           </Card>
         ) : weather?.connected ? (
           <Card className="p-4 border-0 shadow-sm">
-            {/* Stale data warning banner */}
+            {/* Stale data warning or sync notice */}
             {weather.stale && (
-              <div className="alert alert-warning py-2 px-3 small d-flex align-items-center gap-2 mb-3" role="alert">
-                <i className="bi bi-exclamation-triangle-fill fs-5 text-warning" />
+              <div
+                className={`alert py-2 px-3 small d-flex align-items-center gap-2 mb-3 ${
+                  weather.updatedAt && Date.now() - new Date(weather.updatedAt).getTime() < 45 * 60 * 1000
+                    ? 'alert-light border text-secondary'
+                    : 'alert-warning'
+                }`}
+                role="alert"
+              >
+                <i
+                  className={`fs-5 ${
+                    weather.updatedAt && Date.now() - new Date(weather.updatedAt).getTime() < 45 * 60 * 1000
+                      ? 'bi bi-info-circle text-primary'
+                      : 'bi bi-exclamation-triangle-fill text-warning'
+                  }`}
+                />
                 <div>
-                  <strong>{t('monitoring.staleWarning')}</strong>
+                  <strong>
+                    {weather.updatedAt && Date.now() - new Date(weather.updatedAt).getTime() < 45 * 60 * 1000
+                      ? 'Verified meteorological station observations'
+                      : t('monitoring.staleWarning')}
+                  </strong>
                   <div className="text-muted">{weather.staleReason}</div>
                 </div>
               </div>
