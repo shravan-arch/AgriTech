@@ -4,6 +4,7 @@ import { useAuth } from '../context/useAuth.js';
 import { useLanguage } from '../context/useLanguage.js';
 import { apiRequest } from '../lib/api.js';
 import { Card, EmptyState, ErrorState, LoadingState, PageHeader } from '../components/ui.jsx';
+import { FarmModal } from '../components/FarmModal.jsx';
 
 const INDIAN_AGRI_PRESETS = [
   { label: 'Ludhiana, Punjab', state: 'Punjab', district: 'Ludhiana', lat: 30.9010, lng: 75.8573, note: 'Wheat & Paddy' },
@@ -87,6 +88,49 @@ const FarmsPage = () => {
   });
   const [detectingGps, setDetectingGps] = useState(false);
   const [gpsStatusNotice, setGpsStatusNotice] = useState('');
+
+  // Comprehensive Farm Profile Modal
+  const [farmModalOpen, setFarmModalOpen] = useState(false);
+  const [farmModalMode, setFarmModalMode] = useState('create');
+  const [farmModalData, setFarmModalData] = useState(null);
+
+  const openCreateFarmModal = () => {
+    setFarmModalMode('create');
+    setFarmModalData(null);
+    setFarmModalOpen(true);
+  };
+
+  const openEditFarmModal = (farm) => {
+    setFarmModalMode('edit');
+    setFarmModalData(farm);
+    setFarmModalOpen(true);
+  };
+
+  const handleFarmModalSuccess = (savedFarm) => {
+    if (!savedFarm) return;
+    setFarms((current) => {
+      const exists = current.some((f) => f._id === savedFarm._id);
+      if (exists) {
+        return current.map((f) => (f._id === savedFarm._id ? savedFarm : f));
+      }
+      return [savedFarm, ...current];
+    });
+    if (farmModalMode === 'create') {
+      setFarmFields((prev) => ({ ...prev, [savedFarm._id]: [] }));
+      setNotice('New farm registered with complete agricultural profile.');
+      if (savedFarm.location?.latitude && savedFarm.location?.longitude) {
+        apiRequest(`/weather/farms/${savedFarm._id}`, { token })
+          .then((weatherRes) => {
+            if (weatherRes.data?.current) {
+              setFarmWeather((prev) => ({ ...prev, [savedFarm._id]: weatherRes.data.current }));
+            }
+          })
+          .catch(() => {});
+      }
+    } else {
+      setNotice('Farm profile and agricultural properties updated.');
+    }
+  };
 
   // Quick Add Field Modal
   const [fieldModalFarm, setFieldModalFarm] = useState(null);
@@ -496,10 +540,14 @@ const FarmsPage = () => {
         title={t('farms.title')}
         description={t('farms.description')}
         actions={
-          <a className="btn btn-primary shadow-sm" href="#add-farm">
-            <i className="bi bi-plus-lg me-2" aria-hidden="true" />
-            {t('farms.addFarm')}
-          </a>
+          <button
+            type="button"
+            className="btn btn-success fw-semibold shadow-sm d-flex align-items-center gap-2"
+            onClick={openCreateFarmModal}
+          >
+            <i className="bi bi-plus-circle-fill" aria-hidden="true" />
+            <span>{t('farms.addFarm')}</span>
+          </button>
         }
       />
 
@@ -670,9 +718,9 @@ const FarmsPage = () => {
         </div>
       </div>
 
-      {/* Main Content Layout: Farms List + Add Farm Card */}
+      {/* Main Content Layout: Farms List */}
       <div className="row g-4 align-items-start">
-        <div className="col-12 col-xl-7">
+        <div className="col-12">
           {loading ? (
             <LoadingState>{t('common.loading')}</LoadingState>
           ) : visibleFarms.length ? (
@@ -685,57 +733,56 @@ const FarmsPage = () => {
                 const weather = farmWeather[farm._id];
 
                 return (
-                  <div key={farm._id} className={viewMode === 'grid' ? 'col-12' : 'w-100'}>
-                    <div className="card shadow-sm border-0 rounded-4 overflow-hidden bg-white interactive-farm-card">
+                  <div key={farm._id} className={viewMode === 'grid' ? 'col-12 col-md-6 col-xl-4' : 'w-100'}>
+                    <div className="card shadow-sm border-0 rounded-4 overflow-hidden bg-white interactive-farm-card h-100">
                       {/* Top Accent Bar */}
                       <div className="farm-card-accent-bar" style={{ height: '4px', background: 'linear-gradient(90deg, #10b981 0%, #34d399 50%, #059669 100%)' }} />
 
                       <div className="card-body p-3 p-md-4">
                         {/* Header & Inline Rename */}
+                        {farm.coverImage && (
+                          <div className="mb-3 rounded-3 overflow-hidden shadow-sm" style={{ maxHeight: '160px' }}>
+                            <img src={farm.coverImage} alt={farm.name} className="w-100 h-100 object-fit-cover" />
+                          </div>
+                        )}
                         <div className="d-flex align-items-start justify-content-between gap-2 mb-2">
                           <div className="d-flex align-items-center gap-2 flex-grow-1">
-                            <span className="farm-avatar-badge rounded-circle d-inline-flex align-items-center justify-content-center bg-success-subtle text-success fw-bold" style={{ width: '42px', height: '42px', fontSize: '1.1rem' }}>
+                            <span className="farm-avatar-badge rounded-circle d-inline-flex align-items-center justify-content-center bg-success-subtle text-success fw-bold flex-shrink-0" style={{ width: '44px', height: '44px', fontSize: '1.2rem' }}>
                               <i className="bi bi-house-heart" />
                             </span>
 
-                            {editingId === farm._id ? (
-                              <form
-                                className="d-flex align-items-center gap-2 flex-grow-1"
-                                onSubmit={(e) => {
-                                  e.preventDefault();
-                                  saveFarmName(farm._id);
-                                }}
-                              >
-                                <input
-                                  className="form-control form-control-sm"
-                                  value={editName}
-                                  onChange={(e) => setEditName(e.target.value)}
-                                  maxLength={100}
-                                  required
-                                  autoFocus
-                                />
-                                <button className="btn btn-success btn-sm" type="submit" disabled={busyId === farm._id}>
-                                  {busyId === farm._id ? '…' : t('common.save')}
-                                </button>
-                                <button className="btn btn-outline-secondary btn-sm" type="button" onClick={() => setEditingId(null)}>
-                                  {t('common.cancel')}
-                                </button>
-                              </form>
-                            ) : (
-                              <div>
-                                <Link to={`/farms/${farm._id}`} className="h5 fw-bold text-dark text-decoration-none farm-hover-link mb-0 d-block">
+                            <div className="flex-grow-1">
+                              <div className="d-flex align-items-center gap-2 flex-wrap">
+                                <Link to={`/farms/${farm._id}`} className="h5 fw-bold text-dark text-decoration-none farm-hover-link mb-0">
                                   {farm.name}
                                 </Link>
-                                <span className="text-secondary small d-flex align-items-center gap-1 mt-0-5">
-                                  <i className="bi bi-geo-alt-fill text-danger small" />
-                                  {[farm.location?.city, farm.location?.region, farm.location?.country].filter(Boolean).join(', ') || 'India'}
+                                <span className="badge bg-light text-secondary border font-monospace small">
+                                  {farm.farmCode || `FRM-${String(farm._id).slice(-6).toUpperCase()}`}
                                 </span>
                               </div>
-                            )}
+                              <div className="text-secondary small d-flex flex-wrap align-items-center gap-2 mt-1">
+                                <span>
+                                  <i className="bi bi-geo-alt-fill text-danger me-1" />
+                                  {[farm.location?.village, farm.location?.district, farm.location?.state || farm.location?.region, farm.location?.country].filter(Boolean).join(', ') || 'India'}
+                                </span>
+                                {farm.farmType && (
+                                  <span className="badge bg-success-subtle text-success fw-normal">
+                                    {farm.farmType}
+                                  </span>
+                                )}
+                                {farm.ownershipType && (
+                                  <span className="badge bg-secondary-subtle text-secondary fw-normal">
+                                    {farm.ownershipType}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           </div>
 
-                          <span className="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1 small">
-                            {t('farms.allSystemsNominal')}
+                          <span className={`badge rounded-pill px-2-5 py-1 small fw-semibold ${
+                            farm.management?.farmStatus === 'Fallow / Inactive' ? 'bg-secondary-subtle text-secondary' : 'bg-success-subtle text-success border border-success-subtle'
+                          }`}>
+                            {farm.management?.farmStatus || t('farms.allSystemsNominal')}
                           </span>
                         </div>
 
@@ -790,6 +837,17 @@ const FarmsPage = () => {
                           </div>
                         )}
 
+                        {/* Primary Crops Chips */}
+                        {farm.agriculturalDetails?.primaryCrops?.length > 0 && (
+                          <div className="d-flex flex-wrap align-items-center gap-1 mb-2">
+                            <span className="small text-muted me-1">Crops:</span>
+                            {farm.agriculturalDetails.primaryCrops.map((c) => (
+                              <span key={c} className="badge bg-success-subtle text-success rounded-pill px-2 py-0-5 small fw-normal">
+                                <i className="bi bi-sprout me-1" />{c}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                         {/* Fields Preview Chips */}
                         {fields.length > 0 ? (
                           <div className="d-flex flex-wrap gap-1-5 mb-3">
@@ -820,11 +878,21 @@ const FarmsPage = () => {
                           <div className="d-flex flex-wrap align-items-center gap-1">
                             <button
                               type="button"
-                              className="btn btn-outline-primary btn-sm"
+                              className="btn btn-outline-primary btn-sm d-flex align-items-center gap-1"
+                              onClick={() => openEditFarmModal(farm)}
+                              title="Edit complete farm profile"
+                            >
+                              <i className="bi bi-pencil-square" />
+                              <span className="d-none d-sm-inline">Edit Profile</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              className="btn btn-outline-success btn-sm d-flex align-items-center gap-1"
                               onClick={() => openFieldModal(farm)}
                               title={t('farms.quickAddField')}
                             >
-                              <i className="bi bi-plus-circle me-1" />
+                              <i className="bi bi-plus-circle" />
                               <span className="d-none d-sm-inline">{t('farms.quickAddField')}</span>
                             </button>
 
@@ -886,206 +954,17 @@ const FarmsPage = () => {
                 title={searchQuery || selectedRegion !== 'ALL' ? t('farms.noFarmsFound') : t('farms.noFarmsYet')}
                 description={t('farms.startAdding')}
                 action={
-                  <a className="btn btn-primary shadow-sm" href="#add-farm">
+                  <button
+                    type="button"
+                    className="btn btn-primary shadow-sm"
+                    onClick={openCreateFarmModal}
+                  >
                     <i className="bi bi-plus-lg me-1" /> {t('farms.quickAddTitle')}
-                  </a>
+                  </button>
                 }
               />
             </Card>
           ) : null}
-        </div>
-
-        {/* Right Side: Register New Farm Form with GPS & Hub Presets */}
-        <div className="col-12 col-xl-5">
-          {user?.role === 'admin' ? (
-            <Card className="form-card rounded-4 border-0 shadow-sm p-4 bg-light border-primary-subtle" id="add-farm">
-              <div className="d-flex align-items-center gap-2 mb-3">
-                <i className="bi bi-shield-shaded text-primary fs-3" />
-                <div>
-                  <h3 className="h6 fw-bold mb-0 text-primary">{t('farms.adminAgriRestriction')}</h3>
-                  <small className="text-secondary">{t('farms.platformGovernanceProtocol')}</small>
-                </div>
-              </div>
-              <p className="small text-secondary mb-3">
-                In accordance with platform security and access control policies, Administrators manage system users and oversee all regional agricultural holdings via the Admin Console. Creation or modification of personal farm workspaces is restricted for administrative accounts.
-              </p>
-              <Link to="/admin" className="btn btn-primary btn-sm fw-semibold w-100 d-flex align-items-center justify-content-center gap-2 py-2">
-                <i className="bi bi-geo-alt" />
-                Open Land &amp; Farms Oversight in Admin Console
-              </Link>
-            </Card>
-          ) : (
-            <Card className="form-card rounded-4 border-0 shadow-sm p-3 p-md-4" id="add-farm">
-              <div className="d-flex align-items-center justify-content-between mb-2">
-                <span className="badge bg-success-subtle text-success rounded-pill px-2-5 py-1 small fw-semibold">
-                  {t('farms.quickAddTitle')}
-                </span>
-                <span className="text-muted small">{t('farms.indiaHub')}</span>
-              </div>
-
-              <h2 className="h5 fw-bold text-dark mb-1">{t('farms.quickAddTitle')}</h2>
-              <p className="text-secondary small mb-3">
-                Configure boundaries, region, and geo-coordinates for automated meteorological tracking.
-              </p>
-
-              <form onSubmit={createFarm}>
-                {/* Farm Name */}
-                <div className="mb-3">
-                  <label className="form-label small fw-semibold text-dark" htmlFor="farm-name">
-                    {t('farms.farmNameLabel')} <span className="text-danger">*</span>
-                  </label>
-                  <input
-                    id="farm-name"
-                    className="form-control"
-                    placeholder={t('farms.farmNamePlaceholder')}
-                    value={form.name}
-                    onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-                    maxLength={100}
-                    required
-                  />
-                </div>
-
-              {/* State & District */}
-              <div className="row g-2 mb-3">
-                <div className="col-12 col-sm-6">
-                  <label className="form-label small fw-semibold text-dark" htmlFor="farm-region">
-                    {t('farms.stateRegionLabel')}
-                  </label>
-                  <input
-                    id="farm-region"
-                    className="form-control form-control-sm"
-                    list="indian-states-list"
-                    placeholder="e.g. Punjab, Maharashtra"
-                    value={form.region}
-                    onChange={(e) => setForm((prev) => ({ ...prev, region: e.target.value }))}
-                    maxLength={100}
-                  />
-                  <datalist id="indian-states-list">
-                    {INDIAN_STATES.map((st) => (
-                      <option key={st} value={st} />
-                    ))}
-                  </datalist>
-                </div>
-
-                <div className="col-12 col-sm-6">
-                  <label className="form-label small fw-semibold text-dark" htmlFor="farm-city">
-                    {t('farms.cityDistrictLabel')}
-                  </label>
-                  <input
-                    id="farm-city"
-                    className="form-control form-control-sm"
-                    placeholder="e.g. Ludhiana, Nashik"
-                    value={form.city}
-                    onChange={(e) => setForm((prev) => ({ ...prev, city: e.target.value }))}
-                    maxLength={100}
-                  />
-                </div>
-              </div>
-
-              {/* GPS Coordinates Header & Detection */}
-              <div className="card bg-light border-0 rounded-3 p-3 mb-3">
-                <div className="d-flex align-items-center justify-content-between mb-2">
-                  <span className="small fw-bold text-dark d-flex align-items-center gap-1">
-                    <i className="bi bi-geo-alt-fill text-danger" />
-                    Geographical Coordinates
-                  </span>
-                  <button
-                    type="button"
-                    className="btn btn-outline-success btn-sm py-0 px-2 rounded-pill small d-inline-flex align-items-center gap-1"
-                    style={{ fontSize: '0.75rem' }}
-                    onClick={() => handleDetectDeviceGps('create')}
-                    disabled={detectingGps}
-                  >
-                    {detectingGps ? (
-                      <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" />
-                    ) : (
-                      <i className="bi bi-crosshair" />
-                    )}
-                    {t('farms.useDeviceGps')}
-                  </button>
-                </div>
-
-                <div className="row g-2 mb-2">
-                  <div className="col-12 col-sm-6">
-                    <label className="form-label small text-muted mb-1" htmlFor="farm-lat">
-                      {t('farms.latitudeLabel')}
-                    </label>
-                    <input
-                      id="farm-lat"
-                      type="number"
-                      step="any"
-                      min="-90"
-                      max="90"
-                      inputMode="decimal"
-                      className="form-control form-control-sm bg-white"
-                      placeholder="e.g. 30.9010"
-                      value={form.latitude}
-                      onChange={(e) => setForm((prev) => ({ ...prev, latitude: e.target.value }))}
-                    />
-                  </div>
-                  <div className="col-12 col-sm-6">
-                    <label className="form-label small text-muted mb-1" htmlFor="farm-lng">
-                      {t('farms.longitudeLabel')}
-                    </label>
-                    <input
-                      id="farm-lng"
-                      type="number"
-                      step="any"
-                      min="-180"
-                      max="180"
-                      inputMode="decimal"
-                      className="form-control form-control-sm bg-white"
-                      placeholder="e.g. 75.8573"
-                      value={form.longitude}
-                      onChange={(e) => setForm((prev) => ({ ...prev, longitude: e.target.value }))}
-                    />
-                  </div>
-                </div>
-
-                {gpsStatusNotice && (
-                  <p className="small text-success mb-2 fw-semibold" style={{ fontSize: '0.75rem' }}>
-                    <i className="bi bi-info-circle me-1" />
-                    {gpsStatusNotice}
-                  </p>
-                )}
-
-                {/* Quick Indian Agricultural Hub Presets */}
-                <div className="mt-2 pt-2 border-top">
-                  <span className="text-muted small d-block mb-1-5" style={{ fontSize: '0.72rem' }}>
-                    {t('farms.quickPresets')}:
-                  </span>
-                  <div className="d-flex flex-wrap gap-1">
-                    {INDIAN_AGRI_PRESETS.map((p) => (
-                      <button
-                        key={p.label}
-                        type="button"
-                        className="btn btn-white btn-sm border py-0-5 px-2 rounded-2 small text-dark preset-chip"
-                        style={{ fontSize: '0.7rem' }}
-                        onClick={() => handleApplyPreset(p, 'create')}
-                      >
-                        {p.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <button className="btn btn-primary w-100 py-2 shadow-sm fw-semibold" type="submit" disabled={submitting}>
-                {submitting ? (
-                  <>
-                    <span className="spinner-border spinner-border-sm me-2" aria-hidden="true" />
-                    {t('common.saving')}
-                  </>
-                ) : (
-                  <>
-                    <i className="bi bi-plus-lg me-2" aria-hidden="true" />
-                    {t('farms.addFarm')}
-                  </>
-                )}
-              </button>
-            </form>
-          </Card>
-          )}
         </div>
       </div>
 
@@ -1341,6 +1220,14 @@ const FarmsPage = () => {
           </div>
         </div>
       )}
+      {/* Comprehensive Farm Registration & Editing Modal */}
+      <FarmModal
+        isOpen={farmModalOpen}
+        mode={farmModalMode}
+        initialData={farmModalData}
+        onClose={() => setFarmModalOpen(false)}
+        onSuccess={handleFarmModalSuccess}
+      />
     </section>
   );
 };

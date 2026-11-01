@@ -141,7 +141,7 @@ export const translations = {
       "eyebrow": "Land & Territory Portfolio",
       "title": "Farms & Agricultural Fields",
       "description": "Manage your agricultural estates, geo-coordinates, cultivated parcels, and crop allocations.",
-      "addFarm": "Add Farm",
+      "addFarm": "Add New Farm",
       "totalFarms": "Total Farms",
       "totalCultivated": "Cultivated Land",
       "totalFields": "Total Fields",
