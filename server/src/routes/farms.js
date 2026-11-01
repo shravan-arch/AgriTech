@@ -61,7 +61,11 @@ export const createFarmRouter = (
   router.route('/:farmId')
     .get(controller.getFarm)
     .patch(controller.updateFarm)
+    .put(controller.updateFarm)
     .delete(controller.deleteFarm);
+  router.route('/:farmId/cover-image')
+    .post(controller.photoUploadMiddleware, controller.uploadFarmCoverImage)
+    .delete(controller.removeFarmCoverImage);
   router.route('/:farmId/fields')
     .get(controller.listFields)
     .post(controller.createField);

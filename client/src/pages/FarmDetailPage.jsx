@@ -1,10 +1,24 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
+import { FarmModal } from '../components/FarmModal.jsx';
 import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../context/useAuth.js';
 import { useLanguage } from '../context/useLanguage.js';
 import { apiRequest } from '../lib/api.js';
 import { Badge, Card, EmptyState, ErrorState, FormField, LoadingState, PageHeader } from '../components/ui.jsx';
 import { AuthenticatedImage } from '../components/AuthenticatedImage.jsx';
+
+
+const FARM_DETAIL_TABS = [
+  { id: 'overview', label: 'Overview', icon: 'bi-grid-1x2' },
+  { id: 'location', label: 'Location', icon: 'bi-geo-alt' },
+  { id: 'land', label: 'Land & Soil', icon: 'bi-aspect-ratio' },
+  { id: 'infrastructure', label: 'Infrastructure', icon: 'bi-droplet' },
+  { id: 'agricultural', label: 'Agriculture', icon: 'bi-flower1' },
+  { id: 'fields', label: 'Fields & Plots', icon: 'bi-grid-3x3-gap' },
+  { id: 'images', label: 'Images & Photos', icon: 'bi-images' },
+  { id: 'management', label: 'Management', icon: 'bi-person-badge' },
+  { id: 'history', label: 'Activity History', icon: 'bi-clock-history' },
+];
 
 const emptyField = { name: '', areaHectares: '', soilType: '', waterSource: '', irrigationDetails: '' };
 const createEmptyPlanting = () => ({
@@ -97,6 +111,11 @@ const FarmDetailPage = () => {
   const { token } = useAuth();
   const { t } = useLanguage();
   const [farm, setFarm] = useState(null);
+  const [currentMainTab, setCurrentMainTab] = useState('overview');
+  const [farmEditModalOpen, setFarmEditModalOpen] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const [coverUploadNotice, setCoverUploadNotice] = useState('');
+
   const [fields, setFields] = useState([]);
   const [cropCycles, setCropCycles] = useState([]);
   const [activities, setActivities] = useState([]);
@@ -691,6 +710,132 @@ const FarmDetailPage = () => {
     }
   };
 
+  
+  const totalAreaHa = fields.reduce((sum, f) => sum + (Number(f.areaHectares) || 0), 0);
+  const totalAcresFromFields = (totalAreaHa * 2.47105).toFixed(1);
+  const displayedTotalArea = farm?.landDetails?.totalArea
+    ? `${farm.landDetails.totalArea} ${farm.landDetails.areaUnit || 'Acres'}`
+    : (totalAreaHa > 0 ? `${totalAreaHa.toFixed(1)} ha (~${totalAcresFromFields} ac)` : 'Not specified');
+  const displayedCultivable = farm?.landDetails?.cultivableArea
+    ? `${farm.landDetails.cultivableArea} ${farm.landDetails.areaUnit || 'Acres'}`
+    : (totalAreaHa > 0 ? `${totalAreaHa.toFixed(1)} ha` : 'Not specified');
+  const displayedIrrigated = farm?.landDetails?.irrigatedArea
+    ? `${farm.landDetails.irrigatedArea} ${farm.landDetails.areaUnit || 'Acres'}`
+    : 'Not configured';
+  const activeCycles = cropCycles.filter((c) => c.status === 'active');
+
+  const cropDistribution = useMemo(() => {
+    const map = {};
+    for (const cycle of activeCycles) {
+      const name = cycle.cropName || 'Unnamed Crop';
+      if (!map[name]) {
+        map[name] = { count: 0, fields: new Set(), varieties: new Set() };
+      }
+      map[name].count += 1;
+      if (cycle.fieldId) map[name].fields.add(cycle.fieldId);
+      if (cycle.variety) map[name].varieties.add(cycle.variety);
+    }
+    return Object.entries(map).map(([name, data]) => ({
+      name,
+      plotCount: data.fields.size,
+      activePlantings: data.count,
+      varieties: Array.from(data.varieties),
+    }));
+  }, [activeCycles]);
+
+  const combinedHistory = useMemo(() => {
+    const list = [];
+    for (const act of activities) {
+      list.push({
+        id: act._id,
+        kind: 'activity',
+        date: act.date || act.createdAt,
+        title: act.type?.replace('_', ' ')?.toUpperCase() || 'ACTIVITY',
+        subtitle: act.notes || 'Field activity recorded',
+        field: fields.find((f) => f._id === act.fieldId)?.name || 'General Plot',
+        badge: act.type,
+        cost: act.cost,
+        performedBy: act.performedBy,
+      });
+    }
+    for (const t of tasks) {
+      list.push({
+        id: t._id,
+        kind: 'task',
+        date: t.completedAt || t.dueDate || t.createdAt,
+        title: `TASK: ${t.title}`,
+        subtitle: t.notes || (t.status === 'completed' ? 'Task completed' : 'Task scheduled'),
+        field: fields.find((f) => f._id === t.fieldId)?.name || 'General',
+        badge: t.status,
+        assignee: t.assignee,
+      });
+    }
+    for (const c of cropCycles) {
+      if (c.plantingDate) {
+        list.push({
+          id: `${c._id}-plant`,
+          kind: 'planting',
+          date: c.plantingDate,
+          title: `PLANTED: ${c.cropName} (${c.variety || 'Standard'})`,
+          subtitle: `Stage: ${c.stage} • Season: ${c.season || 'Current'}`,
+          field: fields.find((f) => f._id === c.fieldId)?.name || 'Plot',
+          badge: 'sowing',
+        });
+      }
+      if (c.harvestDate) {
+        list.push({
+          id: `${c._id}-harvest`,
+          kind: 'harvest',
+          date: c.harvestDate,
+          title: `HARVESTED: ${c.cropName}`,
+          subtitle: `Harvest completed${c.notes ? ` • ${c.notes}` : ''}`,
+          field: fields.find((f) => f._id === c.fieldId)?.name || 'Plot',
+          badge: 'harvested',
+        });
+      }
+    }
+    return list.sort((a, b) => new Date(b.date) - new Date(a.date));
+  }, [activities, tasks, cropCycles, fields]);
+
+  const handleCoverImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingCover(true);
+    setCoverUploadNotice('');
+    try {
+      const formData = new FormData();
+      formData.append('photo', file);
+      const res = await apiRequest(`/farms/${farmId}/cover-image`, {
+        method: 'POST',
+        token,
+        body: formData,
+      });
+      if (res.farm) setFarm(res.farm);
+      setCoverUploadNotice('Cover image updated successfully.');
+    } catch (err) {
+      setError(err.message || 'Failed to upload cover image.');
+    } finally {
+      setUploadingCover(false);
+    }
+  };
+
+  const handleRemoveCoverImage = async () => {
+    if (!window.confirm('Remove cover image for this farm?')) return;
+    setUploadingCover(true);
+    try {
+      const res = await apiRequest(`/farms/${farmId}/cover-image`, {
+        method: 'DELETE',
+        token,
+      });
+      if (res.farm) setFarm(res.farm);
+      setNotice('Cover image removed.');
+    } catch (err) {
+      setError(err.message || 'Failed to remove cover image.');
+    } finally {
+      setUploadingCover(false);
+    }
+  };
+
   const setSubtab = (fieldId, tab) => {
     setFieldSubtabs((prev) => ({ ...prev, [fieldId]: tab }));
   };
@@ -730,21 +875,946 @@ const FarmDetailPage = () => {
         {t('nav.farms')}
       </Link>
       <PageHeader
-        eyebrow={t('farms.eyebrow')}
+        eyebrow={farm?.farmCode ? `${farm.farmCode} • ${farm.farmType || 'Crop Farming'}` : t('farms.eyebrow')}
         title={farm?.name}
-        description={[farm?.location?.region, farm?.location?.country].filter(Boolean).join(', ') || 'Location not specified'}
+        description={[farm?.location?.village, farm?.location?.tehsil, farm?.location?.district, farm?.location?.state || farm?.location?.region, farm?.location?.country].filter(Boolean).join(', ') || 'Location not specified'}
         actions={
-          <Link className="btn btn-outline-secondary" to="/farms">
-            <i className="bi bi-arrow-left me-2" aria-hidden="true" />
-            {t('nav.farms')}
-          </Link>
+          <div className="d-flex align-items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              className="btn btn-success fw-semibold shadow-sm d-flex align-items-center gap-2"
+              onClick={() => setFarmEditModalOpen(true)}
+            >
+              <i className="bi bi-pencil-square" aria-hidden="true" />
+              <span>Edit Farm Profile</span>
+            </button>
+            <Link className="btn btn-outline-secondary d-flex align-items-center gap-1" to="/farms">
+              <i className="bi bi-arrow-left me-1" aria-hidden="true" />
+              <span>{t('nav.farms')}</span>
+            </Link>
+          </div>
         }
       />
+
+      {/* Farm Detail Navigation Tabs */}
+      <div className="card shadow-sm border-0 rounded-4 p-2 mb-4 bg-white">
+        <ul
+          className="nav nav-pills gap-1 flex-nowrap overflow-x-auto pb-1"
+          style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
+        >
+          {FARM_DETAIL_TABS.map((tab) => (
+            <li key={tab.id} className="nav-item flex-shrink-0">
+              <button
+                type="button"
+                className={`btn btn-sm rounded-pill px-3 py-1-5 fw-semibold d-flex align-items-center gap-1-5 ${
+                  currentMainTab === tab.id
+                    ? 'btn-success text-white shadow-sm'
+                    : 'btn-outline-light text-dark border-0 hover-bg-light'
+                }`}
+                onClick={() => setCurrentMainTab(tab.id)}
+              >
+                <i className={`bi ${tab.icon}`} />
+                <span>{tab.label}</span>
+                {tab.id === 'fields' && <span className="badge bg-light text-dark border ms-1">{fields.length}</span>}
+                {tab.id === 'images' && photos.length > 0 && <span className="badge bg-light text-dark border ms-1">{photos.length}</span>}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
 
       {error && <div className="alert alert-danger" role="alert">{error}</div>}
       {notice && <div className="alert alert-success" role="status">{notice}</div>}
 
-      <div className="row g-4 align-items-start">
+      
+      {/* TAB 1: OVERVIEW */}
+      {currentMainTab === 'overview' && (
+        <div className="d-flex flex-column gap-4">
+          {/* Top KPI Cards */}
+          <div className="row g-3">
+            <div className="col-6 col-md-4 col-xl-2">
+              <div className="card shadow-sm border-0 rounded-4 p-3 bg-white h-100">
+                <span className="text-muted small fw-semibold text-uppercase d-block mb-1">Total Area</span>
+                <div className="h4 fw-bold text-dark mb-0">{displayedTotalArea}</div>
+                <small className="text-success mt-1 d-block">{farm?.landDetails?.landTerrain || 'Flat / Plain'}</small>
+              </div>
+            </div>
+
+            <div className="col-6 col-md-4 col-xl-2">
+              <div className="card shadow-sm border-0 rounded-4 p-3 bg-white h-100">
+                <span className="text-muted small fw-semibold text-uppercase d-block mb-1">Total Fields</span>
+                <div className="h4 fw-bold text-dark mb-0">{fields.length}</div>
+                <small className="text-muted mt-1 d-block">Configured Plots</small>
+              </div>
+            </div>
+
+            <div className="col-6 col-md-4 col-xl-2">
+              <div className="card shadow-sm border-0 rounded-4 p-3 bg-white h-100">
+                <span className="text-muted small fw-semibold text-uppercase d-block mb-1">Cultivated</span>
+                <div className="h4 fw-bold text-primary mb-0">{displayedCultivable}</div>
+                <small className="text-muted mt-1 d-block">Sown / Arable</small>
+              </div>
+            </div>
+
+            <div className="col-6 col-md-4 col-xl-2">
+              <div className="card shadow-sm border-0 rounded-4 p-3 bg-white h-100">
+                <span className="text-muted small fw-semibold text-uppercase d-block mb-1">Irrigated</span>
+                <div className="h4 fw-bold text-info mb-0">{displayedIrrigated}</div>
+                <small className="text-muted mt-1 d-block">{farm?.infrastructure?.waterAvailability || 'Perennial'}</small>
+              </div>
+            </div>
+
+            <div className="col-6 col-md-4 col-xl-2">
+              <div className="card shadow-sm border-0 rounded-4 p-3 bg-white h-100">
+                <span className="text-muted small fw-semibold text-uppercase d-block mb-1">Active Crops</span>
+                <div className="h4 fw-bold text-success mb-0">{activeCycles.length}</div>
+                <small className="text-muted mt-1 d-block">Cycles In Ground</small>
+              </div>
+            </div>
+
+            <div className="col-6 col-md-4 col-xl-2">
+              <div className="card shadow-sm border-0 rounded-4 p-3 bg-white h-100">
+                <span className="text-muted small fw-semibold text-uppercase d-block mb-1">Farm Status</span>
+                <div className="h5 fw-bold text-dark mb-0">
+                  <span className={`badge rounded-pill px-2-5 py-1 ${
+                    farm?.management?.farmStatus === 'Fallow / Inactive' ? 'bg-secondary-subtle text-secondary' : 'bg-success-subtle text-success'
+                  }`}>
+                    {farm?.management?.farmStatus || 'Active'}
+                  </span>
+                </div>
+                <small className="text-muted mt-1 d-block">Operational</small>
+              </div>
+            </div>
+          </div>
+
+          {/* Cover Image & Estate Hero Banner */}
+          {farm?.coverImage && (
+            <div className="card shadow-sm border-0 rounded-4 overflow-hidden position-relative" style={{ maxHeight: '280px' }}>
+              <img
+                src={farm.coverImage}
+                alt={farm.name}
+                className="w-100 h-100 object-fit-cover"
+                style={{ maxHeight: '280px' }}
+              />
+              <div
+                className="position-absolute bottom-0 start-0 end-0 p-3 p-sm-4 text-white"
+                style={{ background: 'linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.85) 100%)' }}
+              >
+                <div className="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                  <span className="badge bg-success font-monospace">{farm.farmCode || 'ESTATE'}</span>
+                  <span className="badge bg-light text-dark">{farm.farmType || 'Crop Farming'}</span>
+                  <span className="badge bg-light text-dark">{farm.ownershipType || 'Owned'}</span>
+                  {farm.establishedYear && (
+                    <span className="badge bg-dark">Est. {farm.establishedYear}</span>
+                  )}
+                </div>
+                <h3 className="fw-bold mb-0 text-white">{farm.name}</h3>
+              </div>
+            </div>
+          )}
+
+          {/* Overview Two Column Layout */}
+          <div className="row g-4">
+            {/* Left Column: Description & Crop Distribution */}
+            <div className="col-12 col-lg-7">
+              {/* Description Card */}
+              <div className="card shadow-sm border-0 rounded-4 p-4 bg-white mb-4">
+                <div className="d-flex align-items-center justify-content-between mb-3">
+                  <h5 className="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                    <i className="bi bi-card-text text-success" />
+                    Farm Overview & Description
+                  </h5>
+                  <button
+                    type="button"
+                    className="btn btn-outline-success btn-sm"
+                    onClick={() => setFarmEditModalOpen(true)}
+                  >
+                    <i className="bi bi-pencil me-1" /> Edit
+                  </button>
+                </div>
+                <p className="text-secondary mb-3" style={{ lineHeight: 1.7 }}>
+                  {farm?.description || 'No detailed description provided for this agricultural estate. Click Edit Farm Profile to add details about topography, history, or seasonal operations.'}
+                </p>
+
+                <div className="d-flex flex-wrap gap-2 pt-2 border-top">
+                  <span className="badge bg-light text-dark border px-2-5 py-1-5 rounded-pill">
+                    <i className="bi bi-layers text-primary me-1" /> Soil: <strong>{farm?.landDetails?.soilType || 'Alluvial'}</strong>
+                  </span>
+                  <span className="badge bg-light text-dark border px-2-5 py-1-5 rounded-pill">
+                    <i className="bi bi-droplet-half text-info me-1" /> Water: <strong>{farm?.infrastructure?.waterAvailability || 'Year-round'}</strong>
+                  </span>
+                  <span className="badge bg-light text-dark border px-2-5 py-1-5 rounded-pill">
+                    <i className="bi bi-lightning-charge text-warning me-1" /> Power: <strong>{farm?.infrastructure?.electricityAvailability || '24/7 Grid'}</strong>
+                  </span>
+                  <span className="badge bg-light text-dark border px-2-5 py-1-5 rounded-pill">
+                    <i className="bi bi-patch-check text-success me-1" /> Cert: <strong>{farm?.agriculturalDetails?.organicCertStatus || 'Not Certified'}</strong>
+                  </span>
+                </div>
+              </div>
+
+              {/* Crop Distribution Card */}
+              <div className="card shadow-sm border-0 rounded-4 p-4 bg-white">
+                <div className="d-flex align-items-center justify-content-between mb-3">
+                  <h5 className="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                    <i className="bi bi-pie-chart-fill text-primary" />
+                    Crop Distribution & Active Plantings
+                  </h5>
+                  <button
+                    type="button"
+                    className="btn btn-outline-primary btn-sm"
+                    onClick={() => setCurrentMainTab('fields')}
+                  >
+                    Manage Crops <i className="bi bi-arrow-right ms-1" />
+                  </button>
+                </div>
+
+                {cropDistribution.length > 0 ? (
+                  <div className="d-flex flex-column gap-3">
+                    {cropDistribution.map((crop) => (
+                      <div key={crop.name} className="p-3 bg-light rounded-3 border">
+                        <div className="d-flex align-items-center justify-content-between mb-1">
+                          <strong className="text-dark fs-6 d-flex align-items-center gap-2">
+                            <i className="bi bi-sprout text-success" /> {crop.name}
+                          </strong>
+                          <span className="badge bg-success text-white">
+                            {crop.activePlantings} active {crop.activePlantings === 1 ? 'planting' : 'plantings'}
+                          </span>
+                        </div>
+                        <div className="small text-muted d-flex flex-wrap gap-2">
+                          <span>Across {crop.plotCount} {crop.plotCount === 1 ? 'plot' : 'plots'}</span>
+                          {crop.varieties.length > 0 && (
+                            <span>• Varieties: {crop.varieties.join(', ')}</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-4 text-center bg-light rounded-3 border">
+                    <i className="bi bi-flower1 fs-2 text-muted d-block mb-2" />
+                    <p className="text-muted small mb-2">No active crop plantings recorded on this farm yet.</p>
+                    <button
+                      type="button"
+                      className="btn btn-outline-success btn-sm"
+                      onClick={() => setCurrentMainTab('fields')}
+                    >
+                      <i className="bi bi-plus-circle me-1" /> Add Plantings in Fields
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right Column: Quick Contacts, Location & Actions */}
+            <div className="col-12 col-lg-5">
+              {/* Management & Contact Card */}
+              <div className="card shadow-sm border-0 rounded-4 p-4 bg-white mb-4">
+                <h5 className="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+                  <i className="bi bi-person-badge-fill text-success" />
+                  Farm Management & Contacts
+                </h5>
+                <div className="d-flex flex-column gap-2 small">
+                  <div className="d-flex justify-content-between py-1 border-bottom">
+                    <span className="text-muted">Manager:</span>
+                    <strong className="text-dark">{farm?.management?.managerName || 'Self / Owner Managed'}</strong>
+                  </div>
+                  <div className="d-flex justify-content-between py-1 border-bottom">
+                    <span className="text-muted">Contact Person:</span>
+                    <strong className="text-dark">{farm?.management?.contactPerson || 'Not specified'}</strong>
+                  </div>
+                  <div className="d-flex justify-content-between py-1 border-bottom">
+                    <span className="text-muted">Phone:</span>
+                    {farm?.management?.contactPhone ? (
+                      <a href={`tel:${farm.management.contactPhone}`} className="text-decoration-none fw-semibold">
+                        <i className="bi bi-telephone me-1" />{farm.management.contactPhone}
+                      </a>
+                    ) : (
+                      <span className="text-muted">Not specified</span>
+                    )}
+                  </div>
+                  <div className="d-flex justify-content-between py-1">
+                    <span className="text-muted">Email:</span>
+                    {farm?.management?.contactEmail ? (
+                      <a href={`mailto:${farm.management.contactEmail}`} className="text-decoration-none fw-semibold">
+                        <i className="bi bi-envelope me-1" />{farm.management.contactEmail}
+                      </a>
+                    ) : (
+                      <span className="text-muted">Not specified</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Location & GPS Summary */}
+              <div className="card shadow-sm border-0 rounded-4 p-4 bg-white mb-4">
+                <h5 className="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+                  <i className="bi bi-geo-alt-fill text-danger" />
+                  Geographical Coordinates
+                </h5>
+                <p className="small text-secondary mb-2">
+                  {[farm?.location?.village, farm?.location?.tehsil, farm?.location?.district, farm?.location?.state || farm?.location?.region, farm?.location?.country].filter(Boolean).join(', ') || 'India'}
+                </p>
+                {farm?.location?.latitude != null && farm?.location?.longitude != null ? (
+                  <div className="p-2-5 bg-light rounded-3 border small mb-3">
+                    <div className="d-flex justify-content-between mb-1">
+                      <span className="text-muted">Latitude:</span>
+                      <strong>{Number(farm.location.latitude).toFixed(4)}°</strong>
+                    </div>
+                    <div className="d-flex justify-content-between mb-2">
+                      <span className="text-muted">Longitude:</span>
+                      <strong>{Number(farm.location.longitude).toFixed(4)}°</strong>
+                    </div>
+                    <a
+                      href={`https://www.google.com/maps?q=${farm.location.latitude},${farm.location.longitude}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-outline-primary btn-sm w-100 d-flex align-items-center justify-content-center gap-1"
+                    >
+                      <i className="bi bi-box-arrow-up-right" /> Open in Google Maps
+                    </a>
+                  </div>
+                ) : (
+                  <p className="text-muted small fst-italic">GPS coordinates not configured.</p>
+                )}
+                <Link to={`/mapping?farmId=${farmId}`} className="btn btn-outline-success btn-sm w-100 d-flex align-items-center justify-content-center gap-1">
+                  <i className="bi bi-map" /> View Field Boundary Mapping
+                </Link>
+              </div>
+
+              {/* Quick Actions Card */}
+              <div className="card shadow-sm border-0 rounded-4 p-4 bg-white">
+                <h5 className="fw-bold text-dark mb-3">Quick Actions</h5>
+                <div className="d-grid gap-2">
+                  <button
+                    type="button"
+                    className="btn btn-success fw-semibold d-flex align-items-center justify-content-center gap-2"
+                    onClick={() => setFarmEditModalOpen(true)}
+                  >
+                    <i className="bi bi-pencil-square" /> Edit Complete Farm Profile
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-outline-primary d-flex align-items-center justify-content-center gap-2"
+                    onClick={() => setCurrentMainTab('fields')}
+                  >
+                    <i className="bi bi-grid-plus" /> Manage Plots & Fields
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary d-flex align-items-center justify-content-center gap-2"
+                    onClick={() => setCurrentMainTab('history')}
+                  >
+                    <i className="bi bi-clock-history" /> View Activity Timeline
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2: LOCATION */}
+      {currentMainTab === 'location' && (
+        <div className="row g-4">
+          <div className="col-12 col-lg-7">
+            <div className="card shadow-sm border-0 rounded-4 p-4 bg-white">
+              <div className="d-flex align-items-center justify-content-between mb-3">
+                <h5 className="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                  <i className="bi bi-pin-map-fill text-danger" /> Geographical Address & Boundary
+                </h5>
+                <button
+                  type="button"
+                  className="btn btn-outline-success btn-sm"
+                  onClick={() => setFarmEditModalOpen(true)}
+                >
+                  <i className="bi bi-pencil me-1" /> Edit Location
+                </button>
+              </div>
+
+              <div className="table-responsive">
+                <table className="table table-borderless table-sm mb-0">
+                  <tbody>
+                    <tr><td className="text-muted" style={{ width: '160px' }}>Country:</td><td className="fw-semibold">{farm?.location?.country || 'India'}</td></tr>
+                    <tr><td className="text-muted">State / Region:</td><td className="fw-semibold">{farm?.location?.state || farm?.location?.region || 'Not specified'}</td></tr>
+                    <tr><td className="text-muted">District:</td><td className="fw-semibold">{farm?.location?.district || 'Not specified'}</td></tr>
+                    <tr><td className="text-muted">Tehsil / Taluka:</td><td className="fw-semibold">{farm?.location?.tehsil || 'Not specified'}</td></tr>
+                    <tr><td className="text-muted">Village / Town:</td><td className="fw-semibold">{farm?.location?.village || 'Not specified'}</td></tr>
+                    <tr><td className="text-muted">Full Address:</td><td className="fw-semibold">{farm?.location?.address || 'Not specified'}</td></tr>
+                    <tr><td className="text-muted">Postal / PIN Code:</td><td className="fw-semibold">{farm?.location?.postalCode || 'Not specified'}</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div className="col-12 col-lg-5">
+            <div className="card shadow-sm border-0 rounded-4 p-4 bg-white">
+              <h5 className="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+                <i className="bi bi-crosshair text-success" /> GPS Positioning
+              </h5>
+              <div className="p-3 bg-light rounded-3 border mb-3">
+                <div className="d-flex justify-content-between mb-2">
+                  <span className="text-muted">Latitude:</span>
+                  <strong className="font-monospace fs-6">{farm?.location?.latitude != null ? Number(farm.location.latitude).toFixed(6) : 'N/A'}</strong>
+                </div>
+                <div className="d-flex justify-content-between mb-3">
+                  <span className="text-muted">Longitude:</span>
+                  <strong className="font-monospace fs-6">{farm?.location?.longitude != null ? Number(farm.location.longitude).toFixed(6) : 'N/A'}</strong>
+                </div>
+
+                {farm?.location?.latitude != null && farm?.location?.longitude != null && (
+                  <div className="d-grid gap-2">
+                    <a
+                      href={`https://www.google.com/maps?q=${farm.location.latitude},${farm.location.longitude}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-outline-primary btn-sm d-flex align-items-center justify-content-center gap-1"
+                    >
+                      <i className="bi bi-box-arrow-up-right" /> Open in Google Maps
+                    </a>
+                    <Link
+                      to={`/monitoring`}
+                      className="btn btn-outline-success btn-sm d-flex align-items-center justify-content-center gap-1"
+                    >
+                      <i className="bi bi-cloud-sun" /> View Live Meteorological Model
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: LAND AND SOIL */}
+      {currentMainTab === 'land' && (
+        <div className="row g-4">
+          <div className="col-12 col-lg-7">
+            <div className="card shadow-sm border-0 rounded-4 p-4 bg-white">
+              <div className="d-flex align-items-center justify-content-between mb-3">
+                <h5 className="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                  <i className="bi bi-aspect-ratio text-success" /> Land & Area Breakdown
+                </h5>
+                <button
+                  type="button"
+                  className="btn btn-outline-success btn-sm"
+                  onClick={() => setFarmEditModalOpen(true)}
+                >
+                  <i className="bi bi-pencil me-1" /> Edit Land Details
+                </button>
+              </div>
+
+              <div className="row g-3 mb-4">
+                <div className="col-6 col-sm-3">
+                  <div className="p-3 bg-light rounded-3 text-center border">
+                    <small className="text-muted d-block mb-1">Total Area</small>
+                    <strong className="fs-5 text-dark">{displayedTotalArea}</strong>
+                  </div>
+                </div>
+                <div className="col-6 col-sm-3">
+                  <div className="p-3 bg-light rounded-3 text-center border">
+                    <small className="text-muted d-block mb-1">Cultivable</small>
+                    <strong className="fs-5 text-primary">{displayedCultivable}</strong>
+                  </div>
+                </div>
+                <div className="col-6 col-sm-3">
+                  <div className="p-3 bg-light rounded-3 text-center border">
+                    <small className="text-muted d-block mb-1">Irrigated</small>
+                    <strong className="fs-5 text-info">{displayedIrrigated}</strong>
+                  </div>
+                </div>
+                <div className="col-6 col-sm-3">
+                  <div className="p-3 bg-light rounded-3 text-center border">
+                    <small className="text-muted d-block mb-1">Non-Cultivable</small>
+                    <strong className="fs-5 text-secondary">
+                      {farm?.landDetails?.nonCultivableArea ? `${farm.landDetails.nonCultivableArea} ${farm.landDetails.areaUnit || 'Acres'}` : '0'}
+                    </strong>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-top pt-3">
+                <h6 className="fw-bold text-dark mb-2">Soil & Terrain Profile</h6>
+                <div className="d-flex flex-wrap gap-2">
+                  <span className="badge bg-success-subtle text-success p-2 rounded-3 fs-6 fw-normal">
+                    <i className="bi bi-layers me-1" /> Soil Type: <strong>{farm?.landDetails?.soilType || 'Alluvial'}</strong>
+                  </span>
+                  <span className="badge bg-info-subtle text-info p-2 rounded-3 fs-6 fw-normal">
+                    <i className="bi bi-globe me-1" /> Terrain: <strong>{farm?.landDetails?.landTerrain || 'Flat / Plain'}</strong>
+                  </span>
+                  <span className="badge bg-light text-dark border p-2 rounded-3 fs-6 fw-normal">
+                    <i className="bi bi-rulers me-1" /> Primary Unit: <strong>{farm?.landDetails?.areaUnit || 'Acres'}</strong>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="col-12 col-lg-5">
+            <div className="card shadow-sm border-0 rounded-4 p-4 bg-white">
+              <h5 className="fw-bold text-dark mb-3">Field Aggregation</h5>
+              <div className="p-3 bg-light rounded-3 border mb-3">
+                <div className="d-flex justify-content-between mb-2">
+                  <span className="text-muted">Total Configured Plots:</span>
+                  <strong>{fields.length}</strong>
+                </div>
+                <div className="d-flex justify-content-between mb-2">
+                  <span className="text-muted">Field Measured Area:</span>
+                  <strong>{totalAreaHa.toFixed(2)} Hectares</strong>
+                </div>
+                <div className="d-flex justify-content-between">
+                  <span className="text-muted">Equivalent in Acres:</span>
+                  <strong>~{totalAcresFromFields} Acres</strong>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="btn btn-outline-success btn-sm w-100"
+                onClick={() => setCurrentMainTab('fields')}
+              >
+                <i className="bi bi-grid-3x3-gap me-1" /> View Field Boundary Metrics
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: INFRASTRUCTURE */}
+      {currentMainTab === 'infrastructure' && (
+        <div className="row g-4">
+          <div className="col-12 col-lg-6">
+            <div className="card shadow-sm border-0 rounded-4 p-4 bg-white h-100">
+              <div className="d-flex align-items-center justify-content-between mb-3">
+                <h5 className="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                  <i className="bi bi-droplet-fill text-info" /> Irrigation & Water Network
+                </h5>
+                <button
+                  type="button"
+                  className="btn btn-outline-success btn-sm"
+                  onClick={() => setFarmEditModalOpen(true)}
+                >
+                  <i className="bi bi-pencil me-1" /> Edit
+                </button>
+              </div>
+
+              <div className="mb-3">
+                <span className="text-muted small d-block mb-1">Water Availability:</span>
+                <span className="badge bg-info-subtle text-info fs-6 fw-normal px-3 py-1-5 rounded-pill">
+                  {farm?.infrastructure?.waterAvailability || 'Year-round (Perennial)'}
+                </span>
+              </div>
+
+              <div className="mb-3">
+                <span className="text-muted small d-block mb-1">Irrigation Sources:</span>
+                <div className="d-flex flex-wrap gap-1-5">
+                  {farm?.infrastructure?.irrigationSources?.length > 0 ? (
+                    farm.infrastructure.irrigationSources.map((s) => (
+                      <span key={s} className="badge bg-light text-dark border px-2-5 py-1 rounded-pill">
+                        <i className="bi bi-check2 text-success me-1" /> {s}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-muted small fst-italic">None configured</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="mb-3">
+                <span className="text-muted small d-block mb-1">Irrigation Methods:</span>
+                <div className="d-flex flex-wrap gap-1-5">
+                  {farm?.infrastructure?.irrigationMethods?.length > 0 ? (
+                    farm.infrastructure.irrigationMethods.map((m) => (
+                      <span key={m} className="badge bg-primary-subtle text-primary px-2-5 py-1 rounded-pill">
+                        {m}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-muted small fst-italic">None configured</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="col-12 col-lg-6">
+            <div className="card shadow-sm border-0 rounded-4 p-4 bg-white h-100">
+              <div className="d-flex align-items-center justify-content-between mb-3">
+                <h5 className="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                  <i className="bi bi-lightning-charge-fill text-warning" /> Power & Storage Assets
+                </h5>
+                <button
+                  type="button"
+                  className="btn btn-outline-success btn-sm"
+                  onClick={() => setFarmEditModalOpen(true)}
+                >
+                  <i className="bi bi-pencil me-1" /> Edit
+                </button>
+              </div>
+
+              <div className="mb-3">
+                <span className="text-muted small d-block mb-1">Electricity Supply:</span>
+                <span className="badge bg-warning-subtle text-warning fs-6 fw-normal px-3 py-1-5 rounded-pill">
+                  {farm?.infrastructure?.electricityAvailability || '24/7 Grid Power'}
+                </span>
+              </div>
+
+              <div className="mb-3">
+                <span className="text-muted small d-block mb-1">Greenhouse / Protected Cultivation:</span>
+                <span className="badge bg-light text-dark border fs-6 fw-normal px-3 py-1-5 rounded-pill">
+                  {farm?.infrastructure?.greenhousePolyhouse || 'None'}
+                </span>
+              </div>
+
+              <div className="mb-3">
+                <span className="text-muted small d-block mb-1">Storage Sheds & Warehouses:</span>
+                <div className="d-flex flex-wrap gap-1-5">
+                  {farm?.infrastructure?.storageFacilities?.length > 0 ? (
+                    farm.infrastructure.storageFacilities.map((f) => (
+                      <span key={f} className="badge bg-light text-dark border px-2-5 py-1 rounded-pill">
+                        <i className="bi bi-building me-1 text-secondary" /> {f}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-muted small fst-italic">None configured</span>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <span className="text-muted small d-block mb-1">Farm Machinery & Drone Units:</span>
+                <div className="d-flex flex-wrap gap-1-5">
+                  {farm?.infrastructure?.farmEquipment?.length > 0 ? (
+                    farm.infrastructure.farmEquipment.map((eq) => (
+                      <span key={eq} className="badge bg-dark text-white px-2-5 py-1 rounded-pill">
+                        {eq}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-muted small fst-italic">None configured</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 5: AGRICULTURAL INFORMATION */}
+      {currentMainTab === 'agricultural' && (
+        <div className="card shadow-sm border-0 rounded-4 p-4 bg-white">
+          <div className="d-flex align-items-center justify-content-between mb-3">
+            <h5 className="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+              <i className="bi bi-flower1 text-success" /> Agricultural Systems & Practices
+            </h5>
+            <button
+              type="button"
+              className="btn btn-outline-success btn-sm"
+              onClick={() => setFarmEditModalOpen(true)}
+            >
+              <i className="bi bi-pencil me-1" /> Edit Agricultural Profile
+            </button>
+          </div>
+
+          <div className="row g-4">
+            <div className="col-12 col-md-6">
+              <div className="mb-3">
+                <span className="text-muted small d-block mb-1">Primary Crops Cultivated:</span>
+                <div className="d-flex flex-wrap gap-1-5">
+                  {farm?.agriculturalDetails?.primaryCrops?.length > 0 ? (
+                    farm.agriculturalDetails.primaryCrops.map((c) => (
+                      <span key={c} className="badge bg-success-subtle text-success fs-6 fw-normal px-3 py-1-5 rounded-pill">
+                        <i className="bi bi-sprout me-1" /> {c}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-muted small fst-italic">No primary crops entered yet</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="mb-3">
+                <span className="text-muted small d-block mb-1">Farming Method:</span>
+                <span className="badge bg-primary-subtle text-primary fs-6 fw-normal px-3 py-1-5 rounded-pill">
+                  {farm?.agriculturalDetails?.farmingMethod || 'Conventional'}
+                </span>
+              </div>
+
+              <div className="mb-3">
+                <span className="text-muted small d-block mb-1">Active Agricultural Seasons:</span>
+                <div className="d-flex flex-wrap gap-1-5">
+                  {farm?.agriculturalDetails?.farmingSeasons?.length > 0 ? (
+                    farm.agriculturalDetails.farmingSeasons.map((s) => (
+                      <span key={s} className="badge bg-light text-dark border px-2-5 py-1 rounded-pill">
+                        {s}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-muted small fst-italic">Standard seasonal</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="col-12 col-md-6">
+              <div className="mb-3">
+                <span className="text-muted small d-block mb-1">Organic Certification Status:</span>
+                <span className="badge bg-success-subtle text-success border border-success-subtle fs-6 fw-normal px-3 py-1-5 rounded-pill">
+                  <i className="bi bi-patch-check-fill text-success me-1" />
+                  {farm?.agriculturalDetails?.organicCertStatus || 'Not Certified'}
+                </span>
+              </div>
+
+              <div className="mb-3">
+                <span className="text-muted small d-block mb-1">Soil Fertility Level:</span>
+                <span className="badge bg-secondary-subtle text-dark fs-6 fw-normal px-3 py-1-5 rounded-pill">
+                  {farm?.agriculturalDetails?.soilFertility || 'Medium'}
+                </span>
+              </div>
+
+              <div className="mb-3">
+                <span className="text-muted small d-block mb-1">Typical Annual Rainfall:</span>
+                <span className="badge bg-light text-dark border fs-6 fw-normal px-3 py-1-5 rounded-pill">
+                  {farm?.agriculturalDetails?.annualRainfallMm ? `${farm.agriculturalDetails.annualRainfallMm} mm / year` : 'Not specified'}
+                </span>
+              </div>
+
+              {farm?.agriculturalDetails?.agriculturalNotes && (
+                <div className="p-3 bg-light rounded-3 border">
+                  <small className="text-muted d-block fw-semibold mb-1">Agronomic Notes:</small>
+                  <p className="small text-secondary mb-0">{farm.agriculturalDetails.agriculturalNotes}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 7: FARM IMAGES & DOCUMENTS */}
+      {currentMainTab === 'images' && (
+        <div className="d-flex flex-column gap-4">
+          {/* Cover Image Upload & Showcase Card */}
+          <div className="card shadow-sm border-0 rounded-4 p-4 bg-white">
+            <h5 className="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+              <i className="bi bi-image-fill text-success" /> Farm Cover Image
+            </h5>
+
+            {coverUploadNotice && (
+              <div className="alert alert-success py-2 px-3 small mb-3">{coverUploadNotice}</div>
+            )}
+
+            <div className="row g-4 align-items-center">
+              <div className="col-12 col-md-6">
+                {farm?.coverImage ? (
+                  <div className="rounded-3 overflow-hidden shadow-sm position-relative" style={{ maxHeight: '240px' }}>
+                    <img
+                      src={farm.coverImage}
+                      alt={farm.name}
+                      className="w-100 h-100 object-fit-cover"
+                      style={{ maxHeight: '240px' }}
+                    />
+                  </div>
+                ) : (
+                  <div className="p-5 text-center bg-light rounded-3 border">
+                    <i className="bi bi-image fs-1 text-muted d-block mb-2" />
+                    <span className="text-muted small">No cover image uploaded for this farm yet.</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="col-12 col-md-6">
+                <label className="form-label fw-semibold small text-dark">Upload New Cover Photo</label>
+                <input
+                  type="file"
+                  className="form-control mb-2"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleCoverImageUpload}
+                  disabled={uploadingCover}
+                />
+                <small className="text-muted d-block mb-3">
+                  Accepted formats: JPEG, PNG, WebP (up to 10MB). Image is securely validated and processed.
+                </small>
+
+                {farm?.coverImage && (
+                  <button
+                    type="button"
+                    className="btn btn-outline-danger btn-sm"
+                    onClick={handleRemoveCoverImage}
+                    disabled={uploadingCover}
+                  >
+                    <i className="bi bi-trash me-1" /> Remove Cover Image
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Field Photographs Consolidated Gallery */}
+          <div className="card shadow-sm border-0 rounded-4 p-4 bg-white">
+            <div className="d-flex align-items-center justify-content-between mb-3">
+              <h5 className="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                <i className="bi bi-camera-fill text-primary" />
+                Field Visual History & Photographs ({photos.length})
+              </h5>
+              <button
+                type="button"
+                className="btn btn-outline-primary btn-sm"
+                onClick={() => setCurrentMainTab('fields')}
+              >
+                Go to Field Management <i className="bi bi-arrow-right ms-1" />
+              </button>
+            </div>
+
+            {photos.length > 0 ? (
+              <div className="row g-3">
+                {photos.map((photo) => (
+                  <div key={photo._id} className="col-6 col-sm-4 col-md-3">
+                    <div
+                      className="card shadow-sm border-0 rounded-3 overflow-hidden h-100 cursor-pointer hover-shadow"
+                      onClick={() => setPreviewPhoto(photo)}
+                    >
+                      <AuthenticatedImage
+                        storageKey={photo.storageKey || photo.publicId}
+                        storageProvider={photo.storageProvider || 'local'}
+                        alt={photo.notes || 'Field Photo'}
+                        className="w-100 object-fit-cover"
+                        style={{ height: '140px' }}
+                      />
+                      <div className="p-2 small">
+                        <span className="fw-semibold text-dark d-block text-truncate">
+                          {fields.find((f) => f._id === photo.fieldId)?.name || 'Field Plot'}
+                        </span>
+                        <span className="text-muted small d-block">
+                          {photo.capturedAt ? new Date(photo.capturedAt).toLocaleDateString() : 'Recent'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-4 text-center bg-light rounded-3 border">
+                <i className="bi bi-camera fs-2 text-muted d-block mb-2" />
+                <p className="text-muted small mb-0">No field photographs taken yet. You can upload photographs inside any field plot.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 8: MANAGEMENT AND CONTACTS */}
+      {currentMainTab === 'management' && (
+        <div className="row g-4">
+          <div className="col-12 col-lg-7">
+            <div className="card shadow-sm border-0 rounded-4 p-4 bg-white">
+              <div className="d-flex align-items-center justify-content-between mb-3">
+                <h5 className="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                  <i className="bi bi-person-lines-fill text-success" /> Farm Administration & Contacts
+                </h5>
+                <button
+                  type="button"
+                  className="btn btn-outline-success btn-sm"
+                  onClick={() => setFarmEditModalOpen(true)}
+                >
+                  <i className="bi bi-pencil me-1" /> Edit Contacts
+                </button>
+              </div>
+
+              <div className="table-responsive">
+                <table className="table table-borderless table-sm mb-0">
+                  <tbody>
+                    <tr><td className="text-muted" style={{ width: '180px' }}>Farm Status:</td><td><span className="badge bg-success-subtle text-success">{farm?.management?.farmStatus || 'Active'}</span></td></tr>
+                    <tr><td className="text-muted">Assigned Manager:</td><td className="fw-semibold">{farm?.management?.managerName || 'Self / Owner Managed'}</td></tr>
+                    <tr><td className="text-muted">Contact Person:</td><td className="fw-semibold">{farm?.management?.contactPerson || 'Not specified'}</td></tr>
+                    <tr>
+                      <td className="text-muted">Phone Number:</td>
+                      <td>
+                        {farm?.management?.contactPhone ? (
+                          <a href={`tel:${farm.management.contactPhone}`} className="text-decoration-none fw-semibold">
+                            <i className="bi bi-telephone me-1" />{farm.management.contactPhone}
+                          </a>
+                        ) : 'Not specified'}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="text-muted">Email Address:</td>
+                      <td>
+                        {farm?.management?.contactEmail ? (
+                          <a href={`mailto:${farm.management.contactEmail}`} className="text-decoration-none fw-semibold">
+                            <i className="bi bi-envelope me-1" />{farm.management.contactEmail}
+                          </a>
+                        ) : 'Not specified'}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {farm?.management?.internalNotes && (
+                <div className="mt-4 pt-3 border-top">
+                  <span className="small text-muted fw-semibold d-block mb-1">Internal Operational Notes:</span>
+                  <div className="p-3 bg-light rounded-3 border small text-secondary">
+                    {farm.management.internalNotes}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 9: ACTIVITY HISTORY */}
+      {currentMainTab === 'history' && (
+        <div className="card shadow-sm border-0 rounded-4 p-4 bg-white">
+          <h5 className="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+            <i className="bi bi-clock-history text-success" />
+            Unified Farm Operations & Crop Activity Timeline
+          </h5>
+
+          {combinedHistory.length > 0 ? (
+            <div className="d-flex flex-column gap-3">
+              {combinedHistory.map((item) => (
+                <div key={item.id} className="p-3 bg-light rounded-3 border d-flex align-items-start gap-3">
+                  <span className="badge bg-white text-dark border p-2 rounded-3 fs-5 flex-shrink-0">
+                    <i className={
+                      item.kind === 'activity' ? 'bi bi-droplet-half text-primary' :
+                      item.kind === 'task' ? 'bi bi-check2-square text-warning' :
+                      item.kind === 'harvest' ? 'bi bi-basket2 text-success' : 'bi bi-sprout text-success'
+                    } />
+                  </span>
+
+                  <div className="flex-grow-1">
+                    <div className="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-1">
+                      <strong className="text-dark fs-6">{item.title}</strong>
+                      <span className="badge bg-white text-secondary border small">
+                        {item.date ? new Date(item.date).toLocaleDateString() : 'Recent'}
+                      </span>
+                    </div>
+
+                    <p className="text-secondary small mb-1">{item.subtitle}</p>
+
+                    <div className="d-flex flex-wrap gap-2 small text-muted">
+                      <span><i className="bi bi-grid me-1" /> Plot: <strong>{item.field}</strong></span>
+                      {item.performedBy && <span>• By: <strong>{item.performedBy}</strong></span>}
+                      {item.assignee && <span>• Assignee: <strong>{item.assignee}</strong></span>}
+                      {item.cost ? <span>• Cost: <strong>₹{item.cost}</strong></span> : null}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-4 text-center bg-light rounded-3 border">
+              <i className="bi bi-clock-history fs-2 text-muted d-block mb-2" />
+              <p className="text-muted small mb-0">No recorded activities, tasks, or harvest milestones on this farm yet.</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 6: FIELDS AND PLOTS (The complete existing interactive field management layout) */}
+      {currentMainTab === 'fields' && (
+<div className="row g-4 align-items-start">
         <div className="col-12 col-xl-7">
           <div className="section-heading">
             <div>
@@ -2145,6 +3215,19 @@ const FarmDetailPage = () => {
           </Card>
         </div>
       </div>
+      )}
+
+      {/* Farm Profile Edit Modal */}
+      <FarmModal
+        isOpen={farmEditModalOpen}
+        mode="edit"
+        initialData={farm}
+        onClose={() => setFarmEditModalOpen(false)}
+        onSuccess={(savedFarm) => {
+          setFarm(savedFarm);
+          setNotice('Farm profile and agricultural properties updated.');
+        }}
+      />
 
       {previewPhoto && (
         <div

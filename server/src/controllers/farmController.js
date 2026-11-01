@@ -1,5 +1,19 @@
 import mongoose from 'mongoose';
 import multer from 'multer';
+import {
+  FARM_TYPES,
+  OWNERSHIP_TYPES,
+  AREA_UNITS,
+  SOIL_TYPES,
+  LAND_TERRAINS,
+  WATER_AVAILABILITIES,
+  ELECTRICITY_AVAILABILITIES,
+  GREENHOUSE_TYPES,
+  FARMING_METHODS,
+  SOIL_FERTILITY_LEVELS,
+  ORGANIC_CERT_STATUSES,
+  FARM_STATUSES,
+} from '../models/Farm.js';
 import { ACTIVITY_TYPES } from '../models/FarmActivity.js';
 import { TASK_TYPES, TASK_PRIORITIES, TASK_STATUSES } from '../models/Task.js';
 import { ALLOWED_PHOTO_MIME_TYPES } from '../models/FieldPhoto.js';
@@ -41,7 +55,46 @@ export const photoUploadMiddleware = (req, res, next) => {
   });
 };
 
-const farmKeys = new Set(['name', 'location']);
+const farmKeys = new Set([
+  'name',
+  'farmCode',
+  'description',
+  'farmType',
+  'ownershipType',
+  'establishedYear',
+  'coverImage',
+  'location',
+  'landDetails',
+  'infrastructure',
+  'agriculturalDetails',
+  'management',
+  'totalArea',
+  'areaUnit',
+  'cultivableArea',
+  'irrigatedArea',
+  'nonCultivableArea',
+  'soilType',
+  'landTerrain',
+  'managerName',
+  'contactPerson',
+  'contactPhone',
+  'contactEmail',
+  'farmStatus',
+  'internalNotes',
+  'farmingMethod',
+  'primaryCrops',
+  'farmingSeasons',
+  'irrigationSources',
+  'irrigationMethods',
+  'waterAvailability',
+  'electricityAvailability',
+  'storageFacilities',
+  'greenhousePolyhouse',
+  'farmEquipment',
+  'annualRainfallMm',
+  'organicCertStatus',
+  'agriculturalNotes',
+]);
 const fieldKeys = new Set([
   'name',
   'areaHectares',
@@ -53,7 +106,19 @@ const fieldKeys = new Set([
   'calculatedMetrics',
   'boundaryMetadata',
 ]);
-const locationKeys = new Set(['region', 'country', 'city', 'latitude', 'longitude']);
+const locationKeys = new Set([
+  'region',
+  'country',
+  'city',
+  'state',
+  'district',
+  'tehsil',
+  'village',
+  'address',
+  'postalCode',
+  'latitude',
+  'longitude',
+]);
 const cropCycleKeys = new Set([
   'cropName',
   'variety',
@@ -127,6 +192,8 @@ const validateLocation = (location) => {
     } else if (key === 'longitude') {
       const lon = Number(value);
       if (!Number.isFinite(lon) || lon < -180 || lon > 180) return false;
+    } else if (key === 'address') {
+      if (typeof value !== 'string' || value.trim().length > 500) return false;
     } else {
       if (typeof value !== 'string' || value.trim().length > 100) return false;
     }
@@ -137,15 +204,23 @@ const validateLocation = (location) => {
 const cleanLocation = (loc) => {
   if (!loc) return undefined;
   const cleaned = {};
-  if (loc.region !== undefined) cleaned.region = loc.region.trim();
-  if (loc.country !== undefined) cleaned.country = loc.country.trim();
-  if (loc.city !== undefined) cleaned.city = loc.city.trim();
+  if (loc.region !== undefined) cleaned.region = String(loc.region).trim();
+  if (loc.state !== undefined) cleaned.state = String(loc.state).trim();
+  if (loc.district !== undefined) cleaned.district = String(loc.district).trim();
+  if (loc.country !== undefined) cleaned.country = String(loc.country).trim();
+  if (loc.city !== undefined) cleaned.city = String(loc.city).trim();
+  if (loc.tehsil !== undefined) cleaned.tehsil = String(loc.tehsil).trim();
+  if (loc.village !== undefined) cleaned.village = String(loc.village).trim();
+  if (loc.address !== undefined) cleaned.address = String(loc.address).trim();
+  if (loc.postalCode !== undefined) cleaned.postalCode = String(loc.postalCode).trim();
   if (loc.latitude !== undefined && loc.latitude !== null && loc.latitude !== '') {
     cleaned.latitude = Number(loc.latitude);
   }
   if (loc.longitude !== undefined && loc.longitude !== null && loc.longitude !== '') {
     cleaned.longitude = Number(loc.longitude);
   }
+  if (cleaned.state && !cleaned.region) cleaned.region = cleaned.state;
+  if (cleaned.region && !cleaned.state) cleaned.state = cleaned.region;
   return cleaned;
 };
 
@@ -157,11 +232,286 @@ const validateFarm = (body, partial = false) => {
   if (body.name !== undefined && !validateName(body.name)) {
     return 'Farm name must contain 1 to 100 characters.';
   }
-  if (body.location !== undefined && !validateLocation(body.location)) {
-    return 'Location must contain valid region, country, city, or coordinates.';
+  if (body.description !== undefined && body.description !== null && (typeof body.description !== 'string' || body.description.length > 2000)) {
+    return 'Farm description cannot exceed 2000 characters.';
   }
+  if (body.farmType !== undefined && body.farmType !== null && body.farmType !== '' && !FARM_TYPES.includes(body.farmType)) {
+    return `Invalid farm type: ${body.farmType}.`;
+  }
+  if (body.ownershipType !== undefined && body.ownershipType !== null && body.ownershipType !== '' && !OWNERSHIP_TYPES.includes(body.ownershipType)) {
+    return `Invalid ownership type: ${body.ownershipType}.`;
+  }
+  if (body.establishedYear !== undefined && body.establishedYear !== null && body.establishedYear !== '') {
+    const y = Number(body.establishedYear);
+    if (!Number.isInteger(y) || y < 1800 || y > 2100) {
+      return 'Established year must be a 4-digit year between 1800 and 2100.';
+    }
+  }
+  if (body.location !== undefined && !validateLocation(body.location)) {
+    return 'Location must contain valid region, state, district, country, city, address, or coordinates.';
+  }
+
+  // Land Details validation
+  const land = body.landDetails || {};
+  const totalArea = body.totalArea !== undefined ? body.totalArea : land.totalArea;
+  const areaUnit = body.areaUnit !== undefined ? body.areaUnit : land.areaUnit;
+  const cultivableArea = body.cultivableArea !== undefined ? body.cultivableArea : land.cultivableArea;
+  const irrigatedArea = body.irrigatedArea !== undefined ? body.irrigatedArea : land.irrigatedArea;
+  const nonCultivableArea = body.nonCultivableArea !== undefined ? body.nonCultivableArea : land.nonCultivableArea;
+  const soilType = body.soilType !== undefined ? body.soilType : land.soilType;
+  const landTerrain = body.landTerrain !== undefined ? body.landTerrain : land.landTerrain;
+
+  let numTotal;
+  if (totalArea !== undefined && totalArea !== null && totalArea !== '') {
+    numTotal = Number(totalArea);
+    if (!Number.isFinite(numTotal) || numTotal < 0 || numTotal > 10000000) {
+      return 'Total farm area must be a positive number.';
+    }
+  }
+
+  let numCult;
+  if (cultivableArea !== undefined && cultivableArea !== null && cultivableArea !== '') {
+    numCult = Number(cultivableArea);
+    if (!Number.isFinite(numCult) || numCult < 0) {
+      return 'Cultivable area must be a non-negative number.';
+    }
+    if (numTotal !== undefined && numCult > numTotal * 1.001) {
+      return 'Cultivable area cannot exceed total farm area.';
+    }
+  }
+
+  let numNonCult;
+  if (nonCultivableArea !== undefined && nonCultivableArea !== null && nonCultivableArea !== '') {
+    numNonCult = Number(nonCultivableArea);
+    if (!Number.isFinite(numNonCult) || numNonCult < 0) {
+      return 'Non-cultivable area must be a non-negative number.';
+    }
+    if (numTotal !== undefined && numNonCult > numTotal * 1.001) {
+      return 'Non-cultivable area cannot exceed total farm area.';
+    }
+  }
+
+  if (numTotal !== undefined && numCult !== undefined && numNonCult !== undefined) {
+    if (numCult + numNonCult > numTotal * 1.001) {
+      return 'The sum of cultivable and non-cultivable area cannot exceed total farm area.';
+    }
+  }
+
+  if (irrigatedArea !== undefined && irrigatedArea !== null && irrigatedArea !== '') {
+    const numIrr = Number(irrigatedArea);
+    if (!Number.isFinite(numIrr) || numIrr < 0) {
+      return 'Irrigated area must be a non-negative number.';
+    }
+    const cap = numCult !== undefined ? numCult : numTotal;
+    if (cap !== undefined && numIrr > cap * 1.001) {
+      return 'Irrigated area cannot exceed cultivable or total farm area.';
+    }
+  }
+
+  if (areaUnit !== undefined && areaUnit !== null && areaUnit !== '' && !AREA_UNITS.includes(areaUnit)) {
+    return `Invalid area unit: ${areaUnit}. Must be one of ${AREA_UNITS.join(', ')}.`;
+  }
+  if (soilType !== undefined && soilType !== null && soilType !== '' && !SOIL_TYPES.includes(soilType)) {
+    return `Invalid soil type: ${soilType}.`;
+  }
+  if (landTerrain !== undefined && landTerrain !== null && landTerrain !== '' && !LAND_TERRAINS.includes(landTerrain)) {
+    return `Invalid land terrain: ${landTerrain}.`;
+  }
+
+  // Infrastructure validation
+  const infra = body.infrastructure || {};
+  const waterAvail = body.waterAvailability !== undefined ? body.waterAvailability : infra.waterAvailability;
+  if (waterAvail !== undefined && waterAvail !== null && waterAvail !== '' && !WATER_AVAILABILITIES.includes(waterAvail)) {
+    return `Invalid water availability: ${waterAvail}.`;
+  }
+  const elecAvail = body.electricityAvailability !== undefined ? body.electricityAvailability : infra.electricityAvailability;
+  if (elecAvail !== undefined && elecAvail !== null && elecAvail !== '' && !ELECTRICITY_AVAILABILITIES.includes(elecAvail)) {
+    return `Invalid electricity availability: ${elecAvail}.`;
+  }
+  const greenhouse = body.greenhousePolyhouse !== undefined ? body.greenhousePolyhouse : infra.greenhousePolyhouse;
+  if (greenhouse !== undefined && greenhouse !== null && greenhouse !== '' && !GREENHOUSE_TYPES.includes(greenhouse)) {
+    return `Invalid greenhouse/polyhouse type: ${greenhouse}.`;
+  }
+
+  // Agricultural details validation
+  const agri = body.agriculturalDetails || {};
+  const method = body.farmingMethod !== undefined ? body.farmingMethod : agri.farmingMethod;
+  if (method !== undefined && method !== null && method !== '' && !FARMING_METHODS.includes(method)) {
+    return `Invalid farming method: ${method}.`;
+  }
+  const fertility = body.soilFertility !== undefined ? body.soilFertility : agri.soilFertility;
+  if (fertility !== undefined && fertility !== null && fertility !== '' && !SOIL_FERTILITY_LEVELS.includes(fertility)) {
+    return `Invalid soil fertility level: ${fertility}.`;
+  }
+  const rainfall = body.annualRainfallMm !== undefined ? body.annualRainfallMm : agri.annualRainfallMm;
+  if (rainfall !== undefined && rainfall !== null && rainfall !== '') {
+    const numR = Number(rainfall);
+    if (!Number.isFinite(numR) || numR < 0) return 'Annual rainfall must be a non-negative number.';
+  }
+  const organic = body.organicCertStatus !== undefined ? body.organicCertStatus : agri.organicCertStatus;
+  if (organic !== undefined && organic !== null && organic !== '' && !ORGANIC_CERT_STATUSES.includes(organic)) {
+    return `Invalid organic certification status: ${organic}.`;
+  }
+
+  // Management validation
+  const mgmt = body.management || {};
+  const status = body.farmStatus !== undefined ? body.farmStatus : mgmt.farmStatus;
+  if (status !== undefined && status !== null && status !== '' && !FARM_STATUSES.includes(status)) {
+    return `Invalid farm status: ${status}.`;
+  }
+  const email = body.contactEmail !== undefined ? body.contactEmail : mgmt.contactEmail;
+  if (email !== undefined && email !== null && email !== '') {
+    if (typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      return 'Contact email is invalid.';
+    }
+  }
+
   if (partial && !Object.keys(body).length) return 'At least one farm field is required.';
   return null;
+};
+
+const cleanFarm = (body, partial = false) => {
+  const result = {};
+
+  if (body.name !== undefined) result.name = body.name.trim();
+  if (body.farmCode !== undefined && body.farmCode !== null && body.farmCode !== '') {
+    result.farmCode = String(body.farmCode).trim().toUpperCase();
+  }
+  if (body.description !== undefined) result.description = String(body.description).trim();
+  if (body.farmType !== undefined && body.farmType !== null) result.farmType = String(body.farmType).trim();
+  if (body.ownershipType !== undefined && body.ownershipType !== null) result.ownershipType = String(body.ownershipType).trim();
+  if (body.establishedYear !== undefined && body.establishedYear !== null && body.establishedYear !== '') {
+    result.establishedYear = Number(body.establishedYear);
+  }
+  if (body.coverImage !== undefined) result.coverImage = String(body.coverImage).trim();
+
+  // Location
+  if (body.location !== undefined) {
+    result.location = cleanLocation(body.location);
+  }
+
+  // Land Details
+  const rawLand = body.landDetails || {};
+  const totalArea = body.totalArea !== undefined ? body.totalArea : rawLand.totalArea;
+  const areaUnit = body.areaUnit !== undefined ? body.areaUnit : rawLand.areaUnit;
+  const cultivableArea = body.cultivableArea !== undefined ? body.cultivableArea : rawLand.cultivableArea;
+  const irrigatedArea = body.irrigatedArea !== undefined ? body.irrigatedArea : rawLand.irrigatedArea;
+  const nonCultivableArea = body.nonCultivableArea !== undefined ? body.nonCultivableArea : rawLand.nonCultivableArea;
+  const soilType = body.soilType !== undefined ? body.soilType : rawLand.soilType;
+  const landTerrain = body.landTerrain !== undefined ? body.landTerrain : rawLand.landTerrain;
+
+  if (
+    body.landDetails !== undefined ||
+    totalArea !== undefined ||
+    areaUnit !== undefined ||
+    cultivableArea !== undefined ||
+    irrigatedArea !== undefined ||
+    nonCultivableArea !== undefined ||
+    soilType !== undefined ||
+    landTerrain !== undefined
+  ) {
+    result.landDetails = {
+      ...(totalArea !== undefined && totalArea !== null && totalArea !== '' ? { totalArea: Number(totalArea) } : {}),
+      ...(areaUnit !== undefined && areaUnit !== null ? { areaUnit: String(areaUnit).trim() } : {}),
+      ...(cultivableArea !== undefined && cultivableArea !== null && cultivableArea !== '' ? { cultivableArea: Number(cultivableArea) } : {}),
+      ...(irrigatedArea !== undefined && irrigatedArea !== null && irrigatedArea !== '' ? { irrigatedArea: Number(irrigatedArea) } : {}),
+      ...(nonCultivableArea !== undefined && nonCultivableArea !== null && nonCultivableArea !== '' ? { nonCultivableArea: Number(nonCultivableArea) } : {}),
+      ...(soilType !== undefined && soilType !== null ? { soilType: String(soilType).trim() } : {}),
+      ...(landTerrain !== undefined && landTerrain !== null ? { landTerrain: String(landTerrain).trim() } : {}),
+    };
+  }
+
+  // Infrastructure
+  const rawInfra = body.infrastructure || {};
+  const irrigationSources = body.irrigationSources !== undefined ? body.irrigationSources : rawInfra.irrigationSources;
+  const irrigationMethods = body.irrigationMethods !== undefined ? body.irrigationMethods : rawInfra.irrigationMethods;
+  const waterAvailability = body.waterAvailability !== undefined ? body.waterAvailability : rawInfra.waterAvailability;
+  const electricityAvailability = body.electricityAvailability !== undefined ? body.electricityAvailability : rawInfra.electricityAvailability;
+  const storageFacilities = body.storageFacilities !== undefined ? body.storageFacilities : rawInfra.storageFacilities;
+  const greenhousePolyhouse = body.greenhousePolyhouse !== undefined ? body.greenhousePolyhouse : rawInfra.greenhousePolyhouse;
+  const farmEquipment = body.farmEquipment !== undefined ? body.farmEquipment : rawInfra.farmEquipment;
+
+  if (
+    body.infrastructure !== undefined ||
+    irrigationSources !== undefined ||
+    irrigationMethods !== undefined ||
+    waterAvailability !== undefined ||
+    electricityAvailability !== undefined ||
+    storageFacilities !== undefined ||
+    greenhousePolyhouse !== undefined ||
+    farmEquipment !== undefined
+  ) {
+    result.infrastructure = {
+      ...(irrigationSources !== undefined ? { irrigationSources: Array.isArray(irrigationSources) ? irrigationSources.map(s => String(s).trim()).filter(Boolean) : [String(irrigationSources).trim()].filter(Boolean) } : {}),
+      ...(irrigationMethods !== undefined ? { irrigationMethods: Array.isArray(irrigationMethods) ? irrigationMethods.map(s => String(s).trim()).filter(Boolean) : [String(irrigationMethods).trim()].filter(Boolean) } : {}),
+      ...(waterAvailability !== undefined && waterAvailability !== null ? { waterAvailability: String(waterAvailability).trim() } : {}),
+      ...(electricityAvailability !== undefined && electricityAvailability !== null ? { electricityAvailability: String(electricityAvailability).trim() } : {}),
+      ...(storageFacilities !== undefined ? { storageFacilities: Array.isArray(storageFacilities) ? storageFacilities.map(s => String(s).trim()).filter(Boolean) : [String(storageFacilities).trim()].filter(Boolean) } : {}),
+      ...(greenhousePolyhouse !== undefined && greenhousePolyhouse !== null ? { greenhousePolyhouse: String(greenhousePolyhouse).trim() } : {}),
+      ...(farmEquipment !== undefined ? { farmEquipment: Array.isArray(farmEquipment) ? farmEquipment.map(s => String(s).trim()).filter(Boolean) : [String(farmEquipment).trim()].filter(Boolean) } : {}),
+    };
+  }
+
+  // Agricultural Details
+  const rawAgri = body.agriculturalDetails || {};
+  const primaryCrops = body.primaryCrops !== undefined ? body.primaryCrops : rawAgri.primaryCrops;
+  const farmingMethod = body.farmingMethod !== undefined ? body.farmingMethod : rawAgri.farmingMethod;
+  const farmingSeasons = body.farmingSeasons !== undefined ? body.farmingSeasons : rawAgri.farmingSeasons;
+  const soilFertility = body.soilFertility !== undefined ? body.soilFertility : rawAgri.soilFertility;
+  const annualRainfallMm = body.annualRainfallMm !== undefined ? body.annualRainfallMm : rawAgri.annualRainfallMm;
+  const organicCertStatus = body.organicCertStatus !== undefined ? body.organicCertStatus : rawAgri.organicCertStatus;
+  const agriculturalNotes = body.agriculturalNotes !== undefined ? body.agriculturalNotes : rawAgri.agriculturalNotes;
+
+  if (
+    body.agriculturalDetails !== undefined ||
+    primaryCrops !== undefined ||
+    farmingMethod !== undefined ||
+    farmingSeasons !== undefined ||
+    soilFertility !== undefined ||
+    annualRainfallMm !== undefined ||
+    organicCertStatus !== undefined ||
+    agriculturalNotes !== undefined
+  ) {
+    result.agriculturalDetails = {
+      ...(primaryCrops !== undefined ? { primaryCrops: Array.isArray(primaryCrops) ? primaryCrops.map(s => String(s).trim()).filter(Boolean) : [String(primaryCrops).trim()].filter(Boolean) } : {}),
+      ...(farmingMethod !== undefined && farmingMethod !== null ? { farmingMethod: String(farmingMethod).trim() } : {}),
+      ...(farmingSeasons !== undefined ? { farmingSeasons: Array.isArray(farmingSeasons) ? farmingSeasons.map(s => String(s).trim()).filter(Boolean) : [String(farmingSeasons).trim()].filter(Boolean) } : {}),
+      ...(soilFertility !== undefined && soilFertility !== null ? { soilFertility: String(soilFertility).trim() } : {}),
+      ...(annualRainfallMm !== undefined && annualRainfallMm !== null && annualRainfallMm !== '' ? { annualRainfallMm: Number(annualRainfallMm) } : {}),
+      ...(organicCertStatus !== undefined && organicCertStatus !== null ? { organicCertStatus: String(organicCertStatus).trim() } : {}),
+      ...(agriculturalNotes !== undefined && agriculturalNotes !== null ? { agriculturalNotes: String(agriculturalNotes).trim() } : {}),
+    };
+  }
+
+  // Management
+  const rawMgmt = body.management || {};
+  const managerName = body.managerName !== undefined ? body.managerName : rawMgmt.managerName;
+  const contactPerson = body.contactPerson !== undefined ? body.contactPerson : rawMgmt.contactPerson;
+  const contactPhone = body.contactPhone !== undefined ? body.contactPhone : rawMgmt.contactPhone;
+  const contactEmail = body.contactEmail !== undefined ? body.contactEmail : rawMgmt.contactEmail;
+  const farmStatus = body.farmStatus !== undefined ? body.farmStatus : rawMgmt.farmStatus;
+  const internalNotes = body.internalNotes !== undefined ? body.internalNotes : rawMgmt.internalNotes;
+
+  if (
+    body.management !== undefined ||
+    managerName !== undefined ||
+    contactPerson !== undefined ||
+    contactPhone !== undefined ||
+    contactEmail !== undefined ||
+    farmStatus !== undefined ||
+    internalNotes !== undefined
+  ) {
+    result.management = {
+      ...(managerName !== undefined && managerName !== null ? { managerName: String(managerName).trim() } : {}),
+      ...(contactPerson !== undefined && contactPerson !== null ? { contactPerson: String(contactPerson).trim() } : {}),
+      ...(contactPhone !== undefined && contactPhone !== null ? { contactPhone: String(contactPhone).trim() } : {}),
+      ...(contactEmail !== undefined && contactEmail !== null ? { contactEmail: String(contactEmail).trim().toLowerCase() } : {}),
+      ...(farmStatus !== undefined && farmStatus !== null ? { farmStatus: String(farmStatus).trim() } : {}),
+      ...(internalNotes !== undefined && internalNotes !== null ? { internalNotes: String(internalNotes).trim() } : {}),
+    };
+  }
+
+  return result;
 };
 
 const validateField = (body, partial = false) => {
@@ -490,10 +840,8 @@ export const createFarmController = (farmStore, activePhotoStorage = photoStorag
     const validationError = validateFarm(req.body);
     if (validationError) return sendValidationError(res, validationError);
     try {
-      const farm = await farmStore.createFarm(req.user._id || req.user.id, {
-        name: req.body.name.trim(),
-        ...(req.body.location ? { location: cleanLocation(req.body.location) } : {}),
-      });
+      const cleaned = cleanFarm(req.body);
+      const farm = await farmStore.createFarm(req.user._id || req.user.id, cleaned);
       return res.status(201).json({ success: true, farm });
     } catch (error) {
       return next(error);
@@ -527,10 +875,7 @@ export const createFarmController = (farmStore, activePhotoStorage = photoStorag
         });
       }
 
-      const values = {
-        ...(req.body.name !== undefined ? { name: req.body.name.trim() } : {}),
-        ...(req.body.location !== undefined ? { location: cleanLocation(req.body.location) } : {}),
-      };
+      const values = cleanFarm(req.body, true);
       const farm = await farmStore.updateFarm(
         ownerId,
         req.params.farmId,
@@ -538,6 +883,92 @@ export const createFarmController = (farmStore, activePhotoStorage = photoStorag
       );
       if (!farm) return res.status(404).json({ error: 'Not Found', message: 'Farm not found.' });
       return res.json({ success: true, farm });
+    } catch (error) {
+      return next(error);
+    }
+  },
+
+  uploadFarmCoverImage: async (req, res, next) => {
+    if (getIdError(req.params.farmId)) return sendValidationError(res, 'Farm ID is invalid.');
+    if (req.user && req.user.role === 'admin') {
+      return res.status(403).json({
+        error: 'Forbidden',
+        code: 'ADMIN_WRITE_RESTRICTED',
+        message: 'Administrators manage the platform and users; they cannot create personal agricultural resources or workspaces.',
+      });
+    }
+    try {
+      const ownerId = req.user._id || req.user.id;
+      const farm = await farmStore.findFarm(ownerId, req.params.farmId);
+      if (!farm) return res.status(404).json({ error: 'Not Found', message: 'Farm not found.' });
+
+      if (!req.file || !req.file.buffer) {
+        return sendValidationError(res, 'Cover image file is required.');
+      }
+      if (req.file.size === 0) {
+        return sendValidationError(res, 'Uploaded image file cannot be empty.');
+      }
+
+      const detectedMime = detectImageMimeType(req.file.buffer);
+      if (!detectedMime || !ALLOWED_PHOTO_MIME_TYPES.includes(detectedMime)) {
+        return sendValidationError(
+          res,
+          'Invalid image format: magic bytes do not match JPEG, PNG, or WebP.'
+        );
+      }
+
+      let saved;
+      try {
+        saved = await activePhotoStorage.savePhoto({
+          buffer: req.file.buffer,
+          ownerId,
+        });
+      } catch (storageError) {
+        return res.status(500).json({
+          error: 'Storage Failure',
+          message: storageError.message || 'Failed to save cover image file.',
+        });
+      }
+
+      const imageUrl = saved.secure_url || saved.url || `/api/farms/photos/${saved.publicId || saved.storageKey}/file`;
+      const updatedFarm = await farmStore.updateFarm(ownerId, req.params.farmId, {
+        coverImage: imageUrl,
+      });
+
+      return res.json({
+        success: true,
+        message: 'Farm cover image uploaded successfully.',
+        coverImage: imageUrl,
+        farm: updatedFarm,
+      });
+    } catch (error) {
+      return next(error);
+    }
+  },
+
+  removeFarmCoverImage: async (req, res, next) => {
+    if (getIdError(req.params.farmId)) return sendValidationError(res, 'Farm ID is invalid.');
+    if (req.user && req.user.role === 'admin') {
+      return res.status(403).json({
+        error: 'Forbidden',
+        code: 'ADMIN_WRITE_RESTRICTED',
+        message: 'Administrators manage the platform and users; they cannot create personal agricultural resources or workspaces.',
+      });
+    }
+    try {
+      const ownerId = req.user._id || req.user.id;
+      const farm = await farmStore.findFarm(ownerId, req.params.farmId);
+      if (!farm) return res.status(404).json({ error: 'Not Found', message: 'Farm not found.' });
+
+      const updatedFarm = await farmStore.updateFarm(ownerId, req.params.farmId, {
+        coverImage: '',
+      });
+
+      return res.json({
+        success: true,
+        message: 'Farm cover image removed.',
+        farm: updatedFarm,
+      });
     } catch (error) {
       return next(error);
     }
